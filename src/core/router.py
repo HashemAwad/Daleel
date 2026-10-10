@@ -6,6 +6,7 @@ returns something invalid). Model-agnostic — works with Anthropic or Ollama
 via LLMClient.classify.
 """
 from __future__ import annotations
+import os
 from shared.contracts import Inquiry, ToolResult
 from core import providers
 from core.stubs import StubLLM
@@ -57,18 +58,20 @@ def route_model(inq: Inquiry) -> str:
 
 
 def choose_tool(inq: Inquiry) -> str:
-    # Keyword-first: a strong signal (directory/medicine terms) is reliable even
-    # with a tiny local model, which tends to misroute. Only defer to the model
-    # for the ambiguous default (procedure), and only if a real model is wired.
+    # Keyword-first and DETERMINISTIC. A strong signal (directory/medicine terms)
+    # wins; otherwise "procedure" is the catch-all (RAG + its own grounding
+    # threshold decide whether there's a real answer). The small local model
+    # misroutes and is non-deterministic, so model routing is OFF unless
+    # MODEL_ROUTER=1 is set (enable it only with a capable model).
     kw = route_keywords(inq)
     if kw in ("directory", "medicine"):
         return kw
-    if isinstance(providers.llm, StubLLM):
-        return kw
-    try:
-        return route_model(inq)
-    except Exception:
-        return kw
+    if os.getenv("MODEL_ROUTER") == "1" and not isinstance(providers.llm, StubLLM):
+        try:
+            return route_model(inq)
+        except Exception:
+            return kw
+    return kw
 
 
 def run_tool(tool: str, inq: Inquiry) -> ToolResult:

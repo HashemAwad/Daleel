@@ -32,6 +32,7 @@ def test_model_routing_overrides_keywords(monkeypatch):
             return "ok"
         def embed(self, texts):
             return []
+    monkeypatch.setenv("MODEL_ROUTER", "1")  # model routing is opt-in
     monkeypatch.setattr(router.providers, "llm", FakeLLM())
     # text has no directory keywords, but the model says "directory"
     assert router.choose_tool(_inq("I want to find a place")) == "directory"

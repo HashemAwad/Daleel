@@ -10,3 +10,4 @@ numpy>=1.26
 twilio>=9.0
 segno>=1.6          # C: QR for the WhatsApp sandbox join link (/join). Optional: /qr.svg 501s without it.
 pytest>=8.0
+trafilatura>=1.8          # C/A: fetch real procedure pages for lexical ingest

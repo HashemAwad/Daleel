@@ -51,15 +51,47 @@ def _handle(inq: Inquiry) -> Answer:
         return _fallback(inq)
 
     # 5. Build grounded answer from tool results only.
-    #    If the model is unavailable (not pulled yet, down mid-demo), degrade
-    #    gracefully to a hotline fallback instead of 500-ing.
+    #    If the model is unavailable (not pulled yet, down mid-demo), we still have
+    #    REAL retrieved facts — render them plainly instead of dumping to 1787.
+    #    This keeps the platform useful under all conditions.
     context = build_context(result)
     try:
         text = providers.llm.generate(SYSTEM_PROMPT, inq.text, context)
     except Exception:
+        rendered = _render_facts(result)
+        if rendered:
+            return Answer(text=rendered, sources=_sources(result), tool=result.tool,
+                          grounded=True, outcome="answered", lang=inq.lang)
         return _fallback(inq)
     return Answer(text=text, sources=_sources(result), tool=result.tool,
                   grounded=True, outcome="answered", lang=inq.lang)
+
+
+# ---- model-less rendering (robustness: answer from facts if the LLM is down) ----
+def _render_facts(result: ToolResult) -> str:
+    """Plain, grounded answer built directly from retrieved facts, no model.
+    Used only when the LLM call fails, so the bot still helps instead of
+    redirecting to a hotline."""
+    lines: list[str] = []
+    if result.docs:
+        d = result.docs[0]
+        lines.append(d.content[:500].strip())
+        if d.source:
+            lines.append(f"المصدر · source: {d.source.url}")
+    elif result.facilities:
+        lines.append("أقرب المرافق · Nearest facilities:")
+        for f in result.facilities[:3]:
+            parts = [f.name] + [p for p in (f.caza, f.address, f.phone) if p]
+            lines.append("• " + " — ".join(parts))
+    elif result.drugs:
+        for dr in result.drugs[:3]:
+            price = f"{dr.price} {dr.currency}" if dr.price is not None else "السعر غير متوفر · price not listed"
+            free = " — مجاني · free list" if dr.is_free else ""
+            lines.append(f"• {dr.name}: {price}{free}")
+    elif result.hotlines:
+        for h in result.hotlines:
+            lines.append(f"• {h.name}: {h.number} — {h.purpose}")
+    return "\n".join(lines)
 
 
 # ---- voice ----------------------------------------------------------------

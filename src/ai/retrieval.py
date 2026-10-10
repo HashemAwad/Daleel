@@ -49,6 +49,24 @@ class ProcedureSearchImpl:
                            else float(os.getenv("PROCEDURE_MIN_SCORE", DEFAULT_MIN_SCORE)))
 
     def search(self, query: str, lang: Optional[Lang] = None, k: int = 4) -> list[Doc]:
+        """Hybrid retrieval:
+          - embedding model AVAILABLE (injected, or `sentence_transformers` installed)
+            -> semantic vector search, and trust its result (weak matches already
+            dropped by `min_score`).
+          - embedding model UNAVAILABLE -> lexical (pg_trgm) fallback so procedures
+            still answer with no ML download.
+        The decision is made on *availability*, not on an empty result, so the
+        vector threshold is never silently overridden by a lexical match."""
+        import importlib.util
+        if self._embed is not None or importlib.util.find_spec("sentence_transformers"):
+            try:
+                return self._vector_search(query, k)
+            except Exception:
+                pass
+        from ai.lexical import lexical_search   # no-ML keyword fallback
+        return lexical_search(query, k)
+
+    def _vector_search(self, query: str, k: int) -> list[Doc]:
         import numpy as np
         from pgvector.psycopg import register_vector
         embed = self._embed
