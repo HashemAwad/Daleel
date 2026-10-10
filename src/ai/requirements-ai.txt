@@ -1,0 +1,3 @@
+trafilatura>=2.0
+sentence-transformers>=3.0
+camel-tools>=1.5
