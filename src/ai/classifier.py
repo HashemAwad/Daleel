@@ -133,3 +133,53 @@ def classify(transcript: str) -> Metadata:
     return Metadata(topic=topic, subtopic=subtopic, caza=_caza(text), lang=detect_lang(text),
                     outcome="emergency" if topic == "emergency" else "answered",
                     day=date.today().isoformat())
+
+
+# ---------------------------------------------------------------- "kinds" for the dashboard
+# What KIND of paper / medicine / place a question was about, so the ministry sees specific needs
+# and not just "procedures". Keyed by the topic `data.transcripts` writes (procedures, drug_price,
+# directory). Closed vocabulary: values match metadata.subtopic's CHECK (^[a-z_]{1,40}$) and carry
+# no text from the question. STARTER LISTS: the healthcare teammate extends them here, first match wins.
+DETAIL: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
+    "procedures": (
+        ("chronic_medication_approval", ("سرطان", "سكري", "مزمن", "غسيل", "تلاسيميا", "cancer", "diabet",
+                                         "chronic", "dialys", "thalass", "chronique", "sarataan", "sokkari")),
+        ("hospital_admission", ("ادخال", "مستشفي", "تحويل", "admission", "hospital", "referral",
+                                "hôpital", "hopital", "mostashfa")),
+        ("health_coverage_card", ("ضمان", "بطاقه", "تغطيه", "تامين", "card", "coverage", "insurance", "carte",
+                                  "assurance", "couverture", "daman")),
+        ("medical_certificate", ("شهاده", "تقرير", "certificate", "report", "certificat", "rapport")),
+        ("disability_card", ("اعاقه", "disab", "handicap")),
+        ("vaccination", ("لقاح", "تطعيم", "vaccin")),
+        ("primary_care_registration", ("مركز صحي", "رعايه اوليه", "phc", "primary care", "soins primaires")),
+    ),
+    "drug_price": (
+        ("cancer", ("سرطان", "cancer", "chemo", "oncolog", "sarataan")),
+        ("diabetes", ("سكري", "السكر", "insulin", "diabet", "metformin", "sokkari")),
+        ("heart_blood_pressure", ("ضغط", "قلب", "concor", "hypertens", "blood pressure", "cardiac", "cholesterol",
+                                  "tension", "coeur", "cœur")),
+        ("pain_fever", ("بنادول", "panadol", "paracetamol", "ibuprofen", "brufen", "الم", "صداع", "حراره", "pain",
+                        "fever", "headache", "douleur", "fièvre", "fievre")),
+        ("antibiotics", ("مضاد حيوي", "antibiotic", "augmentin", "amoxi", "antibiotique")),
+        ("mental_health", ("اكتئاب", "قلق", "antidepress", "anxiety", "xanax", "anxiété")),
+        ("asthma_allergy", ("ربو", "حساسيه", "asthma", "ventolin", "allerg", "asthme")),
+        ("stomach", ("معده", "nexium", "omeprazole", "stomach", "estomac", "reflux")),
+    ),
+    "directory": (
+        ("pharmacy", ("صيدليه", "pharmac", "saydaliye", "saydaliyye")),
+        ("hospital", ("مستشفي", "hospital", "hôpital", "hopital", "mostashfa")),
+        ("health_center", ("مستوصف", "مركز", "phc", "clinic", "clinique", "health cent", "centre de santé", "mostawsaf")),
+    ),
+}
+_DETAIL_OTHER = {"procedures": "other_paper", "drug_price": "other_medicine", "directory": "other_place"}
+
+
+def detail(text: str, topic: str) -> Optional[str]:
+    """Closed-vocabulary kind of paper / medicine / place, or None for topics that have none."""
+    if topic not in DETAIL:
+        return None
+    norm = _norm(text or "")
+    for kind, words in DETAIL[topic]:
+        if any(w in norm for w in words):
+            return kind
+    return _DETAIL_OTHER[topic]

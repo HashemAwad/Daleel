@@ -61,3 +61,13 @@ logged — local-dev convenience only, which `REQUIRE_TWILIO_SIGNATURE=true`
 turns off.
 
 Full ticket: `docs/tickets/dev-c.md`.
+
+## Dashboard settings (env)
+
+| Variable | Effect |
+|---|---|
+| `DASHBOARD_DEMO=1` | Serve ~300 synthetic rows (generated in memory, never stored) instead of the database. The page shows a permanent "Demo data" banner. `/dashboard?demo=1` does the same for one visit. |
+| `DASHBOARD_TARGET_ANSWERED_MIN` | Optional target (percent). Unset = no verdict is shown. |
+| `DASHBOARD_TARGET_NO_SOURCE_MAX` | Optional target (percent). Unset = no verdict is shown. |
+
+Preview the demo rows: `PYTHONPATH=src python -m channels.demo_metrics`.
