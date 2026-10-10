@@ -17,20 +17,31 @@ and redaction always runs first. So the backend is swappable without touching an
 If the configured backend is unavailable, the app still answers from the data
 (plain/templated) — it never hard-fails.
 
-## Hosted mode — Google Gemini (recommended, free, strong Arabic)
-1. Create a free key at **https://aistudio.google.com/app/apikey** (sign in with Google → "Create API key"; no card).
+## Hosted mode — pick a free provider
+
+**Groq (recommended for building — generous free quota, fast):**
+1. Free key at **https://console.groq.com** → API Keys → Create (no card).
 2. In `.env`:
    ```
    DALEEL_MODEL_PROVIDER=hosted
-   DALEEL_MODEL=gemini-2.0-flash
-   DALEEL_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-   DALEEL_LLM_API_KEY=...              # your Gemini key
+   DALEEL_MODEL=llama-3.3-70b-versatile
+   DALEEL_LLM_BASE_URL=https://api.groq.com/openai/v1
+   DALEEL_LLM_API_KEY=gsk_...          # your Groq key
    ```
-3. Restart the server. Answers are now fluent, with strong Arabic.
+3. Restart the server → fluent answers (Llama 3.3 70B, good Arabic).
 
-"OpenAI-format" = the de-facto API shape Gemini/Groq/OpenRouter all accept — it is
-**not** OpenAI the company. Any such endpoint works: just change the three lines.
-Groq alternative: base_url `https://api.groq.com/openai/v1`, model `llama-3.3-70b-versatile`.
+**Google Gemini (best Arabic, but small free daily quota — can 429 under load):**
+```
+DALEEL_MODEL=gemini-3.8-flash
+DALEEL_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+DALEEL_LLM_API_KEY=...                 # key from aistudio.google.com/app/apikey
+```
+Gemini = best Arabic *result*; Groq = a provider that won't rate-limit while the
+team hammers it. Either way, `selfhost` qwen is the private production target.
+
+> "OpenAI-format" = the de-facto API shape Gemini/Groq/OpenRouter all accept — **not**
+> OpenAI the company. The client (`core/llm_hosted.py`) retries transient 429/503s;
+> a persistent provider failure falls back to plain (still accurate) answers, never an error.
 
 ## Switch to self-hosted (when `ollama list` shows qwen2.5:7b)
 Change two lines in `.env` and restart:

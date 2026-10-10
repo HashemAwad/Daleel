@@ -15,6 +15,15 @@ import pytest
 os.environ["RECORD_TURNS"] = "0"
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_llm(monkeypatch):
+    """Tests must never call a real LLM backend (no network, fast, deterministic).
+    Pin the stub by default; tests that exercise a specific LLM monkeypatch
+    providers.llm themselves and override this within their own scope."""
+    from core import providers, stubs
+    monkeypatch.setattr(providers, "llm", stubs.StubLLM(), raising=False)
+
+
 @pytest.fixture(scope="session")
 def db_ready():
     import psycopg
