@@ -29,3 +29,5 @@ coverage/
 # IDE
 .vscode/
 .idea/
+
+CLAUDE.md

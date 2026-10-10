@@ -13,7 +13,7 @@ One repo, one FastAPI deployable, split into **one-owner folders** that talk onl
 
 ## Stack
 - **Backend:** Python + FastAPI (one service, both channels).
-- **DB:** Postgres + pgvector + PostGIS, one Docker container.
+- **DB:** Postgres + pgvector (+ pg_trgm), one Docker container. Facilities use plain lat/lon (no PostGIS).
 - **Model (demo):** hosted API with tool calling, behind an `LLMClient` interface; open-weight self-host is a config toggle.
 - **Channels:** Twilio WhatsApp sandbox + React web widget (RTL).
 
@@ -37,7 +37,7 @@ One repo, one FastAPI deployable, split into **one-owner folders** that talk onl
 | A — Backend core | `/src/core`, `/src/app` | FastAPI service; normalize→safety→redact→route→ground→reply pipeline; `LLMClient` + hosted impl + self-host toggle; deterministic hotline routing |
 | B — AI & retrieval | `/src/ai` | Procedure ingestion/embeddings; `ProcedureSearch`; prompts (4 langs, citations); `redact()`; metadata `classify()`; eval runner |
 | C — Channels & frontend | `/src/channels`, `/web` | Twilio webhook + signature + quick replies; web chat endpoint; React RTL widget; dashboard stub |
-| D — Data & infra | `/src/data`, `/infra` | Postgres/pgvector/PostGIS schema + migrations; `DirectorySearch` (PostGIS); `MedicineLookup`; hotline seed; retention job; deploy + demo reset + backup |
+| D — Data & infra | `/src/data`, `/infra` | Postgres/pgvector schema + idempotent re-apply; `DirectorySearch` (caza filter / haversine); `MedicineLookup`; hotline seed; retention job; deploy + demo reset + backup |
 | Healthcare (5th) | `/data_sources` | Verify 5–8 procedures; eval questions; topic list; answer wording; pitch |
 
 ## Shared contracts (agree day 1, in `/src/shared`)

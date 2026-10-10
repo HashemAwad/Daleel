@@ -6,7 +6,8 @@
 **You only edit files inside _your_ module folder.** Shared code (types, interfaces, config) changes go through a quick PR review so everyone stays in sync.
 
 ## Branching
-- `main` is always working/deployable. Never push directly to `main`.
+- `main` is always working/deployable. Push small commits straight to `main`: `git pull --rebase`, `PYTHONPATH=src pytest -q` green, then push. Never force-push. Tag `demo-freeze` at feature freeze (Sun 10:00).
+- Branches below are optional — use one for a risky change.
 - Branch per feature: `feat/<your-name>/<short-desc>` e.g. `feat/mariam/auth-login`
 - Fixes: `fix/<your-name>/<short-desc>`
 
@@ -23,7 +24,7 @@ git push -u origin feat/you/thing
 
 ## Pull Requests
 - Keep them small. One feature = one PR.
-- At least **1 teammate approval** before merge (fast, even a 2-min look).
+- For a risky or shared-file change: at least **1 teammate approval** before merge (even a 2-min look). Otherwise commit to `main`.
 - Resolve conflicts on *your* branch, never force-push `main`.
 - Squash-merge to keep `main` history clean.
 

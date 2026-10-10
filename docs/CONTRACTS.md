@@ -31,10 +31,13 @@ Adding an **optional** field to a model is safe. **Renaming or removing** a fiel
 
 ## The DB schema is the other contract — D owns it
 D publishes `src/data/init/schema.sql` in Sprint 0. Tables everyone else assumes:
-`procedures(id, title, content, url, checked_on, lang, embedding vector)`,
-`facilities(id, name, type, caza, address, phone, geom)`,
-`drugs(name, price, currency, generics, is_free, list_date)`,
-`hotlines(name, number, purpose)`,
-`transcripts(session_hash, turn, role, text, created_at)`,
-`metadata(topic, subtopic, caza, lang, outcome, day)`.
+`procedures(id, title, content, url, checked_on, lang, embedding vector(1024))` — bge-m3 dims, no vector index,
+`facilities(id, name, type, caza, address, phone, lat, lon, + provenance)` — plain lat/lon, **no PostGIS**; `caza` must exist in `cazas`,
+`drugs(name, price, currency, generics, is_free, list_date, + strength, form, provenance)` — `price` / `is_free` are NULL when unknown, never 0 / false,
+`hotlines(name, number, purpose, + verified_on)`,
+`transcripts(session_hash, turn, role, text, created_at, + outcome?, tool?, lang?)` — **redacted text only**, temporary,
+`metadata(topic, subtopic, caza, lang, outcome, day)` — closed vocab, no id / timestamp / session link.
+
+Extra helper tables: `cazas`, `caza_aliases`, `drug_aliases`. Exact DDL: `src/data/init/schema.sql`.
+Existing local volume? Re-apply with `PYTHONPATH=src python -m data.db` (idempotent). If you created your own `procedures` table by hand, drop it first.
 B's `retrieval.py` reads `procedures`; C's dashboard reads `metadata`; D's retention job writes `metadata` and deletes `transcripts`.
