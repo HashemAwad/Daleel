@@ -1,36 +1,38 @@
 # Running Daleel for a demo
 
-Two ways to run it. Both end with a public HTTPS URL that Twilio and the judges' phones can reach.
+The demo runs on **one laptop** (the teammate's MacBook) with a tunnel for the public HTTPS URL that Twilio
+and the judges' phones reach. The AWS server at the bottom is the fallback.
 
-## A. Cloud server (what is deployed now)
-One Ubuntu 24.04 server, built by `infra/vm_setup.sh`. It runs Postgres (docker, loopback only), the app,
-the retention loop, a small local model (Ollama) and Caddy for HTTPS.
+## A. The demo laptop (macOS or Linux)
+Install first: **Docker Desktop** (or OrbStack) and start it, **Ollama** (https://ollama.com) and open it,
+**Python 3.12** (`brew install python@3.12`), and a tunnel: `brew install ngrok` or `brew install cloudflared`.
 
 ```bash
-# from your laptop, in the repo root
-HOST=ubuntu@<server-ip>
-ssh $HOST 'sudo mkdir -p /opt/daleel && sudo chown ubuntu:ubuntu /opt/daleel'
-rsync -az --delete --exclude .venv --exclude .git --exclude data_source --exclude __pycache__ \
-      --exclude .env --exclude .pytest_cache ./ $HOST:/opt/daleel/
-ssh $HOST 'bash /opt/daleel/infra/vm_setup.sh <a-b-c-d>.sslip.io'     # the server IP with dashes
+git clone <repo> && cd hack4health
+bash infra/laptop_setup.sh      # once: .env, database, packages, seed data, the model; ends with "ready"
+bash infra/run_demo.sh          # terminal 1: the app on 127.0.0.1:8000 + the retention loop. Ctrl-C stops both
 ```
-`<ip-with-dashes>.sslip.io` resolves to the server and gets a real certificate, so no domain is needed.
-The script is safe to re-run; it stops with `FAILED:` if the database is unhealthy or a stub provider is live.
+`laptop_setup.sh` is safe to re-run (after every `git pull`). It creates `.env` with demo settings if there is
+none, pulls the model named by `DALEEL_MODEL` in `.env` (`qwen2.5:7b`, about 4.7 GB), and stops with `FAILED:`
+if Docker or Ollama is not running, the database is unhealthy, or a stub provider would be live.
+It prints row counts: **`procedures: 0 rows` means B's ingestion still has to be run on this laptop**
+(`PYTHONPATH=src .venv/bin/python src/ai/ingest.py URL [URL ...]`), otherwise procedure questions get the hotline reply.
 
-**Update after a `git pull`:** rsync again, then `ssh $HOST 'sudo systemctl restart daleel-app daleel-retention'`.
-
-**Never run `pytest` on the server.** The DB tests reload seed tables and delete idle transcripts.
-(`DALEEL_ENV=production` in the server's `.env` makes the suite refuse.)
-
-## B. A laptop plus a tunnel
+**Public URL (terminal 2).** Pick one:
 ```bash
-docker compose up -d
-PYTHONPATH=src python -m data.db && PYTHONPATH=src python -m data.loaders
-PYTHONPATH=src uvicorn core.app:app --host 127.0.0.1 --port 8000      # terminal 1
-PYTHONPATH=src python -m data.retention --loop                         # terminal 2
-cloudflared tunnel --url http://localhost:8000                         # terminal 3: prints the public URL
+ngrok http --url=<your-name>.ngrok-free.app 8000     # free account gives ONE fixed domain: set it once in Twilio
+cloudflared tunnel --url http://localhost:8000       # no account, but a NEW url on every restart
 ```
-The tunnel URL changes every time it restarts.
+ngrok shows browsers a one-time "you are about to visit" page; WhatsApp webhooks are not affected.
+Then put the URL in `.env` as `PUBLIC_BASE_URL=https://...` (no trailing slash), add the Twilio values,
+restart `run_demo.sh`, and set the Twilio sandbox webhook to `https://<public-url>/webhook/whatsapp` (POST).
+
+**Check it from a phone on mobile data:** `https://<public-url>/health` returns `{"ok":true,...}`, and
+`https://<public-url>/health/channels` shows no provider starting with `Stub`.
+
+Keep the laptop plugged in with the lid open (`run_demo.sh` stops macOS sleeping while it runs).
+**Never run `pytest` on the demo laptop**: the DB tests reload seed tables and delete transcripts
+(`DALEEL_ENV=production` in its `.env` makes the suite refuse). Nothing limits request size on a tunnel.
 
 ## Settings that matter (`.env`)
 | Setting | Demo value | Why |
@@ -59,3 +61,13 @@ PYTHONPATH=src python -m data.retention --once        # or wait for the loop
 Honest wording: transcripts are temporary, masked (phone numbers, IDs, emails, introduced names — not a
 bare name or an address) and deleted from the live database after the idle window, 24 hours at most.
 Copies held by WhatsApp, Twilio, the model provider and the user's phone are outside our control.
+
+## B. Fallback: the AWS server
+One Ubuntu 24.04 server built by `infra/vm_setup.sh` (Postgres, the app, the retention loop, Ollama with the
+smaller `qwen2.5:3b`, Caddy for HTTPS). It is slower and answers less well than the laptop. D has the SSH access.
+```bash
+HOST=ubuntu@<server-ip>
+rsync -az --delete --exclude .venv --exclude .git --exclude __pycache__ --exclude .env --exclude .pytest_cache ./ $HOST:/opt/daleel/
+ssh $HOST 'bash /opt/daleel/infra/vm_setup.sh <a-b-c-d>.sslip.io'     # first time; the server IP with dashes
+ssh $HOST 'sudo systemctl restart daleel-app daleel-retention'         # after later rsyncs
+```

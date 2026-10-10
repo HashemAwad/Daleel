@@ -20,7 +20,7 @@ Status is as read from `main` at that time — check the code before assuming an
 | A11 | Facility answers need "opening hours and stock not confirmed — call before going" and "© OpenStreetMap contributors" | We have no hours data; OSM data is ODbL | `core/prompts.py` |
 | A12 | Do **not** add another `metadata` write | `data.transcripts.record` writes exactly one row per turn; a second writer would double-count | pipeline |
 | A14 | The hotline fallback overwrites the tool (`tool="hotline"`) | An unanswered pharmacy or price question is counted under topic `other`, so the dashboard cannot say *what* went unanswered. Keep the routed tool on the fallback `Answer` | `core/pipeline.py` `_fallback` |
-| A17 | **The local model invents a source link on facility answers.** Asked "bade saydaliyye 2arib mn Aley" on the deployed server, `qwen2.5:3b` replied with one pharmacy and a made-up URL (`https://www.marinafarm.com.lb/`). The data has no URLs for facilities | A fabricated source in front of the jury. Facility and medicine answers should be rendered from the records without asking the model for a source, or any URL not present in the tool result should be stripped | `core/prompts.py`, `core/pipeline.py` |
+| A17 | ~~The local model invents a source link on facility answers~~ **Done by A** (`c3b3fc3` strips URLs not in the tool result) | — | — |
 | A18 | `/chat` has no length limit on `text` (`ChatIn`) | One very long message ties up the worker (regex + model). The server's proxy now caps requests at 64 KB; add `Field(max_length=2000)` | `core/app.py` |
 | A19 | `providers.py` swaps in a stub silently, and the stubs return FAKE data (`StubMedicine` price 0.0, `StubDirectory` "Example pharmacy", `StubProcedureSearch` an invented procedure) | A typo or missing package in any module turns the bot into a fake one with no log line. Log at ERROR in each `except`, and make the stubs return `[]` so the hotline fallback fires. `infra/vm_setup.sh` now fails if a stub is live | `core/providers.py`, `core/stubs.py` |
 | A20 | `/health/channels`, `/docs` and `/openapi.json` are public | They show configuration flags, the sender number and provider names | `core/app.py`, `channels/web.py` |
@@ -43,8 +43,8 @@ Status is as read from `main` at that time — check the code before assuming an
 | # | Missing | Why it matters |
 |---|---------|----------------|
 | C1 | ~~Hide dashboard cells under 5~~ **Done by C** (`channels/metrics.py` withholds groups under 5) | — |
-| C5 | `channels/asgi.py` and `channels/__init__.py` say to run `channels.asgi:app` until core registers the routes | Core does register them now, so `core.app:app` serves everything |
-| C3 | Real topic values are `procedures`, `directory`, `drug_price`, `emergency`, `dosing_request`, `other` | The dashboard's mock rows use other names (`pharmacy_locator`, `hospital_admission`) |
+| C5 | ~~Docs said to run `channels.asgi:app`~~ **Done by C** (`cd0304b`) | — |
+| C3 | ~~Mock dashboard rows used other topic names~~ **Done by C** (`e7a4159`) | — |
 | C4 | The dashboard shows mock rows only while `metadata` is empty | After the first real turn it shows just the real rows; the demo reset (D7) will seed realistic ones |
 | C2 | ~~OSM credit line~~ **Done by C** (`web/index.html`, `channels/render.py`) | — |
 
@@ -58,17 +58,17 @@ Status is as read from `main` at that time — check the code before assuming an
 | H5 | Spot-check ~30 drug rows against the official list (name, strength, form, price) | Prices were fetched 10 Oct from the MoPH database search |
 | H6 | A list of PHCs we can load (name, caza, address, phone) | The PHC network PDF in `data_source/` does not extract; "nearest PHC" returns nothing |
 
-## Deployment (as of Sat 10 Oct)
-- Live at `https://13-51-237-14.sslip.io` on one AWS `m7i-flex.large` (Stockholm), built by `infra/vm_setup.sh`. Update it with rsync + `sudo systemctl restart daleel-app daleel-retention` (see `infra/vm_setup.sh` header).
+## Deployment (as of Sat 10 Oct, evening)
+- **The demo runs on a teammate's MacBook** with `qwen2.5:7b` and a tunnel: `bash infra/laptop_setup.sh`, then `bash infra/run_demo.sh`. Steps in `infra/SETUP.md`.
+- Still to do on that laptop: Twilio values + `PUBLIC_BASE_URL` in `.env`, the Twilio webhook, and B's procedure ingestion.
+- Fallback: `https://13-51-237-14.sslip.io` on one AWS `m7i-flex.large` (Stockholm), built by `infra/vm_setup.sh`, smaller model (`qwen2.5:3b`), no procedures loaded. D keeps it until the demo is over.
 - `bash infra/reset_demo.sh` before each rehearsal. It deletes all transcripts and metadata and inserts 320 **made-up** metadata rows marked `subtopic='sample'` so the dashboard is not empty.
-- Not yet on the server: Twilio values in `.env`, and procedure documents (B's ingestion has not been run there).
-- Amazon Bedrock (hosted Claude) is callable from this AWS account. Wiring it in needs a server IAM role and a Bedrock option in the model client (A).
 
 ## Whoever runs the app (deploy / demo)
 - **`SESSION_HASH_SALT` must be set to a real value in `.env`.** With the default `change-me`, no transcript rows are stored at all (metadata still is).
 - `STORE_TRANSCRIPT_TEXT=1` to keep scrubbed text for the demo; default is off (rows stored with `[not stored]`).
 - **Never run `pytest` on the demo server** (the DB tests reload seed tables and delete idle transcripts; `DALEEL_ENV=production` makes the suite refuse). Use `REQUIRE_DB=1 pytest -q` on a laptop for the pre-demo run so a down database fails instead of skipping.
-- Start the retention loop: `PYTHONPATH=src python -m data.retention --loop` (`RETENTION_INTERVAL_SECONDS`, default 600; use ~20 for the demo). On the server it runs as the `daleel-retention` systemd unit (`infra/vm_setup.sh`); on a laptop start it by hand.
+- Start the retention loop: `PYTHONPATH=src python -m data.retention --loop` (`RETENTION_INTERVAL_SECONDS`, default 600; use ~20 for the demo). `infra/run_demo.sh` starts it with the app; on the AWS server it is the `daleel-retention` systemd unit.
 - Masked before storage: phone numbers, IDs, emails and names introduced as "my name is …" (B's redactor), plus a digit/email backstop (D's `scrub`). **Not masked: a bare name, an address, a spelled-out number.** Demo input should contain a phone number, not a name.
 - Emergency and refusal turns never store text. Voice-note turns store no user text (the transcript is produced inside the pipeline).
 - Pitch wording: "temporary, masked, auto-deleted from our live database", not "keeps no transcripts".
@@ -78,8 +78,7 @@ Status is as read from `main` at that time — check the code before assuming an
 - No `list_date`: the MoPH search page states none. Only the date we checked is stored.
 - Directory: places resolve by caza name (any spelling) or by a town's first word as OSM spells it (Choueifat, Jounie/Jounieh, Achrafieh). Neighbourhoods not in the data (Hamra, Dahieh), regions ("the south") and Arabic-script town names do not resolve. `lat`/`lon` are ignored; nothing is ranked by distance. "clinic" / "مركز" map to `phc`, and no PHCs are loaded.
 - Pharmacies have no phone numbers or opening hours (OSM has none). The scope's user story promises a phone number per entry.
-- `data_source/` is untracked and not in `.gitignore`.
 - `README.md:12` and `docs/GETTING_STARTED.md:20` still say "PostGIS".
 
 ## Dev D — still to build
-Nothing — D0–D7 are done. Follow-ups: `infra/SETUP.md` for a second laptop, Bedrock wiring.
+Nothing — D0–D7 are done. Follow-up: terminate the AWS server after the demo.
