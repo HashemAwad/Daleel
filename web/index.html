@@ -630,6 +630,17 @@ input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
 });
 
+/* ---------- location (enables TRUE "nearest" by distance) ----------------- */
+let coords = null;
+function requestLocation(){
+  if (!navigator.geolocation) return;          // needs https or localhost
+  navigator.geolocation.getCurrentPosition(
+    (p) => { coords = { lat: p.coords.latitude, lon: p.coords.longitude }; },
+    () => { coords = null; },                  // denied -> backend falls back to town
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 600000 }
+  );
+}
+
 /* ---------- sending ------------------------------------------------------- */
 async function send(text){
   if (busy) return;
@@ -653,7 +664,10 @@ async function send(text){
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       // lang is omitted on purpose: the backend detects it per message.
-      body: JSON.stringify({ channel:"web", text:q, user_ref: await userRef() }),
+      body: JSON.stringify({
+        channel:"web", text:q, user_ref: await userRef(),
+        ...(coords ? { lat: coords.lat, lon: coords.lon } : {}),   // true nearest when shared
+      }),
     });
     typing(false);
     if (!r.ok) throw new Error("HTTP " + r.status);
@@ -685,6 +699,7 @@ document.getElementById("themeBtn").addEventListener("click", toggleTheme);
 (async function boot(){
   applyUi(detectUi());
   input.focus();
+  requestLocation();   // ask once; if allowed, "nearest" uses real distance, else town
 
   try {
     const h = await fetch(API + "/api/hotlines");

@@ -162,6 +162,14 @@ def _safe_lang(lang: Optional[str]) -> Optional[str]:
     return lang if lang in VALID_LANGS else None
 
 
+def _coords(form: dict[str, str]) -> tuple[Optional[float], Optional[float]]:
+    """A shared WhatsApp location pin arrives as Latitude/Longitude form fields."""
+    try:
+        return float(form["Latitude"]), float(form["Longitude"])
+    except (KeyError, ValueError, TypeError):
+        return None, None
+
+
 def build_inquiry(form: dict[str, str]) -> Inquiry:
     """Normalise a Twilio form payload into an Inquiry. Never returns raw PII."""
     sender = form.get("From", "")  # e.g. "whatsapp:+9617xxxxxx" — hashed below, never stored
@@ -175,12 +183,19 @@ def build_inquiry(form: dict[str, str]) -> Inquiry:
         else:
             log.info("unsupported media type received: %s", mime or "unknown")
 
+    lat, lon = _coords(form)
+    # A bare location pin (no text) means "what's near me" — default to pharmacy
+    # so the distance search can run; conversation memory handles the richer case.
+    if lat is not None and not text:
+        text = "nearest pharmacy"
+
     return Inquiry(
         id=form.get("MessageSid", "") or "wa-msg",
         channel="whatsapp",
         text=text,
         lang=_safe_lang(lang),  # type: ignore[arg-type]
         user_ref=user_ref(sender, prefix="wa"),
+        lat=lat, lon=lon,
     )
 
 
