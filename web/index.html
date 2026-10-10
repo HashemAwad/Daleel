@@ -1,186 +1,206 @@
 <!doctype html>
-<!-- Daleel chat. Owner: C (tickets C0, C1, C5).
-     Arabic-first, RTL, with per-message bidi detection so Arabic, Arabizi,
-     French and English render correctly in one thread. Language is detected
-     per message by the backend — the reader is never asked to pick one.
-     No external assets: this page must work on a flaky venue network, so the
-     cedar is inline SVG and every colour and rule is in this file. -->
+<!-- Daleel. Owner: C (tickets C0, C1, C5).
+     Arabic-first, RTL, per-message bidi so Arabic, Arabizi, French and English
+     read correctly in one thread. Language is detected per message by the
+     backend — the reader is never asked to choose.
+
+     Design: the interface is an official record, not a messaging app. Answers
+     are entries; the source is a reference line; the cedar appears once, blind-
+     embossed, the way a seal sits on ministry letterhead.
+
+     No external assets — the venue network cannot be trusted, so the cedar is
+     inline SVG and both typefaces are resident on-device. -->
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<meta name="theme-color" content="#FFFFFF"/>
-<title>دليل · Daleel — وزارة الصحة العامة</title>
+<meta name="theme-color" content="#FCFCFA" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#14130F" media="(prefers-color-scheme: dark)"/>
+<title>دليل — وزارة الصحة العامة</title>
 <style>
-  /* Identity taken from the ministry's own lockup: cedar green for the state,
-     red reserved for the ministry line and for emergencies. Nothing else is
-     coloured, which is what makes it read as official rather than as an app. */
   :root{
     color-scheme: light;
-    --green:#15693A;
-    --green-deep:#0E4A29;
-    --red:#C62127;
-    --ink:#161817;
-    --ink-2:#3F4442;
-    --muted:#6E7471;
-    --line:#E4E6E3;
-    --line-soft:#EFF1EE;
-    --page:#FFFFFF;
-    --raised:#F6F7F5;     /* user message, input well */
-    --amber:#8A5B00; --amber-soft:#FBF2DF;
-    --red-soft:#FBEBEA;
-    --measure:46rem;      /* reading column — keeps lines under ~80 chars */
+    /* Five values, every one of them taken from the ministry's own lockup. */
+    --cedar:#15693A;
+    --cedar-deep:#0D4426;
+    --seal:#C62127;        /* emergencies and the identity rule. Nowhere else. */
+    --ink:#221F1A;
+    --ink-2:#4A453D;
+    --quiet:#6B655C;
+    --paper:#FCFCFA;
+    --paper-2:#F4F3EE;     /* the reader's own entry */
+    --rule:#DFDCD3;
+    --rule-soft:#EBE9E2;
+    --amber:#7A5200; --amber-wash:#F7F0DE;
+    --seal-wash:#F9EAE9;
+
+    --measure:40rem;
+    --swift:cubic-bezier(.2,.65,.3,1);
   }
   @media (prefers-color-scheme: dark){
     :root{
       color-scheme: dark;
-      --green:#4FAE77; --green-deep:#8FD3AC; --red:#FF8F8A;
-      --ink:#ECEFED; --ink-2:#C2C8C5; --muted:#8E9793;
-      --line:#272B29; --line-soft:#1E2220;
-      --page:#121413; --raised:#1B1E1C;
-      --amber:#E8BE78; --amber-soft:#2A2109; --red-soft:#2E1513;
+      --cedar:#5FB98A; --cedar-deep:#93D8B2; --seal:#FF8F8A;
+      --ink:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
+      --paper:#14130F; --paper-2:#1D1B16;
+      --rule:#302D26; --rule-soft:#23211B;
+      --amber:#E2BC72; --amber-wash:#2A2109; --seal-wash:#2E1512;
     }
   }
 
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; background:var(--page); color:var(--ink);
-    font-family:"Noto Sans Arabic","SF Arabic",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-    font-size:16.5px; line-height:1.7;
-    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    margin:0; background:var(--paper); color:var(--ink);
+    /* Naskh for Arabic, a transitional serif for Latin: one document voice. */
+    font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
+                "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
+    font-size:17px; line-height:1.85;   /* serif wants the extra leading */
+    font-variant-numeric:tabular-nums;
+    -webkit-font-smoothing:antialiased;
   }
   .bidi{unicode-bidi:plaintext; text-align:start}
   bdi{unicode-bidi:isolate}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 
   #app{height:100%; display:flex; flex-direction:column}
-  .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:20px}
+  .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:22px}
 
-  /* ---------------- masthead: the official lockup, nothing more ----------- */
-  .masthead{
-    border-bottom:1px solid var(--line); background:var(--page);
-    padding-block:10px; padding-top:calc(10px + env(safe-area-inset-top));
-    flex:none;
-  }
-  .lockup{display:flex; align-items:center; gap:12px}
-  .cedar{width:30px; height:30px; flex:none; fill:var(--green); display:block}
-  .titles{display:flex; flex-direction:column; line-height:1.18}
-  .t-state{
-    font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--green);
-    text-transform:uppercase;
-  }
-  .t-ministry{
-    font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--red);
-    text-transform:uppercase;
-  }
-  .rule{width:1px; align-self:stretch; background:var(--line); margin-inline:4px}
-  .service{display:flex; flex-direction:column; line-height:1.2}
-  .service b{font-size:15px; font-weight:700; letter-spacing:-.1px}
-  .service span{font-size:11.5px; color:var(--muted)}
+  /* ---- letterhead ------------------------------------------------------- */
+  .letterhead{flex:none; background:var(--paper)}
+  .lockup{display:flex; align-items:center; gap:13px; padding-block:13px;
+          padding-top:calc(13px + env(safe-area-inset-top))}
+  .cedar{width:31px; height:31px; flex:none; fill:var(--cedar); display:block}
+  .titles{display:flex; flex-direction:column; line-height:1.2}
+  /* Caps here are the ministry's actual logotype, not a decorative eyebrow. */
+  .titles span{font-size:10px; font-weight:700; letter-spacing:.11em;
+               text-transform:uppercase; font-family:"Iowan Old Style",Palatino,Georgia,serif}
+  .t-state{color:var(--cedar)}
+  .t-ministry{color:var(--seal)}
+  .vrule{width:1px; align-self:stretch; background:var(--rule); margin-inline:5px}
+  .svc{font-size:16px; font-weight:600; letter-spacing:.01em}
   .grow{flex:1}
-  .navlinks{display:flex; gap:18px; font-size:13px}
-  .navlinks a{
-    color:var(--ink-2); text-decoration:none; padding-block:4px;
-    border-bottom:1.5px solid transparent;
+  .letterhead nav{display:flex; gap:19px; font-size:14px}
+  .letterhead nav a{
+    color:var(--ink-2); text-decoration:none; padding-bottom:2px;
+    border-bottom:1px solid transparent; transition:color .2s var(--swift), border-color .2s var(--swift);
   }
-  .navlinks a:hover{color:var(--green); border-bottom-color:var(--green)}
-  @media (max-width:560px){ .navlinks{display:none} .service span{display:none} }
+  .letterhead nav a:hover{color:var(--cedar); border-bottom-color:var(--cedar)}
+  @media (max-width:560px){ .letterhead nav{display:none} }
 
-  /* ---------------- conversation ----------------------------------------- */
+  /* The identity rule: cedar green, broken by the ministry's red. */
+  .band{height:2px; background:var(--cedar); position:relative}
+  .band::after{content:""; position:absolute; inset-block:0; inset-inline-start:0;
+               width:84px; background:var(--seal)}
+
+  /* ---- record ----------------------------------------------------------- */
   #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain}
-  #log{display:flex; flex-direction:column; gap:22px; padding-block:26px 8px}
+  #log{display:flex; flex-direction:column; padding-block:30px 10px}
 
   .m{max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere}
-  /* The reader's own words sit in a quiet well; the service answers in plain
-     type at full measure, the way a document speaks. */
+  .m + .m{margin-top:26px}
+
+  /* The reader's question: indented, ruled on the leading edge — a margin note.
+     Not a bubble; bubbles make a ministry read as a chat app. */
   .m.u{
-    background:var(--raised); border-radius:16px; padding:11px 16px;
-    max-width:84%; margin-inline-start:auto; color:var(--ink);
+    color:var(--ink-2); font-size:16px;
+    padding:4px 15px; margin-inline-start:auto; max-width:82%;
+    border-inline-start:2px solid var(--rule);
+    background:var(--paper-2);
   }
-  .m.b{color:var(--ink)}
-  .m.sys{
-    color:var(--muted); font-size:14px; text-align:center;
-    border-block:1px solid var(--line-soft); padding-block:12px;
+  /* The answer: full measure, plain, with a cedar tick in the margin. */
+  .m.b{position:relative; padding-inline-start:19px}
+  .m.b::before{
+    content:""; position:absolute; inset-inline-start:0; top:.72em;
+    width:7px; height:7px; background:var(--cedar);
+    clip-path:polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   }
-  .m.enter{animation:settle .32s cubic-bezier(.2,.6,.3,1) both}
-  @keyframes settle{from{opacity:0; transform:translateY(6px)}}
+  .m.sys{color:var(--quiet); font-size:15px; text-align:center;
+         border-block:1px solid var(--rule-soft); padding-block:14px}
+  .m.enter{animation:settle .34s var(--swift) both}
+  @keyframes settle{from{opacity:0; transform:translateY(5px)}}
 
-  .badge{
-    display:inline-block; font-size:11.5px; font-weight:700; letter-spacing:.02em;
-    padding:2px 8px; border-radius:4px; margin-bottom:8px;
+  .flag{
+    display:inline-block; font-size:13px; font-weight:600;
+    padding:1px 9px; margin-bottom:7px;
+    border-inline-start:3px solid currentColor;
   }
-  .badge.emergency{background:var(--red-soft); color:var(--red)}
-  .badge.refused,.badge.unanswered{background:var(--amber-soft); color:var(--amber)}
+  .flag.emergency{background:var(--seal-wash); color:var(--seal)}
+  .flag.refused,.flag.unanswered{background:var(--amber-wash); color:var(--amber)}
 
-  .srcs{
-    margin-top:14px; padding-top:11px; border-top:1px solid var(--line);
-    display:flex; flex-direction:column; gap:7px;
+  /* Reference line — reads like a citation on a record, so no label above it. */
+  .srcs{margin-top:15px; padding-top:10px; border-top:1px solid var(--rule-soft);
+        display:flex; flex-direction:column; gap:5px}
+  .src{font-size:14.5px; line-height:1.6; color:var(--quiet)}
+  .src a{color:var(--cedar); text-decoration:none;
+         border-bottom:1px solid var(--rule); transition:border-color .2s var(--swift)}
+  .src a:hover{border-bottom-color:var(--cedar)}
+  .src .when{font-size:13.5px}
+
+  .typing{display:flex; gap:5px; align-items:center; height:26px; padding-inline-start:19px}
+  .typing i{width:5px; height:5px; border-radius:50%; background:var(--quiet);
+            opacity:.3; animation:bob 1.3s var(--swift) infinite}
+  .typing i:nth-child(2){animation-delay:.16s}
+  .typing i:nth-child(3){animation-delay:.32s}
+  @keyframes bob{30%{opacity:.85; transform:translateY(-3px)}}
+
+  /* ---- opening: the seal ------------------------------------------------ */
+  #open{padding-block:9vh 0; position:relative}
+  /* Blind emboss: the cedar pressed into the paper rather than printed on it. */
+  .seal{
+    position:absolute; inset-block-start:5vh; inset-inline-end:-18px;
+    width:188px; height:188px; pointer-events:none;
+    fill:var(--ink); opacity:.032;
   }
-  .srcs-h{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
-  .src{font-size:13.5px; display:flex; gap:7px; align-items:baseline; flex-wrap:wrap; line-height:1.5}
-  .src a{color:var(--green); text-decoration:none; border-bottom:1px solid var(--line)}
-  .src a:hover{border-bottom-color:var(--green)}
-  .src .when{color:var(--muted); font-size:12px}
-
-  .typing{display:flex; gap:5px; align-items:center; height:24px}
-  .typing i{width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.35; animation:bob 1.25s ease-in-out infinite}
-  .typing i:nth-child(2){animation-delay:.15s}
-  .typing i:nth-child(3){animation-delay:.3s}
-  @keyframes bob{30%{opacity:.9; transform:translateY(-3px)}}
-
-  /* ---------------- opening state ---------------------------------------- */
-  #hero{padding-block:11vh 0; text-align:center}
-  #hero .cedar-lg{width:46px; height:46px; fill:var(--green); margin-inline:auto; display:block}
-  #hero h1{font-size:30px; font-weight:700; margin:18px 0 6px; letter-spacing:-.3px}
-  #hero p{margin:0 auto; color:var(--muted); font-size:15px; max-width:34rem}
-  .suggest{display:grid; gap:9px; margin-top:30px; text-align:start}
-  @media (min-width:620px){ .suggest{grid-template-columns:1fr 1fr} }
-  .sg{
-    font:inherit; font-size:14.5px; color:var(--ink-2); cursor:pointer;
-    background:var(--page); border:1px solid var(--line); border-radius:12px;
-    padding:13px 15px; text-align:start; line-height:1.45;
-    transition:border-color .18s ease, background .18s ease;
+  #open h1{
+    font-size:clamp(30px, 7vw, 44px); font-weight:600; line-height:1.3;
+    margin:0 0 14px; letter-spacing:-.01em; max-width:19ch;
   }
-  .sg:hover{border-color:var(--green); background:var(--raised)}
-
-  /* ---------------- composer --------------------------------------------- */
-  .composer{flex:none; background:var(--page); padding-bottom:calc(10px + env(safe-area-inset-bottom))}
-  .well{
-    display:flex; align-items:flex-end; gap:8px;
-    border:1px solid var(--line); border-radius:18px; background:var(--page);
-    padding:7px 7px 7px 14px; transition:border-color .18s ease, box-shadow .18s ease;
+  #open .lede{margin:0; color:var(--quiet); font-size:16.5px; max-width:36ch}
+  .examples{margin-top:34px; border-top:1px solid var(--rule)}
+  .ex{
+    display:block; width:100%; font:inherit; font-size:16px; cursor:pointer;
+    background:none; border:0; border-bottom:1px solid var(--rule-soft);
+    color:var(--ink-2); text-align:start; padding:14px 2px 14px 0;
+    transition:color .22s var(--swift), padding .28s var(--swift),
+               background .22s var(--swift);
   }
-  .well:focus-within{border-color:var(--green); box-shadow:0 0 0 3px color-mix(in oklab, var(--green) 12%, transparent)}
+  .ex:hover{color:var(--cedar); padding-inline-start:10px; background:var(--paper-2)}
+  .ex:active{padding-inline-start:6px}
+
+  /* ---- composer --------------------------------------------------------- */
+  .composer{flex:none; background:var(--paper); border-top:1px solid var(--rule)}
+  .well{display:flex; align-items:flex-end; gap:10px; padding-block:12px}
   #t{
     flex:1; border:0; outline:0; background:transparent; color:var(--ink);
-    font:inherit; resize:none; padding:9px 2px; max-height:168px; min-height:24px;
-    line-height:1.6;
+    font:inherit; resize:none; padding:7px 0; max-height:170px; min-height:26px;
+    line-height:1.7;
   }
-  #t::placeholder{color:var(--muted)}
+  #t::placeholder{color:var(--quiet); opacity:.85}
   #send{
-    width:36px; height:36px; flex:none; border:0; border-radius:10px; cursor:pointer;
-    background:var(--green); color:#fff; display:grid; place-items:center;
-    transition:opacity .18s ease, background .18s ease;
+    width:40px; height:40px; flex:none; border:0; cursor:pointer;
+    background:var(--cedar); color:var(--paper); display:grid; place-items:center;
+    transition:background .22s var(--swift), opacity .22s var(--swift), transform .22s var(--swift);
   }
-  #send:hover:not(:disabled){background:var(--green-deep)}
-  #send:disabled{opacity:.3; cursor:default}
-  #send svg{width:16px; height:16px; fill:currentColor; display:block}
-  .legal{
-    font-size:11.5px; color:var(--muted); text-align:center;
-    padding:9px 0 2px; line-height:1.5;
+  #send:hover:not(:disabled){background:var(--cedar-deep)}
+  #send:active:not(:disabled){transform:scale(.94)}
+  #send:disabled{opacity:.28; cursor:default}
+  #send svg{width:17px; height:17px; fill:currentColor; display:block}
+  .standing{
+    font-size:13.5px; color:var(--quiet); line-height:1.6;
+    padding-bottom:calc(11px + env(safe-area-inset-bottom));
   }
-  .legal b{color:var(--red); font-weight:700}
+  .standing b{color:var(--seal); font-weight:700}
 
-  .chips{display:flex; flex-wrap:wrap; gap:8px; padding-block:14px 0}
-  .chip{
-    font:inherit; font-size:13.5px; color:var(--ink-2); cursor:pointer;
-    background:var(--page); border:1px solid var(--line); border-radius:999px;
-    padding:6px 13px; transition:border-color .18s ease, color .18s ease;
+  .more{display:flex; gap:20px; padding-block:16px 0; font-size:14.5px}
+  .more button{
+    font:inherit; background:none; border:0; cursor:pointer; color:var(--ink-2);
+    padding:0 0 2px; border-bottom:1px solid var(--rule);
+    transition:color .2s var(--swift), border-color .2s var(--swift);
   }
-  .chip:hover{border-color:var(--green); color:var(--green)}
+  .more button:hover{color:var(--cedar); border-bottom-color:var(--cedar)}
 
-  :is(button,a,textarea):focus-visible{outline:2px solid var(--green); outline-offset:2px}
+  :is(button,a,textarea):focus-visible{outline:2px solid var(--cedar); outline-offset:3px}
 
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
@@ -188,43 +208,40 @@
 </style>
 </head>
 <body>
-<!-- One cedar, defined once, referenced wherever it is needed. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="cedar" viewBox="0 0 64 64">
   <path d="M32 3 L21.5 17h5.5L18.5 29h6L10 43h18.5v18h7V43H54L39.5 29h6L37 17h5.5Z"/>
 </symbol></svg>
 
 <div id="app">
-  <div class="masthead">
+  <div class="letterhead">
     <div class="col lockup">
       <svg class="cedar" aria-hidden="true"><use href="#cedar"/></svg>
       <div class="titles">
         <span class="t-state" lang="en">Republic of Lebanon</span>
         <span class="t-ministry" lang="en">Ministry of Public Health</span>
       </div>
-      <div class="rule" aria-hidden="true"></div>
-      <div class="service">
-        <b>دليل <span style="font-weight:600">· Daleel</span></b>
-        <span>مساعد المعلومات الصحية</span>
-      </div>
+      <div class="vrule" aria-hidden="true"></div>
+      <span class="svc">دليل</span>
       <div class="grow"></div>
-      <nav class="navlinks">
+      <nav>
         <a href="/join">واتساب</a>
-        <a href="/dashboard">لوحة المعلومات</a>
+        <a href="/dashboard">الإحصاءات</a>
       </nav>
     </div>
+    <div class="band" aria-hidden="true"></div>
   </div>
 
   <div id="scroll">
     <div class="col">
-      <section id="hero">
-        <svg class="cedar-lg" aria-hidden="true"><use href="#cedar"/></svg>
-        <h1>كيف يمكننا مساعدتك؟</h1>
-        <p dir="auto" class="bidi">اسأل عن الإجراءات الرسمية، الصيدليات والمستشفيات الحكومية، أسعار الأدوية، أو الخطوط الساخنة. اكتب بالعربية أو بالـArabizi أو بالفرنسية أو بالإنكليزية.</p>
-        <div class="suggest" id="suggest"></div>
+      <section id="open">
+        <svg class="seal" aria-hidden="true"><use href="#cedar"/></svg>
+        <h1>اسأل عن أي معاملة أو دواء أو مستشفى</h1>
+        <p class="lede">اكتب بالعربية، بالعامية المكتوبة بالأحرف اللاتينية، بالفرنسية أو بالإنكليزية. نجيب من المصادر الرسمية فقط.</p>
+        <div class="examples" id="examples"></div>
       </section>
 
       <div id="log" role="log" aria-live="polite" aria-label="المحادثة"></div>
-      <div class="chips" id="quick"></div>
+      <div class="more" id="more"></div>
     </div>
   </div>
 
@@ -234,14 +251,14 @@
         <label class="sr" for="t">اكتب سؤالك</label>
         <div class="well">
           <textarea id="t" rows="1" dir="auto" class="bidi" enterkeyhint="send"
-                    placeholder="اسأل سؤالك…"></textarea>
+                    placeholder="اكتب سؤالك هنا"></textarea>
           <button id="send" type="submit" aria-label="إرسال">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l15-7-4.5 7L19 19z"/></svg>
           </button>
         </div>
       </form>
-      <p class="legal" dir="auto">
-        معلومات رسمية فقط — لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل <b><bdi dir="ltr">140</bdi></b>.
+      <p class="standing" dir="auto">
+        معلومات رسمية فقط. لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل بالرقم <b><bdi dir="ltr">140</bdi></b>.
       </p>
     </div>
   </div>
@@ -254,7 +271,7 @@ const log     = document.getElementById("log");
 const scroller= document.getElementById("scroll");
 const input   = document.getElementById("t");
 const sendBtn = document.getElementById("send");
-const hero    = document.getElementById("hero");
+const opening = document.getElementById("open");
 
 let hotlines = [];
 let busy = false;
@@ -281,8 +298,8 @@ async function userRef(){
   return ref;
 }
 
-/* ---------- rendering ----------------------------------------------------- */
-function bubble(who){
+/* ---------- entries ------------------------------------------------------- */
+function entry(who){
   const d = document.createElement("div");
   d.className = "m " + who + " bidi" + (CALM ? "" : " enter");
   d.setAttribute("dir","auto");          // per-message direction detection
@@ -292,26 +309,26 @@ function bubble(who){
 }
 
 function say(text, who){
-  const d = bubble(who);
+  const d = entry(who);
   d.textContent = text;                   // textContent: never inject markup
   scrollDown();
   return d;
 }
 
-const BADGES = {
+const FLAGS = {
   emergency:  "طوارئ",
   refused:    "لا نصائح طبية",
   unanswered: "لا يوجد مصدر رسمي",
 };
 
 function showAnswer(a){
-  const d = bubble("b");
+  const d = entry("b");
 
-  if (BADGES[a.outcome]){
-    const b = document.createElement("span");
-    b.className = "badge " + a.outcome;
-    b.textContent = BADGES[a.outcome];
-    d.appendChild(b);
+  if (FLAGS[a.outcome]){
+    const f = document.createElement("span");
+    f.className = "flag " + a.outcome;
+    f.textContent = FLAGS[a.outcome];
+    d.appendChild(f);
     d.appendChild(document.createElement("br"));
   }
 
@@ -326,11 +343,6 @@ function showAnswer(a){
   if (srcs.length || isDir){
     const wrap = document.createElement("div");
     wrap.className = "srcs";
-    const h = document.createElement("div");
-    h.className = "srcs-h";
-    h.textContent = "المصدر";
-    wrap.appendChild(h);
-
     const seen = new Set();
     for (const s of srcs){
       if (seen.has(s.url)) continue;
@@ -338,6 +350,7 @@ function showAnswer(a){
       const row = document.createElement("div");
       row.className = "src bidi";
       row.setAttribute("dir","auto");
+      row.appendChild(document.createTextNode("المصدر: "));
 
       const link = document.createElement("a");
       link.href = s.url;                  // href only; text is set separately
@@ -349,12 +362,11 @@ function showAnswer(a){
       if (s.checked_on){
         const when = document.createElement("span");
         when.className = "when";
-        when.appendChild(document.createTextNode("("));
+        when.appendChild(document.createTextNode("، روجع في "));
         const d2 = document.createElement("bdi");
         d2.dir = "ltr";
         d2.textContent = s.checked_on;
         when.appendChild(d2);
-        when.appendChild(document.createTextNode(")"));
         row.appendChild(when);
       }
       wrap.appendChild(row);
@@ -387,7 +399,7 @@ function typing(on){
     el.id = "typing";
     el.className = "m b typing";
     el.innerHTML = "<i></i><i></i><i></i>";
-    el.setAttribute("aria-label","يكتب…");
+    el.setAttribute("aria-label","يكتب");
     log.appendChild(el);
     scrollDown();
   } else if (!on && el){
@@ -395,50 +407,47 @@ function typing(on){
   }
 }
 
-/* ---------- openers and follow-ups ---------------------------------------
-   Written in four languages on purpose: the first screen has to show that
-   mixing them is expected, without a language picker telling you to choose. */
-const STARTERS = [
-  { label:"كيف أجدّد دفتر الدواء المزمن؟",      text:"كيف أجدّد دفتر الدواء المزمن؟" },
-  { label:"أقرب صيدلية في عاليه",               text:"أقرب صيدلية في عاليه" },
-  { label:"kif 2a2dar la2i mosta2fa 7koume?",   text:"kif 2a2dar la2i mosta2fa 7koume 2arib?" },
-  { label:"Combien coûte le Concor 5 ?",        text:"combien coûte le Concor 5?" },
+/* ---------- openers -------------------------------------------------------
+   Four languages on the first screen, because showing that mixing is expected
+   works better than a picker telling the reader to choose one. */
+const EXAMPLES = [
+  "كيف أجدّد دفتر الدواء المزمن؟",
+  "أقرب صيدلية في عاليه",
+  "kif 2a2dar la2i mosta2fa 7koume 2arib?",
+  "Combien coûte le Concor 5 ?",
 ];
 
 function openers(){
-  const bar = document.getElementById("suggest");
+  const bar = document.getElementById("examples");
   bar.textContent = "";
-  for (const it of STARTERS){
+  for (const text of EXAMPLES){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "sg bidi";
+    b.type = "button"; b.className = "ex bidi";
     b.setAttribute("dir","auto");
-    b.textContent = it.label;
-    b.addEventListener("click", () => send(it.text));
+    b.textContent = text;
+    b.addEventListener("click", () => send(text));
     bar.appendChild(b);
   }
 }
 
 function followUps(){
-  const bar = document.getElementById("quick");
+  const bar = document.getElementById("more");
   bar.textContent = "";
-  for (const it of [{ label:"سؤال آخر", act:"another" },
-                    { label:"تحدث مع شخص", act:"human" }]){
+  const items = [["اسأل سؤالاً آخر", () => { bar.textContent = ""; input.focus(); }],
+                 ["أرقام الطوارئ", showHotlines]];
+  for (const [label, fn] of items){
     const b = document.createElement("button");
-    b.type = "button"; b.className = "chip";
-    b.textContent = it.label;
-    b.addEventListener("click", () => {
-      if (it.act === "another"){ bar.textContent = ""; input.focus(); return; }
-      showHotlines();
-    });
+    b.type = "button"; b.textContent = label;
+    b.addEventListener("click", fn);
     bar.appendChild(b);
   }
 }
 
 function showHotlines(){
-  const d = bubble("b");
+  const d = entry("b");
   const head = document.createElement("div");
   head.className = "bidi"; head.setAttribute("dir","auto");
-  head.textContent = "الخطوط الساخنة";
+  head.textContent = "أرقام الطوارئ والخطوط الساخنة";
   d.appendChild(head);
 
   const list = document.createElement("div");
@@ -456,19 +465,17 @@ function showHotlines(){
     num.dir = "ltr"; num.textContent = h.number;
     a.appendChild(num);
     row.appendChild(a);
-    const txt = document.createElement("span");
-    txt.textContent = " — " + h.name + " · " + h.purpose;
-    row.appendChild(txt);
+    row.appendChild(document.createTextNode(" — " + h.name + "، " + h.purpose));
     list.appendChild(row);
   }
   d.appendChild(list);
   scrollDown();
 }
 
-/* ---------- composer behaviour ------------------------------------------- */
+/* ---------- composer ------------------------------------------------------ */
 function autoGrow(){
   input.style.height = "auto";
-  input.style.height = Math.min(input.scrollHeight, 168) + "px";
+  input.style.height = Math.min(input.scrollHeight, 170) + "px";
 }
 input.addEventListener("input", autoGrow);
 input.addEventListener("keydown", (e) => {
@@ -481,8 +488,8 @@ async function send(text){
   const q = (text || input.value).trim();
   if (!q) return;
 
-  if (!started){ started = true; hero.remove(); }
-  document.getElementById("quick").textContent = "";
+  if (!started){ started = true; opening.remove(); }
+  document.getElementById("more").textContent = "";
 
   say(q, "u");
   input.value = ""; autoGrow();
@@ -502,10 +509,11 @@ async function send(text){
     followUps();
   } catch (err){
     typing(false);
-    const d = say("تعذّر الاتصال بالخدمة. حاول مرة أخرى.", "sys");
+    const d = say("الخدمة غير متاحة الآن. تحقق من اتصالك ثم أعد المحاولة.", "sys");
     const retry = document.createElement("button");
-    retry.type = "button"; retry.className = "chip"; retry.textContent = "إعادة المحاولة";
-    retry.style.marginTop = "8px";
+    retry.type = "button"; retry.textContent = "أعد المحاولة";
+    retry.style.cssText = "font:inherit;background:none;border:0;cursor:pointer;"
+      + "color:var(--cedar);border-bottom:1px solid var(--rule);margin-top:8px;padding:0 0 2px";
     retry.addEventListener("click", () => { retry.remove(); send(q); });
     d.appendChild(document.createElement("br"));
     d.appendChild(retry);

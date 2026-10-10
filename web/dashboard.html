@@ -56,7 +56,9 @@
   *{box-sizing:border-box}
   body{
     margin:0; background:var(--page); color:var(--text-primary);
-    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Arabic",sans-serif;
+    /* one stack, restated in the editorial block below for the whole page */
+    font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
+                "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
     font-size:15px; line-height:1.5;
   }
   .wrap{max-width:1060px; margin:0 auto; padding:20px 16px 56px}
@@ -194,6 +196,101 @@
   }
   .provenance b{color:var(--text-secondary); font-weight:600}
 
+  /* ===== editorial pass ====================================================
+     A ministry statistics page should read as a published return, not as a
+     product dashboard. Everything below removes the card kit — identical
+     rounded panels, one radius, the same soft shadow under each — and replaces
+     it with ruled bands and figures carrying the hierarchy. The chart palette
+     further up is CVD-validated and still untouched. */
+  :root{
+    --paper:#FCFCFA; --paper-2:#F4F3EE; --rule-2:#DFDCD3; --rule-soft:#EBE9E2;
+    --ink-1:#221F1A; --ink-2:#4A453D; --quiet:#6B655C;
+    --swift:cubic-bezier(.2,.65,.3,1);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14130F; --paper-2:#1D1B16; --rule-2:#302D26; --rule-soft:#23211B;
+      --ink-1:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14130F; --paper-2:#1D1B16; --rule-2:#302D26; --rule-soft:#23211B;
+    --ink-1:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
+  }
+
+  body{
+    background:var(--paper); color:var(--ink-1);
+    font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
+                "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
+    font-size:16px; line-height:1.75; font-variant-numeric:tabular-nums;
+  }
+  .wrap{max-width:62rem}
+
+  .masthead{border-bottom:0; padding-bottom:12px}
+  .cedar{fill:var(--moph-green)}
+  .titles span{font-family:"Iowan Old Style",Palatino,Georgia,serif; font-size:10px; letter-spacing:.11em}
+  .band{height:2px; background:var(--moph-green); position:relative;
+        margin:0 -16px 0; }
+  .band::after{content:""; position:absolute; inset-block:0; inset-inline-start:0;
+               width:84px; background:var(--moph-red)}
+  .lockup .svc{font-size:16px; font-weight:600}
+
+  header.top{padding-top:26px; margin-bottom:4px}
+  header.top h1{font-size:27px; font-weight:600; letter-spacing:-.01em; color:var(--ink-1)}
+  header.top .tagline{color:var(--quiet); font-size:15px}
+  .btn{
+    font:inherit; font-size:14px; border-radius:0; background:none;
+    border:0; border-bottom:1px solid var(--rule-2); color:var(--ink-2);
+    padding:2px 0; transition:color .2s var(--swift), border-color .2s var(--swift);
+  }
+  .btn:hover{color:var(--moph-green); border-bottom-color:var(--moph-green)}
+
+  .provenance{color:var(--quiet); font-size:13.5px; border-bottom:1px solid var(--rule-2)}
+  .provenance b{color:var(--ink-2); font-weight:600}
+
+  /* Figures carry the hierarchy: the headline number is set large, the rest
+     step down sharply. No panel around any of them. */
+  .kpis{
+    display:grid; gap:0; margin:0 0 30px;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));
+    border-bottom:1px solid var(--rule-2);
+  }
+  .tile{
+    background:none; border:0; border-radius:0; padding:22px 20px 20px;
+    border-inline-start:1px solid var(--rule-soft);
+  }
+  .tile:first-child{border-inline-start:0; padding-inline-start:0}
+  .tile .label{color:var(--quiet); font-size:14px}
+  .tile .value{font-size:40px; font-weight:600; letter-spacing:-.025em; line-height:1.1; margin-top:6px}
+  .tile.hero .value{font-size:60px}
+  .tile .note{color:var(--quiet); font-size:13px}
+  .meter{height:3px; border-radius:0; background:var(--rule-soft)}
+  .meter > span{border-radius:0}
+
+  .card{
+    background:none; border:0; border-radius:0; box-shadow:none;
+    padding:26px 0 24px; margin:0;
+    border-top:1px solid var(--rule-soft);
+  }
+  .card h2{font-size:19px; font-weight:600; color:var(--ink-1); margin-bottom:3px}
+  .card .sub{color:var(--quiet); font-size:14px; margin-bottom:18px}
+  .two{gap:0 38px}
+  .two > .card{border-top:1px solid var(--rule-soft)}
+
+  .row .name{font-size:15px; color:var(--ink-2)}
+  .row .val{font-size:15px; color:var(--ink-1)}
+  .bar{border-radius:0}
+  .track{background:none}
+  th,td{border-bottom:1px solid var(--rule-soft); font-size:14.5px}
+  th{color:var(--quiet); font-weight:600; font-size:13.5px; letter-spacing:0; text-transform:none}
+  summary{font-size:14px; color:var(--quiet)}
+  .banner{border-radius:0; border:0; border-inline-start:3px solid var(--moph-green);
+          background:var(--paper-2); color:var(--ink-2); font-size:14.5px}
+  .banner.mock{border-inline-start-color:var(--moph-red)}
+  .foot{color:var(--quiet); font-size:13px; border-top:1px solid var(--rule-2); padding-top:16px}
+  .foot a{color:var(--moph-green)}
+  #tip{border-radius:0; font-family:inherit}
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
   }
@@ -212,11 +309,12 @@
       <span class="t-ministry">Ministry of Public Health</span>
     </div>
     <div class="vrule" aria-hidden="true"></div>
-    <span class="svc">Daleel · دليل</span>
+    <span class="svc">دليل</span>
     <div class="grow"></div>
-    <a href="/">Chat service</a>
+    <a href="/">Open the chat service</a>
   </div>
 </div>
+<div class="band" aria-hidden="true"></div>
 
 <div class="wrap">
   <header class="top">
