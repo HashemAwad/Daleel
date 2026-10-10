@@ -127,6 +127,7 @@
   .ex:hover{border-color:var(--olive); color:var(--olive)}
   .ex .script{font-size:14px; font-weight:700; color:var(--olive)}
   .ex .q{unicode-bidi:isolate; overflow-wrap:anywhere; min-width:0}
+  @media (min-width:1500px){ :root{--measure:52rem} }
   @media (max-width:640px){ .examples{grid-template-columns:minmax(0,1fr); gap:16px} #open{padding-block:44px 16px} .ex{min-height:84px} }
 
   /* ---- conversation ----------------------------------------------------- */
@@ -568,6 +569,7 @@ function openers(){
     // isolated, not plaintext: the Arabic row starts in the same column as the others
     const q = document.createElement("span");
     q.className = "q";
+    q.dir = "auto";                 // each question orders its own punctuation ("?" stays at the end of Latin text)
     q.textContent = ex.text;
     b.appendChild(tag); b.appendChild(q);
     b.addEventListener("click", () => send(ex.text));
