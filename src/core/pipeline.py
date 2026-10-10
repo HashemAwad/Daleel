@@ -4,6 +4,7 @@ transcribe (voice) -> safety -> redact -> route -> ground -> Answer.
 Nothing reaches the model before redaction; nothing leaves without tool support.
 """
 from __future__ import annotations
+import re
 import httpx
 from shared.contracts import Inquiry, Answer, Source, ToolResult
 from core import safety, router, providers, memory
@@ -70,6 +71,7 @@ def _handle(inq: Inquiry) -> Answer:
             return Answer(text=rendered, sources=_sources(result), tool=result.tool,
                           grounded=True, outcome="answered", lang=inq.lang)
         return _fallback(inq)
+    text = _strip_unsourced_urls(text, result)   # A17: no made-up links
     return Answer(text=text, sources=_sources(result), tool=result.tool,
                   grounded=True, outcome="answered", lang=inq.lang)
 
@@ -83,6 +85,24 @@ def _apply_pending_town(inq: Inquiry) -> Inquiry:
     if prev and len(inq.text.split()) <= 4 and router._resolve_caza(inq.text):
         return inq.model_copy(update={"text": f"{prev} {inq.text}"})
     return inq
+
+
+# ---- A17: strip any URL the model invented ---------------------------------
+_URL_RE = re.compile(r"https?://[^\s)>\]]+")
+
+
+def _strip_unsourced_urls(text: str, result: ToolResult) -> str:
+    """Remove any link the model emitted that isn't a real source from the
+    retrieved records. Facilities/medicines have no source URLs, so every link
+    is dropped there; procedures keep only their actual source link. The true
+    source is still attached via Answer.sources regardless."""
+    allowed = {d.source.url for d in result.docs if d.source}
+
+    def repl(m: re.Match) -> str:
+        return m.group(0) if m.group(0).rstrip(".,);:،") in allowed else ""
+
+    cleaned = _URL_RE.sub(repl, text)
+    return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
 
 
 # ---- model-less rendering (robustness: answer from facts if the LLM is down) ----

@@ -50,6 +50,27 @@ def test_model_routing_falls_back_on_error(monkeypatch):
     assert router.choose_tool(_inq("nearest pharmacy")) == "directory"  # keyword fallback
 
 
+# ---- A17: strip invented source URLs --------------------------------------
+def test_strip_invented_url_on_facilities():
+    from core import pipeline
+    from shared.contracts import ToolResult, Facility
+    res = ToolResult(tool="directory", facilities=[Facility(id="1", name="X Pharmacy", type="pharmacy")])
+    out = pipeline._strip_unsourced_urls("Nearest is X Pharmacy. Source: https://fake-pharmacy.com", res)
+    assert "http" not in out            # facilities have no source -> link dropped
+
+
+def test_keep_real_procedure_source_url():
+    from core import pipeline
+    from shared.contracts import ToolResult, Doc, Source
+    real = "https://moph.gov.lb/real-page"
+    res = ToolResult(tool="procedure",
+                     docs=[Doc(id="1", title="T", content="c", source=Source(title="T", url=real))])
+    kept = pipeline._strip_unsourced_urls(f"Steps... source: {real}", res)
+    fake = pipeline._strip_unsourced_urls("Steps... source: https://made-up.example", res)
+    assert real in kept                 # the genuine source survives
+    assert "made-up" not in fake        # an invented one is removed
+
+
 # ---- 0.3: follow-up town memory -------------------------------------------
 def test_pending_town_followup_stitches_question(monkeypatch):
     from core import memory, pipeline
