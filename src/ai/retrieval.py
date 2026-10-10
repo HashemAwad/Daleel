@@ -7,6 +7,7 @@ Never log exception messages or query text from here (Postgres errors can echo r
 """
 from __future__ import annotations
 
+import os
 from typing import Callable, Optional
 
 from data.db import get_conn
@@ -25,15 +26,27 @@ def count_procedures() -> int:
         return conn.execute("SELECT count(*) AS n FROM procedures").fetchone()["n"]
 
 
+# bge-m3 cosine similarity. Measured on the PHC FAQ page: off-topic questions (capital of
+# France, recipes, weather; AR/FR/EN) score 0.26-0.32, on-topic ones 0.44-0.54. Re-check this
+# when more pages are ingested. Override with PROCEDURE_MIN_SCORE.
+DEFAULT_MIN_SCORE = 0.38
+
+
 class ProcedureSearchImpl:
     """Implements shared.contracts.ProcedureSearch.
 
     `lang` is accepted for the contract but NOT used as a filter: bge-m3 is multilingual,
     so Arabizi / French / English queries should match Arabic pages and vice versa.
+
+    Results scoring below `min_score` are dropped, so an off-topic question returns [] and
+    core's grounding gate falls back to the hotline instead of answering from a weak match.
     """
 
-    def __init__(self, embed: Optional[Callable[[list[str]], list[list[float]]]] = None):
+    def __init__(self, embed: Optional[Callable[[list[str]], list[list[float]]]] = None,
+                 min_score: Optional[float] = None):
         self._embed = embed
+        self._min_score = (min_score if min_score is not None
+                           else float(os.getenv("PROCEDURE_MIN_SCORE", DEFAULT_MIN_SCORE)))
 
     def search(self, query: str, lang: Optional[Lang] = None, k: int = 4) -> list[Doc]:
         import numpy as np
@@ -54,7 +67,7 @@ class ProcedureSearchImpl:
                     score=float(r["score"]),
                     source=Source(title=r["title"], url=r["url"],
                                   checked_on=r["checked_on"].isoformat() if r["checked_on"] else None))
-                for r in rows]
+                for r in rows if float(r["score"]) >= self._min_score]
 
 
 if __name__ == "__main__":

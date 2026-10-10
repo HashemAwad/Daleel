@@ -31,7 +31,7 @@ def _rows():
 
 
 def test_nearest_doc_first_with_source_and_score():
-    docs = retrieval.ProcedureSearchImpl(embed=_fake_embed).search("alpha", k=2)
+    docs = retrieval.ProcedureSearchImpl(embed=_fake_embed, min_score=0.0).search("alpha", k=2)
     assert docs[0].title == "Title A"
     assert docs[0].source.url == URLS[0] and docs[0].source.checked_on
     assert docs[0].lang == "en"
@@ -40,10 +40,18 @@ def test_nearest_doc_first_with_source_and_score():
 
 
 def test_k_limits_results():
-    assert len(retrieval.ProcedureSearchImpl(embed=_fake_embed).search("alpha", k=1)) == 1
+    assert len(retrieval.ProcedureSearchImpl(embed=_fake_embed, min_score=0.0).search("alpha", k=1)) == 1
 
 
 def test_lang_does_not_filter():
     """Arabizi/FR queries must still match AR/EN pages."""
-    docs = retrieval.ProcedureSearchImpl(embed=_fake_embed).search("beta", lang="arabizi", k=1)
+    docs = retrieval.ProcedureSearchImpl(embed=_fake_embed, min_score=0.0).search("beta", lang="arabizi", k=1)
     assert docs[0].title == "Title B"
+
+
+
+def test_weak_matches_are_dropped():
+    """Off-topic query (orthogonal vector, score 0) returns nothing at the default cutoff."""
+    assert retrieval.ProcedureSearchImpl(embed=lambda t: [_vec(5) for _ in t]).search("france") == []
+    docs = retrieval.ProcedureSearchImpl(embed=_fake_embed).search("alpha", k=2)
+    assert [d.title for d in docs] == ["Title A"]      # Title B scores 0 -> dropped
