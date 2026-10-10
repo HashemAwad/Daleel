@@ -5,7 +5,8 @@ widget and the dashboard need around it:
 
     GET /api/session        mint an opaque session id for a new browser
     GET /api/hotlines       the hotline list, so numbers aren't hardcoded in HTML
-    GET /health/channels    demo-time diagnostics (what's wired, what isn't)
+    GET /health/channels    demo-time diagnostics (what's wired, what isn't);
+                            also the deploy's stub guard — see A20 note below
     GET /dashboard, /join   serve the other two pages in /web
 """
 from __future__ import annotations
@@ -40,8 +41,20 @@ def hotlines() -> dict:
 
 @router.get("/health/channels")
 def channel_health() -> JSONResponse:
-    """Is each channel actually wired? Used by the widget's status dot and by
-    us on stage to see at a glance what is live."""
+    """Is each channel actually wired? Read on stage to see what is live.
+
+    No page fetches this — the widget has no status dot. The consumers are
+    `tests/test_channels.py` and `infra/vm_setup.sh`, which greps the response
+    for `"Stub` and fails the deploy when a provider silently fell back to a
+    fake one (open item A19).
+
+    That grep is why the `providers` block is still public, which open item A20
+    wants closed along with `/docs` and `/openapi.json`. Narrowing it needs the
+    matching change in `vm_setup.sh` (D) in the same breath, or the deploy stops
+    catching stubs and nobody notices. Behind the server's reverse proxy every
+    request arrives from 127.0.0.1, so a loopback check would not gate anything
+    — it needs a token.
+    """
     from core import providers
 
     whatsapp_ready = bool(settings.twilio_auth_token and settings.public_base_url)
