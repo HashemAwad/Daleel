@@ -469,6 +469,24 @@ function entry(who){
   return d;
 }
 
+/* Render text, turning any http(s) URL into a clickable link. Builds DOM nodes
+   (never innerHTML) so it stays injection-safe. Maps links show as "🗺️ map". */
+function linkify(el, text){
+  el.textContent = "";
+  const re = /(https?:\/\/[^\s]+)/g;
+  let last = 0, m;
+  while ((m = re.exec(text))){
+    if (m.index > last) el.appendChild(document.createTextNode(text.slice(last, m.index)));
+    const url = m[0].replace(/[.,،]+$/, "");
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.textContent = url.includes("google.com/maps") ? "🗺️ خريطة · map" : url;
+    el.appendChild(a);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
+}
+
 function say(text, who){
   const d = entry(who);
   d.textContent = text;                   // textContent: never inject markup
@@ -490,7 +508,7 @@ function showAnswer(a){
   const body = document.createElement("span");
   body.setAttribute("dir","auto");
   body.className = "bidi";
-  body.textContent = a.text || "";
+  linkify(body, a.text || "");          // URLs (e.g. Google Maps) become clickable
   d.appendChild(body);
 
   const srcs = (a.sources || []).filter(s => s && s.url);

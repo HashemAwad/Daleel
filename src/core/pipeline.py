@@ -5,8 +5,9 @@ Nothing reaches the model before redaction; nothing leaves without tool support.
 """
 from __future__ import annotations
 import re
+import urllib.parse
 import httpx
-from shared.contracts import Inquiry, Answer, Source, ToolResult
+from shared.contracts import Inquiry, Answer, Source, ToolResult, Facility
 from core import safety, router, providers, memory
 from core.prompts import SYSTEM_PROMPT, build_context
 from data import transcripts
@@ -72,6 +73,7 @@ def _handle(inq: Inquiry) -> Answer:
                           grounded=True, outcome="answered", lang=inq.lang)
         return _fallback(inq)
     text = _strip_unsourced_urls(text, result)   # A17: no made-up links
+    text += _maps_block(result)                  # then add accurate map links
     return Answer(text=text, sources=_sources(result), tool=result.tool,
                   grounded=True, outcome="answered", lang=inq.lang)
 
@@ -105,6 +107,30 @@ def _strip_unsourced_urls(text: str, result: ToolResult) -> str:
     return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
 
 
+# ---- Google Maps links (built from our real coordinates, never fabricated) ----
+def _maps_url(f: Facility) -> str | None:
+    if f.lat is not None and f.lon is not None:
+        return f"https://www.google.com/maps/search/?api=1&query={f.lat},{f.lon}"
+    if f.name:                       # no coords -> search by name + area
+        q = ", ".join(p for p in (f.name, f.caza, "Lebanon") if p)
+        return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(q)
+    return None
+
+
+def _maps_block(result: ToolResult) -> str:
+    """A trailing list of accurate map links for the facilities shown. Appended
+    after the model's prose so links are always real (A17-safe)."""
+    if result.tool != "directory" or not result.facilities:
+        return ""
+    lines = []
+    for f in result.facilities[:3]:
+        u = _maps_url(f)
+        if u:
+            dist = f" ({f.distance_km} km)" if f.distance_km is not None else ""
+            lines.append(f"📍 {f.name}{dist}: {u}")
+    return ("\n\n" + "\n".join(lines)) if lines else ""
+
+
 # ---- model-less rendering (robustness: answer from facts if the LLM is down) ----
 def _render_facts(result: ToolResult) -> str:
     """Plain, grounded answer built directly from retrieved facts, no model.
@@ -122,6 +148,9 @@ def _render_facts(result: ToolResult) -> str:
             parts = [f.name] + [p for p in (f.caza, f.address, f.phone) if p]
             if f.distance_km is not None:
                 parts.append(f"{f.distance_km} km")
+            u = _maps_url(f)
+            if u:
+                parts.append(u)
             lines.append("• " + " — ".join(parts))
     elif result.drugs:
         for dr in result.drugs[:3]:
