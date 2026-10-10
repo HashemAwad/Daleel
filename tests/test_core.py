@@ -50,6 +50,29 @@ def test_model_routing_falls_back_on_error(monkeypatch):
     assert router.choose_tool(_inq("nearest pharmacy")) == "directory"  # keyword fallback
 
 
+# ---- 0.3: follow-up town memory -------------------------------------------
+def test_pending_town_followup_stitches_question(monkeypatch):
+    from core import memory, pipeline
+    # pretend "beirut" resolves to a caza; nothing else does
+    monkeypatch.setattr(pipeline.router, "_resolve_caza",
+                        lambda t: "Beirut" if "beirut" in t.lower() else None)
+    # a user we never asked -> no stitch (nothing pending)
+    assert pipeline._apply_pending_town(_inq("Beirut")).text == "Beirut"
+    # a user we DID ask for a town -> their place answer is stitched on
+    memory.remember_pending_town("u1", "nearest pharmacy")
+    inq = _inq("Beirut").model_copy(update={"user_ref": "u1"})
+    assert pipeline._apply_pending_town(inq).text == "nearest pharmacy Beirut"
+
+
+def test_pending_town_ignored_for_new_question(monkeypatch):
+    from core import memory, pipeline
+    monkeypatch.setattr(pipeline.router, "_resolve_caza", lambda t: None)
+    memory.remember_pending_town("u2", "nearest pharmacy")
+    inq = _inq("how much is panadol").model_copy(update={"user_ref": "u2"})
+    out = pipeline._apply_pending_town(inq)
+    assert out.text == "how much is panadol"   # not stitched
+
+
 # ---- A5: safety, multilingual ---------------------------------------------
 @pytest.mark.parametrize("text", [
     "my father is not breathing",

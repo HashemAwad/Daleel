@@ -6,7 +6,7 @@ Nothing reaches the model before redaction; nothing leaves without tool support.
 from __future__ import annotations
 import httpx
 from shared.contracts import Inquiry, Answer, Source, ToolResult
-from core import safety, router, providers
+from core import safety, router, providers, memory
 from core.prompts import SYSTEM_PROMPT, build_context
 from data import transcripts
 
@@ -24,6 +24,10 @@ def _handle(inq: Inquiry) -> Answer:
     inq = _ensure_text(inq)
     if not inq.text.strip():
         return _cannot_read(inq)
+
+    # 0b. Follow-up: if we previously asked this user for a town and they just
+    #     replied with a place, stitch it onto the original question.
+    inq = _apply_pending_town(inq)
 
     # 1. Safety rules (may short-circuit) — run on the real text
     early = safety.check(inq)
@@ -47,6 +51,7 @@ def _handle(inq: Inquiry) -> Answer:
     #    town — ask for it instead of a dead-end hotline message.
     if result.is_empty():
         if result.tool == "directory":
+            memory.remember_pending_town(inq.user_ref, inq.text)
             return _ask_town(inq)
         return _fallback(inq)
 
@@ -65,6 +70,17 @@ def _handle(inq: Inquiry) -> Answer:
         return _fallback(inq)
     return Answer(text=text, sources=_sources(result), tool=result.tool,
                   grounded=True, outcome="answered", lang=inq.lang)
+
+
+# ---- follow-up memory ------------------------------------------------------
+def _apply_pending_town(inq: Inquiry) -> Inquiry:
+    """If we earlier asked this user for a town and they now reply with a place,
+    stitch it onto the original question. Otherwise leave the message as-is
+    (and the stale pending is simply discarded)."""
+    prev = memory.take_pending_town(inq.user_ref)
+    if prev and len(inq.text.split()) <= 4 and router._resolve_caza(inq.text):
+        return inq.model_copy(update={"text": f"{prev} {inq.text}"})
+    return inq
 
 
 # ---- model-less rendering (robustness: answer from facts if the LLM is down) ----
