@@ -25,9 +25,9 @@ try:
         if OllamaLLM.available():
             llm = OllamaLLM()
     elif settings.model_provider == "hosted":
-        from core.llm_openai import OpenAICompatLLM
-        if OpenAICompatLLM.available():
-            llm = OpenAICompatLLM()
+        from core.llm_hosted import HostedLLM
+        if HostedLLM.available():
+            llm = HostedLLM()
     elif settings.anthropic_api_key:
         from core.llm import AnthropicLLM
         llm = AnthropicLLM()

@@ -1,22 +1,21 @@
-"""Hosted LLMClient over any OpenAI-compatible chat API (Groq, OpenRouter, etc.).
-Owner: A.
+"""Hosted LLMClient over any OpenAI-format chat API. Owner: A.
 
-This is the BRIDGE backend: it gives fluent answers immediately with no model
-download, so the team can build while the self-hosted model downloads. Behind
-the same LLMClient Protocol, so switching to self-hosted qwen is a one-line .env
-change (DALEEL_MODEL_PROVIDER=selfhost). Redaction still runs before any call.
+NOT OpenAI the company — "OpenAI-format" is just the de-facto request shape that
+Google Gemini, Groq, OpenRouter, etc. all accept. We use Google Gemini (free,
+strong Arabic). Behind the same LLMClient Protocol, so switching to self-hosted
+qwen is a one-line .env change. Redaction still runs before any call.
 
-Selected when DALEEL_MODEL_PROVIDER=hosted. Config:
-  DALEEL_LLM_BASE_URL   e.g. https://api.groq.com/openai/v1
-  DALEEL_LLM_API_KEY    the provider's free API key
-  DALEEL_MODEL          the hosted model id, e.g. llama-3.3-70b-versatile
+Selected when DALEEL_MODEL_PROVIDER=hosted. Config (see docs/LLM.md):
+  DALEEL_LLM_BASE_URL   https://generativelanguage.googleapis.com/v1beta/openai   (Gemini)
+  DALEEL_LLM_API_KEY    free key from https://aistudio.google.com/app/apikey
+  DALEEL_MODEL          gemini-2.0-flash
 """
 from __future__ import annotations
 import httpx
 from shared.config import settings
 
 
-class OpenAICompatLLM:
+class HostedLLM:
     def __init__(self, base_url: str | None = None, api_key: str | None = None,
                  model: str | None = None) -> None:
         self.base_url = (base_url or settings.llm_base_url).rstrip("/")

@@ -17,19 +17,20 @@ and redaction always runs first. So the backend is swappable without touching an
 If the configured backend is unavailable, the app still answers from the data
 (plain/templated) — it never hard-fails.
 
-## Bridge mode (use while qwen downloads) — Groq, free
-1. Create a free key at **https://console.groq.com** → API Keys → Create (no card).
+## Hosted mode — Google Gemini (recommended, free, strong Arabic)
+1. Create a free key at **https://aistudio.google.com/app/apikey** (sign in with Google → "Create API key"; no card).
 2. In `.env`:
    ```
    DALEEL_MODEL_PROVIDER=hosted
-   DALEEL_MODEL=llama-3.3-70b-versatile
-   DALEEL_LLM_BASE_URL=https://api.groq.com/openai/v1
-   DALEEL_LLM_API_KEY=gsk_...          # your key
+   DALEEL_MODEL=gemini-2.0-flash
+   DALEEL_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+   DALEEL_LLM_API_KEY=...              # your Gemini key
    ```
-3. Restart the server. Answers are now fluent (Llama 3.3 70B, good Arabic).
+3. Restart the server. Answers are now fluent, with strong Arabic.
 
-Any OpenAI-compatible endpoint works here (OpenRouter, Together, …) — just change
-`DALEEL_LLM_BASE_URL`, `DALEEL_LLM_API_KEY`, `DALEEL_MODEL`.
+"OpenAI-format" = the de-facto API shape Gemini/Groq/OpenRouter all accept — it is
+**not** OpenAI the company. Any such endpoint works: just change the three lines.
+Groq alternative: base_url `https://api.groq.com/openai/v1`, model `llama-3.3-70b-versatile`.
 
 ## Switch to self-hosted (when `ollama list` shows qwen2.5:7b)
 Change two lines in `.env` and restart:
