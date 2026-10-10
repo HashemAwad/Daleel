@@ -1,729 +1,641 @@
 <!doctype html>
 <!-- Daleel Phase-2 dashboard. Owner: C (ticket C4).
      Reads ONLY /api/metrics, which aggregates the anonymised `metadata` table
-     (topic, subtopic, caza, lang, outcome, day). No transcripts, no numbers, no
-     names ever reach this page. Falls back to clearly-labelled mock rows until
-     D's retention job writes real ones.
-     No external assets: works offline on a venue network. -->
+     (topic, caza, language, outcome, day). No transcripts, no phone numbers, no names
+     ever reach this page. /api/metrics?demo=1 serves synthetic rows (never stored).
+     Fonts: Hanken Grotesk + Archivo from Google Fonts; offline the system sans-serif is used. -->
 <html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Daleel Dashboard</title>
+<title>Daleel Service Overview</title>
+<link rel="icon" href="data:,"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"/>
 <style>
-  /* Tokens live on :root so the dark overrides below can reach every element.
-     Dark is declared twice on purpose: the media query covers the OS setting,
-     the data-theme scope covers an explicit choice and must win both ways. */
+  /* Olive green on warm beige. Every text and chart-mark colour is >= 4.5:1 on its background.
+     light on #F4EFE4 / card #FCFAF4:  ink 12.6/13.9  ink-2 7.4/8.1  quiet 5.4/6.0  olive 6.2/6.8  attention 5.4/6.0
+     dark  on #171A10 / card #20241A:  ink 15.1/13.6  ink-2 11.3/10.2  quiet 8.1/7.3  olive 9.3/8.3  attention 8.1/7.3 */
   :root{
     color-scheme: light;
-    --page:#F4F6F5; --surface-1:#FFFFFF;
-    --text-primary:#0B0B0B; --text-secondary:#52514E; --text-muted:#6E6B66;
-    --line:#E1E0D9; --baseline:#C3C2B7;
-    --brand:#0F5C4A;
-    /* single-series magnitude hue (brand green) */
-    --series-mag:#0F5C4A;
-    /* categorical slots — fixed per language, never by rank.
-       Validated: light surface #fff, worst adjacent CVD ΔE 9.1 / normal 22.9. */
-    --cat-ar:#2a78d6; --cat-arabizi:#eb6834; --cat-fr:#1baf7a; --cat-en:#eda100;
-    /* status (icon + label always accompany these) */
-    --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
-    --track:#E6EEEB;
+    --bg:#F4EFE4; --card:#FCFAF4; --line:#E3DCCB; --track:#E6E8D3;
+    --ink:#272B1C; --ink-2:#4A4F3A; --quiet:#5E634D;
+    --olive:#4F5E1F; --on-olive:#FCFAF4; --attention:#9A4A1E; --good:#3F6B1F; --bad:#A23B1C;
+    --focus:#0B4FB3;
+    --gap:44px;
   }
-  /* Dark steps are chosen for the dark surface (#141A18), not flipped:
-     validated worst adjacent CVD ΔE 8.4, normal-vision 19.8, all ≥3:1. */
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       color-scheme: dark;
-      --page:#0D0D0D; --surface-1:#141A18;
-      --text-primary:#FFFFFF; --text-secondary:#C3C2B7; --text-muted:#9AA7A3;
-      --line:#2C2C2A; --baseline:#383835;
-      --brand:#15785F;
-      --series-mag:#4FBF9B;
-      --cat-ar:#3987e5; --cat-arabizi:#d95926; --cat-fr:#199e70; --cat-en:#c98500;
-      --track:#1F2A27;
+      --bg:#171A10; --card:#20241A; --line:#343A28; --track:#2F3524;
+      --ink:#F0EEE2; --ink-2:#CFD1BE; --quiet:#AEB29C;
+      --olive:#B5C46B; --on-olive:#171A10; --attention:#E8A06A; --good:#A9D27A; --bad:#F0937A;
+      --focus:#8DB8FF;
     }
   }
   :root[data-theme="dark"]{
     color-scheme: dark;
-    --page:#0D0D0D; --surface-1:#141A18;
-    --text-primary:#FFFFFF; --text-secondary:#C3C2B7; --text-muted:#9AA7A3;
-    --line:#2C2C2A; --baseline:#383835;
-    --brand:#15785F;
-    --series-mag:#4FBF9B;
-    --cat-ar:#3987e5; --cat-arabizi:#d95926; --cat-fr:#199e70; --cat-en:#c98500;
-    --track:#1F2A27;
+    --bg:#171A10; --card:#20241A; --line:#343A28; --track:#2F3524;
+    --ink:#F0EEE2; --ink-2:#CFD1BE; --quiet:#AEB29C;
+    --olive:#B5C46B; --on-olive:#171A10; --attention:#E8A06A; --good:#A9D27A; --bad:#F0937A;
+    --focus:#8DB8FF;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html{scroll-behavior:smooth}
   body{
-    margin:0; background:var(--page); color:var(--text-primary);
-    /* one stack, restated in the editorial block below for the whole page */
-    font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
-                "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
-    font-size:15px; line-height:1.5;
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",Tahoma,sans-serif;
+    font-size:17px; line-height:1.6; font-variant-numeric:tabular-nums;
   }
-  .wrap{max-width:1060px; margin:0 auto; padding:20px 16px 56px}
+  h1,h2,.num-big,.tile .value{font-family:Archivo,"Hanken Grotesk",system-ui,sans-serif}
+  :focus-visible{outline:3px solid var(--focus); outline-offset:3px; border-radius:6px}
+  .sr-only{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+  .skip{position:absolute; inset-inline-start:8px; top:-60px; background:var(--card); color:var(--ink);
+        padding:10px 14px; border:2px solid var(--ink); border-radius:8px; z-index:20}
+  .skip:focus{top:8px}
+  .wrap{max-width:68rem; margin:0 auto; padding:0 24px 72px}
+  a{color:var(--olive)}
 
-  header.top{display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:6px}
-  h1{font-size:21px; margin:0; font-weight:700}
-  .tagline{color:var(--text-secondary); font-size:13.5px; margin:2px 0 0}
+  /* ---- slim ministry bar ---- */
+  .masthead{padding:14px 24px; border-bottom:1px solid var(--line)}
+  .lockup{display:flex; align-items:center; gap:14px; max-width:68rem; margin-inline:auto; flex-wrap:wrap}
+  .cedar{width:28px; height:28px; flex:none; fill:var(--olive); display:block}
+  .titles{display:flex; flex-direction:column; line-height:1.25; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2)}
+  .svc{font-size:20px; font-weight:700}
   .grow{flex:1}
+  .chatlink{display:inline-flex; align-items:center; min-height:44px; font-weight:600}
+
+  /* ---- page head ---- */
+  .top{display:flex; align-items:flex-end; gap:20px 24px; flex-wrap:wrap; padding-top:48px}
+  h1{font-size:40px; line-height:1.1; margin:0; font-weight:800; letter-spacing:-.02em}
+  .subtitle{color:var(--quiet); margin:10px 0 0}
+  .top > div:first-child{max-width:32rem}
+  .actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
   .btn{
-    font:inherit; font-size:13.5px; padding:7px 13px; border-radius:9px; cursor:pointer;
-    background:var(--surface-1); color:var(--text-primary); border:1px solid var(--line);
+    font:inherit; font-size:16px; font-weight:600; min-height:44px; min-width:44px; padding:8px 20px; cursor:pointer;
+    background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px;
   }
-  .btn:hover{border-color:var(--brand)}
-  .btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .btn:hover{border-color:var(--olive); color:var(--olive)}
+  .pill{display:inline-flex; align-items:center; min-height:44px; padding:6px 18px; border-radius:999px;
+        background:var(--olive); color:var(--on-olive); font-weight:600}
+  .updated{color:var(--quiet); font-size:15px; margin:12px 0 0}
 
-  .banner{
-    display:flex; gap:9px; align-items:flex-start; margin:14px 0 18px; padding:10px 13px;
-    border-radius:10px; font-size:13.5px; border:1px solid var(--line);
-    background:var(--surface-1); color:var(--text-secondary);
+  .banner{margin-top:28px; padding:14px 20px; border-radius:14px; background:var(--card); border:1px solid var(--attention); color:var(--ink)}
+  .banner strong{color:var(--attention)}
+  .summary{font-size:24px; line-height:1.4; margin:var(--gap) 0 0; max-width:46rem; font-family:Archivo,"Hanken Grotesk",sans-serif; font-weight:500}
+  .privacy{color:var(--quiet); font-size:16px; margin:12px 0 0}
+
+  /* ---- stat cards ---- */
+  .stats{display:grid; gap:24px; grid-template-columns:repeat(3,1fr); margin-top:var(--gap)}
+  .stats.urgent{grid-template-columns:repeat(2,1fr); margin-top:24px}
+  .tile{background:var(--card); border:1px solid var(--line); border-radius:22px; padding:30px 30px 28px}
+  .tile h2{font-size:17px; font-weight:600; margin:0; color:var(--ink-2); font-family:"Hanken Grotesk",sans-serif}
+  .tile .value{font-size:56px; font-weight:800; line-height:1.05; margin:14px 0 6px; letter-spacing:-.03em}
+  .tile .detail{margin:0; color:var(--quiet); font-size:16px}
+  .tile.hero{background:var(--olive); border-color:var(--olive); color:var(--on-olive)}
+  .tile.hero h2,.tile.hero .detail{color:var(--on-olive)}
+  .stats.urgent .tile .value{font-size:44px}
+  .meter{height:12px; border-radius:999px; background:var(--track); margin-top:18px; overflow:hidden}
+  .meter > span{display:block; height:100%; border-radius:999px; background:var(--olive)}
+  .meter.attn > span{background:var(--attention)}
+  .verdict{font-size:16px; font-weight:600; margin:14px 0 0}
+  .verdict.ok{color:var(--good)} .verdict.bad{color:var(--bad)}
+
+  /* ---- section cards ---- */
+  .grid2{display:grid; grid-template-columns:repeat(2,1fr); gap:24px; margin-top:var(--gap)}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:22px; padding:32px 32px 28px; margin-top:var(--gap)}
+  .grid2 > .card{margin-top:0}
+  .card h2{font-size:24px; line-height:1.25; margin:0; font-weight:700; letter-spacing:-.01em}
+  .takeaway{color:var(--ink-2); margin:8px 0 28px}
+  .hidden-note{font-size:15px; color:var(--quiet); margin:20px 0 0}
+  .meta{font-size:14px; color:var(--quiet); margin:24px 0 0}
+
+  /* ---- bars: name and value on one line, a thick rounded bar below ---- */
+  .bars{display:flex; flex-direction:column; gap:22px}
+  .rowtop{display:flex; justify-content:space-between; gap:16px; align-items:baseline}
+  .rowtop .name{font-weight:500}
+  .rowtop .val{font-weight:700; font-family:Archivo,sans-serif}
+  .track{height:14px; border-radius:999px; background:var(--track); margin-top:8px; overflow:hidden}
+  .bar{height:100%; border-radius:999px; background:var(--olive); min-width:6px}
+  .bars.attn .bar{background:var(--attention)}
+  .row.other .name{color:var(--quiet)}
+  .row.other .bar{background:repeating-linear-gradient(135deg,var(--quiet) 0 3px,transparent 3px 7px)}
+
+  /* ---- line chart ---- */
+  .chart{width:100%}
+  .chart svg{display:block; max-width:100%; overflow:visible}
+  .chart text{fill:var(--quiet); font-size:14px; font-family:inherit}
+  .chart text.v{fill:var(--ink); font-weight:700; font-size:15px}
+  .chart .grid{stroke:var(--line); stroke-width:1}
+  .chart .axis{stroke:var(--quiet); stroke-width:1}
+  .chart .area{fill:var(--olive); opacity:.12}
+  .chart .line{fill:none; stroke:var(--olive); stroke-width:3.5; stroke-linejoin:round}
+  .chart .avg{fill:none; stroke:var(--quiet); stroke-width:2; stroke-dasharray:6 6}
+  .chart .pt{fill:var(--card); stroke:var(--olive); stroke-width:3}
+  .legend{font-size:15px; color:var(--quiet); margin:14px 0 0; display:flex; gap:24px; flex-wrap:wrap}
+  .legend span::before{content:""; display:inline-block; width:26px; height:0; vertical-align:middle; margin-inline-end:8px; border-top:3px solid var(--olive)}
+  .legend span.dash::before{border-top:2px dashed var(--quiet)}
+
+  .cardhead{display:flex; justify-content:space-between; align-items:flex-start; gap:16px 24px; flex-wrap:wrap}
+  .seg{display:inline-flex; background:var(--track); border-radius:999px; padding:4px; gap:4px}
+  .segbtn{font:inherit; font-size:15px; font-weight:600; min-height:44px; padding:6px 18px; border:0; border-radius:999px;
+          background:transparent; color:var(--ink); cursor:pointer}
+  .segbtn[aria-pressed="true"]{background:var(--olive); color:var(--on-olive)}
+  .segbtn:not([aria-pressed="true"]):hover{color:var(--olive)}
+  /* ---- about + states ---- */
+  .about ul{margin:16px 0 0; padding-inline-start:22px; color:var(--ink-2)}
+  .about li{margin:10px 0}
+  .skeleton{display:grid; gap:24px; margin-top:var(--gap)}
+  .skeleton div{height:140px; border-radius:22px; background:linear-gradient(90deg,var(--card),var(--track),var(--card)); background-size:200% 100%; animation:sk 1.4s linear infinite}
+  @keyframes sk{to{background-position:-200% 0}}
+  .error{border:2px solid var(--bad); border-radius:22px; padding:28px; margin-top:var(--gap); background:var(--card)}
+  .error h2{margin:0 0 8px; font-size:22px}
+  .foot{color:var(--quiet); font-size:15px; margin-top:var(--gap); padding-top:24px; border-top:1px solid var(--line)}
+  @media (max-width:880px){
+    .stats,.stats.urgent,.grid2{grid-template-columns:1fr}
+    h1{font-size:32px} .summary{font-size:21px}
+    .card{padding:26px 22px 24px} .tile{padding:26px 24px}
+    :root{--gap:36px}
   }
-  .banner .ic{flex:none; font-size:15px; line-height:1.3}
-  .banner.mock{border-color:var(--warning)}
-
-  .card{
-    background:var(--surface-1); border:1px solid var(--line); border-radius:12px;
-    padding:16px 18px; margin-bottom:16px;
-  }
-  .card h2{font-size:15px; margin:0 0 2px; font-weight:650}
-  .card .sub{color:var(--text-secondary); font-size:12.5px; margin:0 0 14px}
-
-  /* ---- hero + stat tiles ---- */
-  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px}
-  .tile{background:var(--surface-1); border:1px solid var(--line); border-radius:12px; padding:14px 16px}
-  .tile .label{color:var(--text-secondary); font-size:12.5px}
-  .tile .value{font-size:28px; font-weight:650; letter-spacing:-.4px; margin-top:4px}
-  .tile.hero .value{font-size:48px; line-height:1.05}
-  .tile .note{color:var(--text-muted); font-size:12px; margin-top:4px}
-  .meter{height:7px; border-radius:999px; background:var(--track); margin-top:10px; overflow:hidden}
-  .meter > span{display:block; height:100%; border-radius:999px}
-  .statline{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary); margin-top:7px}
-  .dot{width:9px; height:9px; border-radius:50%; flex:none}
-
-  /* ---- horizontal bars ---- */
-  .bars{display:flex; flex-direction:column; gap:9px}
-  .row{display:grid; grid-template-columns:minmax(120px,27%) 1fr auto; gap:10px; align-items:center}
-  .row .name{font-size:13.5px; color:var(--text-secondary); overflow-wrap:anywhere}
-  .track{position:relative; height:22px}
-  .bar{
-    height:22px; background:var(--series-mag);
-    border-start-start-radius:0; border-end-start-radius:0;
-    border-start-end-radius:4px; border-end-end-radius:4px;
-    min-width:2px;
-  }
-  .row .val{font-size:13px; font-variant-numeric:tabular-nums; color:var(--text-secondary); min-width:2.6em; text-align:end}
-  /* k-anonymity: a withheld group is shown, never hidden — a missing row would
-     read as "no questions here", which is a different and wrong claim. */
-  .row.suppressed .name{color:var(--text-muted); font-style:italic}
-  .row.suppressed .bar{
-    background:repeating-linear-gradient(135deg,
-      var(--text-muted) 0 2px, transparent 2px 6px);
-    opacity:.55;
-  }
-
-  /* ---- stacked language bar ---- */
-  .stack{display:flex; gap:2px; height:30px; margin-bottom:12px} /* 2px surface gaps */
-  .seg{position:relative; min-width:3px; border-radius:3px; display:flex; align-items:center; justify-content:center}
-  .seg span{font-size:12px; font-weight:600; padding:0 6px; white-space:nowrap}
-  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--text-secondary)}
-  .legend .k{display:flex; align-items:center; gap:6px}
-  .legend .sw{width:11px; height:11px; border-radius:3px; flex:none}
-
-  /* ---- day columns ---- */
-  .cols{display:flex; align-items:flex-end; gap:12px; height:140px; padding-top:18px; border-bottom:1px solid var(--baseline)}
-  .col{flex:1; max-width:48px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%}
-  .col .capval{font-size:12px; font-variant-numeric:tabular-nums; color:var(--text-secondary); margin-bottom:4px}
-  .col .fill{
-    width:100%; background:var(--series-mag); min-height:2px;
-    border-start-start-radius:4px; border-start-end-radius:4px;
-  }
-  .colLabels{display:flex; gap:12px; margin-top:7px}
-  .colLabels div{flex:1; max-width:48px; text-align:center; font-size:11.5px; color:var(--text-muted); font-variant-numeric:tabular-nums}
-
-  /* ---- tables ---- */
-  table{width:100%; border-collapse:collapse; font-size:13.5px}
-  th,td{text-align:start; padding:7px 8px; border-bottom:1px solid var(--line)}
-  th{color:var(--text-secondary); font-weight:600; font-size:12.5px}
-  td.num,th.num{text-align:end; font-variant-numeric:tabular-nums}
-  tr:last-child td{border-bottom:0}
-  details{margin-top:14px}
-  summary{cursor:pointer; font-size:13px; color:var(--text-secondary)}
-  summary:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
-
-  .two{display:grid; grid-template-columns:1fr 1fr; gap:16px}
-  @media (max-width:760px){ .two{grid-template-columns:1fr} }
-
-  #tip{
-    position:fixed; pointer-events:none; opacity:0; transition:opacity .1s;
-    background:var(--text-primary); color:var(--surface-1); font-size:12.5px;
-    padding:6px 9px; border-radius:7px; z-index:9; white-space:nowrap;
-  }
-  .foot{color:var(--text-muted); font-size:12px; margin-top:22px; text-align:center}
-
-  /* ===== ministry masthead =================================================
-     The chart palette above is CVD-validated and deliberately untouched. This
-     block sets the official lockup and strips decoration: a statistics page
-     for a ministry should look like a report, not a product launch. */
-  :root{ --moph-green:#15693A; --moph-red:#C62127 }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){ --moph-green:#4FAE77; --moph-red:#FF8F8A }
-  }
-  :root[data-theme="dark"]{ --moph-green:#4FAE77; --moph-red:#FF8F8A }
-
-  .masthead{
-    border-bottom:1px solid var(--line);
-    margin:-20px -16px 0; padding:14px 22px;
-  }
-  .lockup{display:flex; align-items:center; gap:12px; max-width:1060px; margin-inline:auto}
-  .cedar{width:30px; height:30px; flex:none; fill:var(--moph-green); display:block}
-  .titles{display:flex; flex-direction:column; line-height:1.18}
-  .t-state{font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--moph-green); text-transform:uppercase}
-  .t-ministry{font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--moph-red); text-transform:uppercase}
-  .vrule{width:1px; align-self:stretch; background:var(--line); margin-inline:4px}
-  .lockup .svc{font-size:14px; font-weight:650}
-  .lockup .grow{flex:1}
-  .lockup a{font-size:13px; color:var(--text-secondary); text-decoration:none; border-bottom:1.5px solid transparent}
-  .lockup a:hover{color:var(--moph-green); border-bottom-color:var(--moph-green)}
-
-  header.top{padding-top:22px; align-items:baseline}
-  header.top h1{font-size:20px; font-weight:650; letter-spacing:-.1px}
-
-  /* Reporting period and provenance belong on the page, not in a tooltip. */
-  .provenance{
-    display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--text-muted);
-    border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px;
-  }
-  .provenance b{color:var(--text-secondary); font-weight:600}
-
-  /* ===== editorial pass ====================================================
-     A ministry statistics page should read as a published return, not as a
-     product dashboard. Everything below removes the card kit — identical
-     rounded panels, one radius, the same soft shadow under each — and replaces
-     it with ruled bands and figures carrying the hierarchy. The chart palette
-     further up is CVD-validated and still untouched. */
-  :root{
-    --ground:#E9EBE3; --paper:#F7F8F3; --paper-2:#E8EAE1;
-    --rule-2:#D2D6C9; --rule-soft:#E1E4DA;
-    --ink-1:#1E211C; --ink-2:#454941; --quiet:#686C62;
-    --swift:cubic-bezier(.2,.65,.3,1);
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
-      --rule-2:#2C3128; --rule-soft:#212520;
-      --ink-1:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
-    }
-  }
-  :root[data-theme="dark"]{
-    --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
-    --rule-2:#2C3128; --rule-soft:#212520;
-    --ink-1:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
-  }
-
-  body{
-    background:var(--paper); color:var(--ink-1);
-    font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
-                "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
-    font-size:16px; line-height:1.75; font-variant-numeric:tabular-nums;
-  }
-  .wrap{max-width:62rem; padding-inline:22px}
-
-  .masthead{border-bottom:0; padding-bottom:12px; background:var(--ground)}
-  .cedar{fill:var(--moph-green)}
-  .titles span{font-family:"Iowan Old Style",Palatino,Georgia,serif; font-size:10px; letter-spacing:.11em}
-  .band{height:2px; background:var(--moph-green); position:relative;
-        margin:0 -16px 0; }
-  .band::after{content:""; position:absolute; inset-block:0; inset-inline-start:0;
-               width:84px; background:var(--moph-red)}
-  .lockup .svc{font-size:16px; font-weight:600}
-
-  header.top{padding-top:26px; margin-bottom:4px}
-  header.top h1{font-size:27px; font-weight:600; letter-spacing:-.01em; color:var(--ink-1)}
-  header.top .tagline{color:var(--quiet); font-size:15px}
-  .btn{
-    font:inherit; font-size:14px; border-radius:0; background:none;
-    border:0; border-bottom:1px solid var(--rule-2); color:var(--ink-2);
-    padding:2px 0; transition:color .2s var(--swift), border-color .2s var(--swift);
-  }
-  .btn:hover{color:var(--moph-green); border-bottom-color:var(--moph-green)}
-
-  .provenance{color:var(--quiet); font-size:13.5px; border-bottom:1px solid var(--rule-2)}
-  .provenance b{color:var(--ink-2); font-weight:600}
-
-  /* Figures carry the hierarchy: the headline number is set large, the rest
-     step down sharply. No panel around any of them. */
-  .kpis{
-    display:grid; gap:0; margin:0 0 30px;
-    grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));
-    border-bottom:1px solid var(--rule-2);
-  }
-  .tile{
-    background:none; border:0; border-radius:0; padding:22px 20px 20px;
-    border-inline-start:1px solid var(--rule-soft);
-  }
-  .tile:first-child{border-inline-start:0; padding-inline-start:0}
-  .tile .label{color:var(--quiet); font-size:14px}
-  .tile .value{font-size:40px; font-weight:600; letter-spacing:-.025em; line-height:1.1; margin-top:6px}
-  .tile.hero .value{font-size:60px}
-  .tile .note{color:var(--quiet); font-size:13px}
-  .meter{height:3px; border-radius:0; background:var(--rule-soft)}
-  .meter > span{border-radius:0}
-
-  .card{
-    background:none; border:0; border-radius:0; box-shadow:none;
-    padding:26px 0 24px; margin:0;
-    border-top:1px solid var(--rule-soft);
-  }
-  .card h2{font-size:19px; font-weight:600; color:var(--ink-1); margin-bottom:3px}
-  .card .sub{color:var(--quiet); font-size:14px; margin-bottom:18px}
-  .two{gap:0 38px}
-  .two > .card{border-top:1px solid var(--rule-soft)}
-
-  .row .name{font-size:15px; color:var(--ink-2)}
-  .row .val{font-size:15px; color:var(--ink-1)}
-  .bar{border-radius:0}
-  .track{background:none}
-  th,td{border-bottom:1px solid var(--rule-soft); font-size:14.5px}
-  th{color:var(--quiet); font-weight:600; font-size:13.5px; letter-spacing:0; text-transform:none}
-  summary{font-size:14px; color:var(--quiet)}
-  .banner{border-radius:0; border:0; border-inline-start:3px solid var(--moph-green);
-          background:var(--paper-2); color:var(--ink-2); font-size:14.5px}
-  .banner.mock{border-inline-start-color:var(--moph-red)}
-  .foot{color:var(--quiet); font-size:13px; border-top:1px solid var(--rule-2); padding-top:16px}
-  .foot a{color:var(--moph-green)}
-  #tip{border-radius:0; font-family:inherit}
-
+  @media (max-width:520px){ .wrap,.masthead{padding-inline:16px} .tile .value{font-size:46px} }
   @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
     *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
   }
 </style>
 </head>
-<body class="viz-root">
+<body>
+<a class="skip" href="#content">Skip to the statistics</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="cedar" viewBox="0 0 64 64">
   <path d="M32 3 L21.5 17h5.5L18.5 29h6L10 43h18.5v18h7V43H54L39.5 29h6L37 17h5.5Z"/>
 </symbol></svg>
 
-<div class="masthead">
+<header class="masthead">
   <div class="lockup">
     <svg class="cedar" aria-hidden="true"><use href="#cedar"/></svg>
-    <div class="titles">
-      <span class="t-state">Republic of Lebanon</span>
-      <span class="t-ministry">Ministry of Public Health</span>
-    </div>
-    <div class="vrule" aria-hidden="true"></div>
-    <span class="svc">دليل</span>
+    <div class="titles"><span>Republic of Lebanon</span><span>Ministry of Public Health</span></div>
+    <span class="svc" lang="ar">دليل</span>
     <div class="grow"></div>
-    <a href="/">Open the chat service</a>
+    <a class="chatlink" href="/">Open the chat service</a>
   </div>
-</div>
-<div class="band" aria-hidden="true"></div>
+</header>
 
 <div class="wrap">
-  <header class="top">
-    <div>
-      <h1>Service statistics</h1>
-      <p class="tagline">Anonymised question metadata — no transcripts, no phone numbers, no names.</p>
+  <main>
+    <div class="top">
+      <div>
+        <h1>Service overview</h1>
+        <p class="subtitle" id="tagline"></p>
+      </div>
+      <div class="grow"></div>
+      <div class="actions">
+        <span class="pill" id="period" hidden></span>
+        <button class="btn" id="demo" type="button" hidden></button>
+        <button class="btn" id="theme" type="button"></button>
+        <button class="btn" id="refresh" type="button"></button>
+      </div>
     </div>
-    <div class="grow"></div>
-    <button class="btn" id="theme" type="button"></button>
-    <button class="btn" id="refresh" type="button">Refresh</button>
-  </header>
+    <p class="updated" id="updated"></p>
 
-  <div class="provenance" id="provenance"></div>
-
-  <div id="banner" class="banner" hidden></div>
-  <div id="content" aria-busy="true"></div>
-
-  <p class="foot">
-    Phase 2 · built from the <code>metadata</code> table only.
-    Groups of fewer than <span id="mincell">5</span> conversations are withheld,
-    so no row can point to one person.
-    <a href="/">Back to the chat widget</a>
-  </p>
+    <div id="banner" class="banner" role="status" hidden></div>
+    <div id="content" tabindex="-1" aria-busy="true"></div>
+    <div id="live" class="sr-only" role="status" aria-live="polite"></div>
+  </main>
+  <footer class="foot" id="foot"></footer>
 </div>
-<div id="tip" role="tooltip"></div>
 
 <script>
 "use strict";
 
-/* Colour follows the entity: a language keeps its hue whatever its rank. */
-const LANGS = [
-  { code:"ar",      label:"Arabic · العربية", varname:"--cat-ar" },
-  { code:"arabizi", label:"Arabizi",          varname:"--cat-arabizi" },
-  { code:"fr",      label:"Français",         varname:"--cat-fr" },
-  { code:"en",      label:"English",          varname:"--cat-en" },
-];
-const OUTCOMES = [
-  { key:"answered",   label:"Answered",            status:"good",     icon:"✓" },
-  { key:"unanswered", label:"No official source",   status:"warning",  icon:"!" },
-  { key:"refused",    label:"Refused (no advice)",  status:"serious",  icon:"⊘" },
-  { key:"escalated",  label:"Escalated to a human", status:"serious",  icon:"↗" },
-  { key:"emergency",  label:"Emergency routed",     status:"critical", icon:"▲" },
-];
+/* Every user-facing string lives here, so a translation is one more object (Arabic is the next priority). */
+const T = {
+  tagline: "Anonymised question statistics. No transcripts, phone numbers or names.",
+  refresh: "Refresh", dark: "Dark mode", light: "Light mode",
+  demoOn: "Show demo data", demoOff: "Show real data",
+  loading: "Loading statistics…", updated: "Last updated", loaded: "Statistics updated.",
+  errTitle: "The statistics could not be loaded", errBody: "Check your connection, then try again.", retry: "Retry",
+  demoBanner: "Demo data, not real citizen questions.",
+  demoBannerMock: " The database has no records yet, so these figures are illustrative.",
+  sparse: (n, k) => `Too few records to show yet. The service has handled ${n} question${n === 1 ? "" : "s"} so far. Breakdowns appear once a group reaches ${k}.`,
+  privacy: (k) => `Groups of fewer than ${k} questions are combined as “Other (under ${k})” to protect privacy.`,
+  other: (k) => `Other (under ${k})`,
+  demoSource: "Demo data", realSource: "Daleel metadata",
+  headline: {
+    total: "Questions handled",
+    answered: "Answered with an official source",
+    noSource: "No official answer found",
+    emergency: "Emergency routed (Red Cross 140)",
+    person: "Escalated to a person (1787 / 1214 / 1564)",
+  },
+  target: { answeredMin: (t) => `Target: at least ${t}%`, noSourceMax: (t) => `Target: under ${t}%`, met: "Within target", missed: "Not within target" },
+  view: { label: "Level of detail", topic: "By topic", kind: "By kind" },
+  kindPrefix: { procedures: "Papers", drug_price: "Medicines", directory: "Places" },
+  sub: {
+    unspecified: "Not specified",
+    health_coverage_card: "Health coverage card", chronic_medication_approval: "Chronic medication approval",
+    hospital_admission: "Hospital admission", medical_certificate: "Medical certificate", disability_card: "Disability card",
+    vaccination: "Vaccination", primary_care_registration: "Primary care registration", other_paper: "Other papers",
+    cancer: "Cancer", diabetes: "Diabetes", heart_blood_pressure: "Heart and blood pressure", pain_fever: "Pain and fever",
+    antibiotics: "Antibiotics", mental_health: "Mental health", asthma_allergy: "Asthma and allergy", stomach: "Stomach",
+    other_medicine: "Other medicines", pharmacy: "Pharmacy", hospital: "Hospital", health_center: "Health centre", other_place: "Other places",
+  },
+  topic: {
+    procedures: "Procedures and papers", directory: "Pharmacy, hospital or clinic",
+    drug_price: "Medicine prices", dosing_request: "Dosing questions (declined)",
+    emergency: "Emergencies", other: "Other topics", unspecified: "Not specified",
+  },
+  lang: { ar: "Arabic script", arabizi: "Arabizi", fr: "French", en: "English", unspecified: "Not specified" },
+  sections: {
+    topics:   { title: "What people ask about", hidden: "Appears on its own once 5 or more questions share it." },
+    language: { title: "Languages", hidden: "Appears on its own once 5 or more questions use a language." },
+    volume:   { title: "Questions per day" },
+    cazas:    { title: "Where questions come from", hidden: "A district appears on its own once 5 or more questions come from it." },
+  },
+  aboutTitle: "How these numbers are calculated",
+  about: [
+    "Questions handled: every recorded question in the period.",
+    "Answered with an official source: answered questions ÷ all questions.",
+    "No official answer found: questions that fell back to the hotline ÷ all questions.",
+    "Emergency routed and escalated: questions the safety rules or the hotline handed to a person.",
+    "Privacy: only the day is stored, never the time. No names, numbers or messages are kept.",
+  ],
+  foot: "This page is built to WCAG 2.2 AA. To report an accessibility problem, contact the Daleel team at the Ministry of Public Health.",
+};
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = text;
+  return n;
+};
+const svgEl = (tag, attrs, text) => {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
   if (text !== undefined) n.textContent = text;
   return n;
 };
-const human = (s) => String(s || "")
-  .replace(/_/g, " ")
-  .replace(/^./, (c) => c.toUpperCase());
-const cssVar = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
+const num = (n) => Number(n).toLocaleString("en-US");
+const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const shortFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+const asDate = (iso) => new Date(iso + "T00:00:00Z");
+const fmtDay = (iso) => dayFmt.format(asDate(iso));
+const fmtShort = (iso) => shortFmt.format(asDate(iso));
+const pctOf = (part, whole) => whole ? Math.round(1000 * part / whole) / 10 : 0;
+const topicName = (k) => T.topic[k] || (String(k).charAt(0).toUpperCase() + String(k).slice(1).replace(/_/g, " "));
+const langName = (k) => T.lang[k] || String(k);
+const plural = (n, w) => `${num(n)} ${w}${n === 1 ? "" : "s"}`;
 
-/* Text sitting inside a coloured fill picks white or ink by the fill's own
-   luminance, so it clears contrast on yellow as well as on blue. */
-function inkOn(hex){
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
-  if (!m) return "#fff";
-  const n = parseInt(m[1], 16);
-  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-  return (L + 0.05) / 0.05 > 4.5 ? "#0B0B0B" : "#FFFFFF";
-}
-const langMeta = (code) => LANGS.find((l) => l.code === code)
-  || { code, label: human(code), varname:"--text-muted" };
-
-/* ---- tooltip (hover layer on every mark) -------------------------------- */
-const tip = document.getElementById("tip");
-function hoverable(node, text){
-  node.addEventListener("pointerenter", () => { tip.textContent = text; tip.style.opacity = "1"; });
-  node.addEventListener("pointermove", (e) => {
-    tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
-    tip.style.top  = (e.clientY - tip.offsetHeight - 10) + "px";
-  });
-  node.addEventListener("pointerleave", () => { tip.style.opacity = "0"; });
+function periodText(m){
+  if (!m.period) return "—";
+  return m.period.start === m.period.end ? fmtDay(m.period.start) : `${fmtDay(m.period.start)} – ${fmtDay(m.period.end)}`;
 }
 
-/* ---- pieces -------------------------------------------------------------- */
-function card(title, sub){
-  const c = el("section", "card");
-  c.appendChild(el("h2", null, title));
-  if (sub) c.appendChild(el("p", "sub", sub));
-  return c;
-}
-
-function tableView(headers, rows, label){
-  const d = el("details");
-  d.appendChild(el("summary", null, label || "Table view"));
-  const t = el("table");
-  const thead = el("thead"), tr = el("tr");
-  headers.forEach((h, i) => {
-    const th = el("th", i ? "num" : null, h.label !== undefined ? h.label : h);
-    tr.appendChild(th);
-  });
-  thead.appendChild(tr); t.appendChild(thead);
-  const tb = el("tbody");
-  for (const r of rows){
-    const row = el("tr");
-    r.forEach((cell, i) => row.appendChild(el("td", i ? "num" : null, cell)));
-    tb.appendChild(row);
-  }
-  t.appendChild(tb); d.appendChild(t);
-  return d;
-}
-
-/* Tally rows -> chart items, turning the API's `withheld` bucket into a row
-   the reader can see. Small groups are suppressed server-side; see MIN_CELL. */
-function tallyItems(list){
+/* ---- tally rows -> chart items. The `other` entry is the privacy merge. ---- */
+function tallyItems(list, nameFn, k){
   return (list || []).map((t) => t.suppressed
-    ? { name:"Withheld — groups too small", count:t.count,
-        suppressed:true, groups:t.groups }
-    : { name:human(t.label), count:t.count });
+    ? { name: T.other(k), count: t.count, other: true, groups: t.groups }
+    : { name: nameFn(t.label), count: t.count, key: t.label });
+}
+function hiddenNote(items, text){
+  if (!items.some((i) => i.other)) return null;
+  return el("p", "hidden-note", "Small groups are combined. " + (text || ""));
 }
 
-/* Single-series magnitude: one hue, length carries the value, value at the tip. */
-function barChart(items, unitLabel){
+/* ---- section scaffold: title, one short sentence, chart, source line ---- */
+function section(id, title, takeaway){
+  const s = el("section", "card");
+  s.id = id;
+  s.setAttribute("aria-labelledby", id + "-h");
+  const h = el("h2", null, title); h.id = id + "-h";
+  s.appendChild(h);
+  s.appendChild(el("p", "takeaway", takeaway));
+  return s;
+}
+function addMeta(s, m){
+  s.appendChild(el("p", "meta", `${m.source === "metadata" ? T.realSource : T.demoSource} · ${periodText(m)}`));
+}
+
+/* "procedures|hospital_admission" -> "Papers · Hospital admission". Topics without kinds keep their topic name. */
+function kindName(label){
+  const [t, sub] = String(label).split("|");
+  const pre = T.kindPrefix[t];
+  if (!pre) return topicName(t);
+  return `${pre} · ${sub ? (T.sub[sub] || topicName(sub)) : T.sub.unspecified}`;
+}
+
+/* One card, two levels of detail behind a labelled switch: By topic / By kind (which papers, which medicines). */
+function viewCard(id, title, views, attn){
+  const s = el("section", "card");
+  s.id = id;
+  s.setAttribute("aria-labelledby", id + "-h");
+  const head = el("div", "cardhead");
+  const h = el("h2", null, title); h.id = id + "-h";
+  head.appendChild(h);
+  const seg = el("div", "seg");
+  seg.setAttribute("role", "group");
+  seg.setAttribute("aria-label", T.view.label);
+  head.appendChild(seg);
+  s.appendChild(head);
+  const buttons = [], panels = [];
+  views.forEach((v, i) => {
+    const b = el("button", "segbtn", v.label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(i === 0));
+    seg.appendChild(b); buttons.push(b);
+    const panel = el("div", "view");
+    panel.hidden = i !== 0;
+    panel.appendChild(el("p", "takeaway", v.takeaway));
+    if (v.items.length) panel.appendChild(barList(v.items, "questions", attn));
+    const hn = hiddenNote(v.items, v.hidden); if (hn) panel.appendChild(hn);
+    s.appendChild(panel); panels.push(panel);
+    b.addEventListener("click", () => {
+      buttons.forEach((x, j) => x.setAttribute("aria-pressed", String(j === i)));
+      panels.forEach((p, j) => { p.hidden = j !== i; });
+    });
+  });
+  return s;
+}
+
+/* ---- charts ---- */
+function barList(items, unit, attn){
   const max = Math.max(...items.map((i) => i.count), 1);
-  const box = el("div", "bars");
+  const box = el("div", "bars" + (attn ? " attn" : ""));
+  box.setAttribute("role", "list");
   for (const it of items){
-    const row = el("div", "row" + (it.suppressed ? " suppressed" : ""));
-    row.appendChild(el("div", "name", it.name));
-    const track = el("div", "track");
-    const bar = el("div", "bar");
-    bar.style.width = Math.max(2, (it.count / max) * 100) + "%";
-    hoverable(bar, it.suppressed
-      ? `${it.count.toLocaleString()} ${unitLabel} across ${it.groups} group${it.groups === 1 ? "" : "s"} too small to publish individually`
-      : `${it.name}: ${it.count.toLocaleString()} ${unitLabel}`);
-    track.appendChild(bar);
-    row.appendChild(track);
-    row.appendChild(el("div", "val", it.count.toLocaleString()));
+    const row = el("div", "row" + (it.other ? " other" : ""));
+    row.setAttribute("role", "listitem");
+    const top = el("div", "rowtop");
+    top.appendChild(el("span", "name", it.name));
+    const v = el("span", "val", num(it.count));
+    v.setAttribute("aria-label", `${num(it.count)} ${unit}`);
+    top.appendChild(v);
+    row.appendChild(top);
+    const track = el("div", "track"); track.setAttribute("aria-hidden", "true");
+    const bar = el("div", "bar"); bar.style.width = Math.max(1, (it.count / max) * 100) + "%";
+    track.appendChild(bar); row.appendChild(track);
     box.appendChild(row);
   }
   return box;
 }
 
-/* Categorical identity: legend always present; labels only where they fit. */
-function languageStack(languages, total){
-  const wrap = el("div");
-  const stack = el("div", "stack");
-  const known = languages.slice().sort(
-    (a, b) => LANGS.findIndex(l => l.code === a.label) - LANGS.findIndex(l => l.code === b.label)
-  );
-  for (const l of known){
-    const meta = langMeta(l.label);
-    const share = total ? (l.count / total) * 100 : 0;
-    const seg = el("div", "seg");
-    seg.style.flex = String(Math.max(share, 0.6));
-    seg.style.background = `var(${meta.varname})`;
-    // only label inside the segment when the text comfortably fits (~44px)
-    if (share >= 9){
-      const txt = el("span", null, Math.round(share) + "%");
-      txt.style.color = inkOn(cssVar(meta.varname));  // against the fill, not the surface
-      seg.appendChild(txt);
+function niceMax(v){
+  const p = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1))));
+  let m = 10 * p;
+  for (const k of [1, 2, 5, 10]) if (k * p >= v){ m = k * p; break; }
+  return m % 2 ? m + 1 : m;          // even, so the middle gridline is a whole number
+}
+
+function lineChart(days, label){
+  const box = el("div", "chart");
+  const n = days.length;
+  const avg = days.reduce((a, d) => a + d.count, 0) / n;
+  const draw = () => {
+    box.textContent = "";
+    const W = Math.max(box.clientWidth || 320, 260), H = 260;
+    const mg = { l: 46, r: 24, t: 34, b: 44 };
+    const pw = W - mg.l - mg.r, ph = H - mg.t - mg.b;
+    const max = niceMax(Math.max(...days.map((d) => d.count), 1));
+    const x = (i) => mg.l + (n === 1 ? pw / 2 : (pw * i) / (n - 1));
+    const y = (v) => mg.t + ph - (v / max) * ph;
+    const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": label });
+    svg.appendChild(svgEl("title", {}, label));
+    for (const v of [0, max / 2, max]){
+      svg.appendChild(svgEl("line", { x1: mg.l, x2: W - mg.r, y1: y(v), y2: y(v), class: v === 0 ? "axis" : "grid" }));
+      svg.appendChild(svgEl("text", { x: mg.l - 10, y: y(v) + 5, "text-anchor": "end" }, num(Math.round(v * 10) / 10)));
     }
-    hoverable(seg, `${meta.label}: ${l.count.toLocaleString()} turns (${share.toFixed(1)}%)`);
-    stack.appendChild(seg);
+    if (n > 1){
+      const pts = days.map((d, i) => `${x(i)},${y(d.count)}`).join(" ");
+      svg.appendChild(svgEl("polygon", { class: "area", points: `${x(0)},${y(0)} ${pts} ${x(n - 1)},${y(0)}` }));
+      svg.appendChild(svgEl("line", { x1: mg.l, x2: W - mg.r, y1: y(avg), y2: y(avg), class: "avg" }));
+      svg.appendChild(svgEl("polyline", { class: "line", points: pts }));
+    }
+    let maxI = 0;
+    days.forEach((d, i) => { if (d.count > days[maxI].count) maxI = i; });
+    days.forEach((d, i) => {
+      svg.appendChild(svgEl("circle", { class: "pt", cx: x(i), cy: y(d.count), r: n > 14 ? 3.5 : 5.5 }));
+      if (n <= 10 || i === maxI || i === n - 1)
+        svg.appendChild(svgEl("text", { class: "v", x: x(i), y: y(d.count) - 12, "text-anchor": "middle" }, num(d.count)));
+    });
+    const step = n > 1 ? Math.max(1, Math.ceil(70 / (pw / (n - 1)))) : 1;
+    const ticks = [];
+    for (let i = 0; i < n; i += step) ticks.push(i);
+    if (ticks[ticks.length - 1] !== n - 1){
+      if (n - 1 - ticks[ticks.length - 1] >= step * 0.6) ticks.push(n - 1);
+      else ticks[ticks.length - 1] = n - 1;
+    }
+    for (const i of ticks)
+      svg.appendChild(svgEl("text", { x: x(i), y: H - 14, "text-anchor": "middle" }, fmtShort(days[i].label)));
+    box.appendChild(svg);
+  };
+  draw();
+  if (typeof ResizeObserver !== "undefined"){
+    let last = box.clientWidth;
+    new ResizeObserver(() => { if (box.clientWidth !== last){ last = box.clientWidth; draw(); } }).observe(box);
   }
-  wrap.appendChild(stack);
-
-  const legend = el("div", "legend");
-  for (const l of known){
-    const meta = langMeta(l.label);
-    const k = el("div", "k");
-    const sw = el("span", "sw");
-    sw.style.background = `var(${meta.varname})`;
-    k.appendChild(sw);
-    k.appendChild(el("span", null, `${meta.label} — ${l.count.toLocaleString()}`));
-    legend.appendChild(k);
-  }
-  wrap.appendChild(legend);
-  return wrap;
-}
-
-function dayColumns(days){
-  const max = Math.max(...days.map((d) => d.count), 1);
   const wrap = el("div");
-  const cols = el("div", "cols");
-  for (const d of days){
-    const col = el("div", "col");
-    col.appendChild(el("div", "capval", d.count.toLocaleString()));
-    const fill = el("div", "fill");
-    fill.style.height = Math.max(2, (d.count / max) * 100) + "%";
-    hoverable(fill, `${d.label}: ${d.count.toLocaleString()} turns`);
-    col.appendChild(fill);
-    cols.appendChild(col);
-  }
-  wrap.appendChild(cols);
-  const labels = el("div", "colLabels");
-  for (const d of days) labels.appendChild(el("div", null, d.label.slice(5)));
-  wrap.appendChild(labels);
+  wrap.appendChild(box);
+  const lg = el("p", "legend");
+  lg.appendChild(el("span", null, "Questions per day"));
+  if (n > 1) lg.appendChild(el("span", "dash", `Average: ${Math.round(avg * 10) / 10} a day`));
+  wrap.appendChild(lg);
   return wrap;
 }
 
-/* ---- tiles --------------------------------------------------------------- */
-function tile(label, value, note, opts){
-  const t = el("div", "tile" + (opts && opts.hero ? " hero" : ""));
-  t.appendChild(el("div", "label", label));
-  t.appendChild(el("div", "value", value));
-  if (note) t.appendChild(el("div", "note", note));
-  if (opts && opts.meter){
-    const m = el("div", "meter");
-    const f = el("span");
-    f.style.width = Math.min(100, opts.meter.pct) + "%";
-    f.style.background = `var(--${opts.meter.status})`;
-    m.appendChild(f);
-    t.appendChild(m);
-    const line = el("div", "statline");
-    const dot = el("span", "dot");
-    dot.style.background = `var(--${opts.meter.status})`;
-    line.appendChild(dot);
-    line.appendChild(el("span", null, `${opts.meter.icon} ${opts.meter.text}`));
-    t.appendChild(line);
+/* ---- stat cards ---- */
+function tile(title, value, detail, opts){
+  opts = opts || {};
+  const t = el("div", "tile" + (opts.hero ? " hero" : ""));
+  t.appendChild(el("h2", null, title));
+  t.appendChild(el("p", "value", value));
+  t.appendChild(el("p", "detail", detail));
+  if (opts.meter != null){
+    const m = el("div", "meter" + (opts.attn ? " attn" : ""));
+    m.setAttribute("role", "img");
+    m.setAttribute("aria-label", `${opts.meter}% of questions`);
+    const f = el("span"); f.style.width = Math.min(100, opts.meter) + "%";
+    m.appendChild(f); t.appendChild(m);
   }
+  if (opts.verdict) t.appendChild(el("p", "verdict " + (opts.verdict.ok ? "ok" : "bad"), `${opts.verdict.ok ? "✓" : "!"} ${opts.verdict.text}`));
   return t;
 }
 
-function severity(pct, warnAt, critAt){
-  if (pct >= critAt) return { status:"critical", icon:"▲", text:"needs attention" };
-  if (pct >= warnAt) return { status:"warning",  icon:"!", text:"watch" };
-  return { status:"good", icon:"✓", text:"within target" };
+function summarySentence(m, topicItems){
+  const total = m.total_turns;
+  if (!total) return "No questions have been recorded yet.";
+  const lead = topicItems.find((i) => !i.other);
+  let s = `Daleel handled ${plural(total, "question")}. ${pctOf(m.outcome_counts.answered, total)}% had an official answer.`;
+  if (lead) s += ` Most were about ${lead.name.toLowerCase()}.`;
+  return s;
 }
 
-/* ---- render -------------------------------------------------------------- */
+/* ---- render ---- */
 function render(m){
   const content = document.getElementById("content");
   content.textContent = "";
-  content.setAttribute("aria-busy", "false");
+  const k = m.min_cell || 5;
+  const total = m.total_turns;
+  const oc = m.outcome_counts;
 
-  /* source banner */
+  const period = document.getElementById("period");
+  period.hidden = !m.period;
+  period.textContent = periodText(m);
+
   const banner = document.getElementById("banner");
-  banner.hidden = false;
-  /* Three states, not two: illustrative, too-early-to-publish, and live.
-     The middle one matters — below the suppression threshold every breakdown
-     is withheld, which looks exactly like a broken page unless we say so. */
-  const state = m.source === "mock" ? "mock" : (m.sparse ? "sparse" : "live");
-  banner.className = "banner" + (state === "live" ? "" : " mock");
+  const demo = m.source === "demo" || m.source === "mock";
+  banner.hidden = !(demo || m.sparse);
   banner.textContent = "";
-  banner.appendChild(el("span", "ic", state === "live" ? "✓" : "!"));
-  banner.appendChild(el("span", null, {
-    mock:   "Illustrative sample — the metadata table is empty or unreachable. "
-          + "Figures below are representative, not recorded.",
-    sparse: "Too few records to publish. The service has handled "
-          + (m.total_turns || 0).toLocaleString() + " question"
-          + ((m.total_turns === 1) ? "" : "s") + " so far; breakdowns stay withheld "
-          + "until a group reaches " + (m.min_cell || 5) + ".",
-    live:   "Live data from the metadata table — anonymised rows written after "
-          + "transcripts are deleted.",
-  }[state]));
-
-  /* keep the footnote honest if the server ever changes the threshold */
-  const mc = document.getElementById("mincell");
-  if (mc && m.min_cell) mc.textContent = m.min_cell;
-
-  /* KPIs */
-  const kpis = el("div", "kpis");
-  const unansweredSev = severity(m.unanswered_rate, 10, 25);
-  const escSev = severity(m.escalation_rate, 5, 15);
-  kpis.appendChild(tile("Questions handled", m.total_turns.toLocaleString(),
-    `${m.days.length} day${m.days.length === 1 ? "" : "s"} of activity`, { hero:true }));
-  kpis.appendChild(tile("Answered with a source", m.answered.toLocaleString(),
-    m.total_turns ? `${(100 * m.answered / m.total_turns).toFixed(1)}% of all questions` : "—"));
-  kpis.appendChild(tile("No official source", m.unanswered_rate + "%",
-    `${m.unanswered.toLocaleString()} questions fell back to a hotline`,
-    { meter:{ pct:m.unanswered_rate, ...unansweredSev } }));
-  kpis.appendChild(tile("Escalated or emergency", m.escalation_rate + "%",
-    `${m.escalations.toLocaleString()} routed to a human or an ambulance`,
-    { meter:{ pct:m.escalation_rate, ...escSev } }));
-  content.appendChild(kpis);
-
-  /* topics */
-  const topics = card("Top topics", "What people ask about most. One colour: length carries the value.");
-  const topicItems = tallyItems(m.topics);
-  topics.appendChild(barChart(topicItems, "questions"));
-  topics.appendChild(tableView(["Topic", "Questions"], topicItems.map((t) => [t.name, t.count.toLocaleString()])));
-  content.appendChild(topics);
-
-  /* language + outcomes side by side */
-  const two = el("div", "two");
-
-  const langs = card("Language mix", "Share of questions by language and script.");
-  langs.appendChild(languageStack(m.languages, m.total_turns));
-  langs.appendChild(tableView(["Language", "Questions"],
-    m.languages.map((l) => [langMeta(l.label).label, l.count.toLocaleString()])));
-  two.appendChild(langs);
-
-  const outc = card("Outcomes", "Every turn ends in exactly one outcome.");
-  const tbl = el("table");
-  const tb = el("tbody");
-  const byKey = Object.fromEntries(m.outcomes.map((o) => [o.label, o.count]));
-  for (const o of OUTCOMES){
-    const count = byKey[o.key] || 0;
-    const tr = el("tr");
-    const tdName = el("td");
-    const line = el("span", "statline");
-    line.style.margin = "0";
-    const dot = el("span", "dot");
-    dot.style.background = `var(--${o.status})`;
-    line.appendChild(dot);
-    line.appendChild(el("span", null, `${o.icon} ${o.label}`)); // icon + label, never colour alone
-    tdName.appendChild(line);
-    tr.appendChild(tdName);
-    tr.appendChild(el("td", "num", count.toLocaleString()));
-    tr.appendChild(el("td", "num", m.total_turns ? (100 * count / m.total_turns).toFixed(1) + "%" : "—"));
-    tb.appendChild(tr);
+  if (demo){
+    banner.appendChild(el("strong", null, T.demoBanner));
+    if (m.source === "mock") banner.appendChild(document.createTextNode(T.demoBannerMock));
+  } else if (m.sparse){
+    banner.appendChild(document.createTextNode(T.sparse(total, k)));
   }
-  const thead = el("thead"), htr = el("tr");
-  ["Outcome", "Count", "Share"].forEach((h, i) => htr.appendChild(el("th", i ? "num" : null, h)));
-  thead.appendChild(htr);
-  tbl.appendChild(thead); tbl.appendChild(tb);
-  outc.appendChild(tbl);
-  two.appendChild(outc);
-  content.appendChild(two);
+
+  const topicItems = tallyItems(m.topics, topicName, k);
+  content.appendChild(el("p", "summary", summarySentence(m, topicItems)));
+  content.appendChild(el("p", "privacy", T.privacy(k)));
+
+  /* headline numbers: all from outcome_counts, and the urgent cards below */
+  const tg = m.targets || {};
+  const ansPct = pctOf(oc.answered, total), noPct = pctOf(oc.unanswered, total);
+  const vAns = tg.answered_min != null ? { ok: ansPct >= tg.answered_min, text: `${T.target.answeredMin(tg.answered_min)}. ${ansPct >= tg.answered_min ? T.target.met : T.target.missed}` } : null;
+  const vNo = tg.no_source_max != null ? { ok: noPct <= tg.no_source_max, text: `${T.target.noSourceMax(tg.no_source_max)}. ${noPct <= tg.no_source_max ? T.target.met : T.target.missed}` } : null;
+  const days = m.days || [];
+  const stats = el("div", "stats");
+  stats.appendChild(tile(T.headline.total, num(total), `${plural(days.length, "day")} of activity`, { hero: true }));
+  stats.appendChild(tile(T.headline.answered, ansPct + "%", `${num(oc.answered)} of ${num(total)} questions`, { meter: ansPct, verdict: vAns }));
+  stats.appendChild(tile(T.headline.noSource, noPct + "%", `${num(oc.unanswered)} of ${num(total)} questions`, { meter: noPct, attn: true, verdict: vNo }));
+  content.appendChild(stats);
+  const urgent = el("div", "stats urgent");
+  urgent.appendChild(tile(T.headline.emergency, num(oc.emergency), `${pctOf(oc.emergency, total)}% of questions`));
+  urgent.appendChild(tile(T.headline.person, num(oc.escalated), `${pctOf(oc.escalated, total)}% of questions`));
+  content.appendChild(urgent);
+
+  /* topics: by topic, or by kind of paper / medicine / place */
+  const kindItems = tallyItems(m.topic_kinds, kindName, k);
+  const mostAsked = (items) => { const l = items.find((i) => !i.other); return l ? `Most asked: ${l.name} (${plural(l.count, "question")}).` : "Too few questions to rank yet."; };
+  const topics = viewCard("topics", T.sections.topics.title, [
+    { key: "topic", label: T.view.topic, items: topicItems, takeaway: mostAsked(topicItems), hidden: T.sections.topics.hidden },
+    { key: "kind", label: T.view.kind, items: kindItems, takeaway: mostAsked(kindItems), hidden: T.sections.topics.hidden },
+  ]);
+  addMeta(topics, m);
+  /* languages */
+  const langs = (() => {
+    const items = tallyItems(m.languages, langName, k);
+    const lead = items.find((i) => !i.other);
+    const s = section("language", T.sections.language.title, lead
+      ? `${lead.name} is the most used: ${pctOf(lead.count, total)}% of questions.`
+      : "Too few questions per language to split yet.");
+    s.appendChild(barList(items, "questions"));
+    const hn = hiddenNote(items, T.sections.language.hidden); if (hn) s.appendChild(hn);
+    addMeta(s, m); return s;
+  })();
+  const g1 = el("div", "grid2"); g1.appendChild(topics); g1.appendChild(langs);
+  content.appendChild(g1);
 
   /* daily volume */
-  const trend = card("Daily volume", "Questions per day.");
-  trend.appendChild(dayColumns(m.days));
-  trend.appendChild(tableView(["Day", "Questions"], m.days.map((d) => [d.label, d.count.toLocaleString()])));
-  content.appendChild(trend);
-
-  /* coverage gaps + geography */
-  const two2 = el("div", "two");
-  const gaps = card("Coverage gaps", "Topics that most often had no official source — the content backlog.");
-  if (m.unanswered_topics.length){
-    gaps.appendChild(barChart(tallyItems(m.unanswered_topics), "unanswered"));
-  } else {
-    gaps.appendChild(el("p", "sub", "No unanswered questions in this period."));
+  {
+    let take = "No days recorded yet.";
+    if (days.length === 1) take = `One day of data: ${plural(days[0].count, "question")} on ${fmtDay(days[0].label)}.`;
+    else if (days.length){
+      const best = days.reduce((a, d) => d.count > a.count ? d : a, days[0]);
+      take = `Busiest day: ${fmtDay(best.label)}, with ${num(best.count)} questions.`;
+    }
+    const s = section("volume", T.sections.volume.title, take);
+    if (days.length) s.appendChild(lineChart(days, take));
+    addMeta(s, m); content.appendChild(s);
   }
-  two2.appendChild(gaps);
 
-  const geo = card("Top cazas", "Where questions come from (district only — never a precise location).");
-  const cazaItems = tallyItems(m.cazas);
-  geo.appendChild(barChart(cazaItems, "questions"));
-  geo.appendChild(tableView(["Caza", "Questions"], cazaItems.map((c) => [c.name, c.count.toLocaleString()])));
-  two2.appendChild(geo);
-  content.appendChild(two2);
-  provenance(m);
+  /* districts */
+  {
+    const items = tallyItems(m.cazas, (c) => c === "unspecified" ? T.lang.unspecified : c, k);
+    const lead = items.find((i) => !i.other);
+    const s = section("cazas", T.sections.cazas.title, lead
+      ? `${lead.name} had the most questions: ${num(lead.count)}. Only the district is recorded, never an exact place.`
+      : "Too few questions per district to rank yet.");
+    s.appendChild(barList(items, "questions"));
+    const hn = hiddenNote(items, T.sections.cazas.hidden); if (hn) s.appendChild(hn);
+    addMeta(s, m); content.appendChild(s);
+  }
+
+  /* how it is calculated: once, at the bottom */
+  const about = el("section", "card about");
+  about.setAttribute("aria-labelledby", "about-h");
+  const ah = el("h2", null, T.aboutTitle); ah.id = "about-h";
+  about.appendChild(ah);
+  const ul = el("ul");
+  T.about.forEach((t) => ul.appendChild(el("li", null, t)));
+  about.appendChild(ul);
+  content.appendChild(about);
 }
 
-/* What a ministry reader needs before trusting a number: where it came from,
-   what period it covers, and the suppression rule that shapes every table. */
-function provenance(m){
-  const bar = document.getElementById("provenance");
-  if (!bar) return;
-  bar.textContent = "";
-  const days = (m.days || []).map((d) => d.label).sort();
-  const period = days.length
-    ? (days[0] === days[days.length - 1] ? days[0] : days[0] + " – " + days[days.length - 1])
-    : "—";
-  const items = [
-    ["Source", m.source === "mock" ? "Illustrative sample" : "metadata table"],
-    ["Period", period],
-    ["Records", (m.total_turns || 0).toLocaleString()],
-    ["Suppression", "groups under " + (m.min_cell || 5) + " withheld"],
-  ];
-  for (const [k, v] of items){
-    const s = el("span", null, null);
-    s.appendChild(el("b", null, k + ": "));
-    s.appendChild(document.createTextNode(v));
-    bar.appendChild(s);
-  }
+/* ---- loading, errors, demo toggle ---- */
+const live = (msg) => { document.getElementById("live").textContent = msg; };
+const wantDemo = () => new URLSearchParams(location.search).get("demo") === "1";
+
+function skeleton(){
+  const c = document.getElementById("content");
+  c.textContent = "";
+  c.setAttribute("aria-busy", "true");
+  const sk = el("div", "skeleton"); sk.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 3; i++) sk.appendChild(el("div"));
+  c.appendChild(sk);
+  live(T.loading);
 }
 
 async function load(){
-  const content = document.getElementById("content");
-  content.setAttribute("aria-busy", "true");
+  skeleton();
+  const demoBtn = document.getElementById("demo");
   try {
-    const r = await fetch("/api/metrics");
+    const r = await fetch("/api/metrics" + (wantDemo() ? "?demo=1" : ""));
     if (!r.ok) throw new Error("HTTP " + r.status);
-    render(await r.json());
+    const m = await r.json();
+    render(m);
+    document.getElementById("content").setAttribute("aria-busy", "false");
+    document.getElementById("updated").textContent = `${T.updated}: ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+    demoBtn.hidden = m.source === "demo" && !wantDemo();          // a server-wide demo flag cannot be switched off here
+    demoBtn.textContent = wantDemo() ? T.demoOff : T.demoOn;
+    live(T.loaded);
   } catch (err){
-    content.textContent = "";
-    const c = card("Dashboard unavailable", "Could not reach /api/metrics.");
-    c.appendChild(el("p", null, String(err.message || err)));
-    content.appendChild(c);
+    const c = document.getElementById("content");
+    c.textContent = "";
+    c.setAttribute("aria-busy", "false");
+    document.getElementById("banner").hidden = true;
+    document.getElementById("period").hidden = true;
+    const box = el("div", "error"); box.setAttribute("role", "alert");
+    box.appendChild(el("h2", null, T.errTitle));
+    box.appendChild(el("p", null, T.errBody));
+    const b = el("button", "btn", T.retry); b.type = "button"; b.addEventListener("click", load);
+    box.appendChild(b); c.appendChild(box);
+    live(T.errTitle);
   }
 }
 
+document.getElementById("tagline").textContent = T.tagline;
+document.getElementById("refresh").textContent = T.refresh;
+document.getElementById("foot").textContent = T.foot;
 document.getElementById("refresh").addEventListener("click", load);
+document.getElementById("demo").addEventListener("click", () => {
+  const u = new URL(location.href);
+  if (wantDemo()) u.searchParams.delete("demo"); else u.searchParams.set("demo", "1");
+  history.replaceState(null, "", u);
+  load();
+});
 
-/* Theme: follow the system until the reader overrides it, then remember.
-   Shares the daleel_theme key with the chat service, so a choice made in one
-   carries to the other. */
+/* Theme: follow the system until the reader overrides it, then remember (shared with the chat page). */
 const THEME_KEY = "daleel_theme";
 const themeBtn = document.getElementById("theme");
-function storedTheme(){
-  try { return localStorage.getItem(THEME_KEY) || "auto"; } catch(e){ return "auto"; }
-}
-function darkNow(){
-  const t = storedTheme();
-  return t === "auto" ? window.matchMedia("(prefers-color-scheme: dark)").matches : t === "dark";
-}
+function storedTheme(){ try { return localStorage.getItem(THEME_KEY) || "auto"; } catch(e){ return "auto"; } }
+function darkNow(){ const t = storedTheme(); return t === "auto" ? window.matchMedia("(prefers-color-scheme: dark)").matches : t === "dark"; }
 function paintTheme(){
   const t = storedTheme();
-  if (t === "auto") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", t);
-  // the control names what pressing it does
-  themeBtn.textContent = darkNow() ? "Light" : "Dark";
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+  themeBtn.textContent = darkNow() ? T.light : T.dark;
 }
-themeBtn.addEventListener("click", () => {
-  try { localStorage.setItem(THEME_KEY, darkNow() ? "light" : "dark"); } catch(e){}
-  paintTheme();
-});
-window.matchMedia("(prefers-color-scheme: dark)")
-  .addEventListener("change", () => { if (storedTheme() === "auto") paintTheme(); });
+themeBtn.addEventListener("click", () => { try { localStorage.setItem(THEME_KEY, darkNow() ? "light" : "dark"); } catch(e){} paintTheme(); });
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (storedTheme() === "auto") paintTheme(); });
 paintTheme();
 load();
 </script>

@@ -3,7 +3,7 @@
     transcripts.record(inq, answer)      # called once per turn from core.pipeline.handle; never raises
 
 What is written, in two separate transactions (metadata first, so a transcript failure cannot lose it):
-  metadata     One row per turn: topic / caza / lang / outcome / day, derived from the route taken —
+  metadata     One row per turn: topic / subtopic (kind) / caza / lang / outcome / day, derived from the route taken —
                no model call, no text, no session key. This is the only thing that is kept.
                Not written when RECORD_TURNS=0 or while backing off after a database outage.
   transcripts  ONLY for a trusted session ref and a non-default salt. Deleted by data.retention.
@@ -61,6 +61,17 @@ def topic(answer: Answer) -> str:
     return _TOPIC_BY_TOOL.get(answer.tool, "other")
 
 
+def kind(text: str | None, answer: Answer) -> str | None:
+    """Closed-vocabulary kind of paper / medicine / place (ai.classifier.detail), or None. No text is kept."""
+    if answer.outcome in _NO_DETAIL:
+        return None
+    try:
+        from ai.classifier import detail
+        return detail(text or "", topic(answer))
+    except Exception:
+        return None
+
+
 def session_key(user_ref: str | None) -> str | None:
     """Key for the transcripts table, or None when the turn must not be stored against a session:
     default salt (hashes of phone numbers would be guessable) or a ref we did not mint ("anon", client-made)."""
@@ -96,11 +107,12 @@ def record(inq: Inquiry, answer: Answer) -> bool:
         lang = answer.lang or inq.lang
         lang = lang if lang in _LANGS else None
         caza = resolve_caza(inq.text) if detail else None
+        subtopic = kind(inq.text, answer)
         with get_conn() as conn:                             # 1. the anonymous count, on its own
             conn.execute(
-                "INSERT INTO metadata (topic, caza, lang, outcome, day) "
-                "VALUES (%s, %s, %s, %s, (now() AT TIME ZONE 'Asia/Beirut')::date)",
-                (topic(answer), caza, lang, answer.outcome))
+                "INSERT INTO metadata (topic, subtopic, caza, lang, outcome, day) "
+                "VALUES (%s, %s, %s, %s, %s, (now() AT TIME ZONE 'Asia/Beirut')::date)",
+                (topic(answer), subtopic, caza, lang, answer.outcome))
         key = session_key(inq.user_ref)
         if key:
             user_text, bot_text = _storable(inq.text, answer), _storable(answer.text, answer)

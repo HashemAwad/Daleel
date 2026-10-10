@@ -237,7 +237,7 @@ def test_metrics_falls_back_to_mock(monkeypatch):
     monkeypatch.setattr(metrics, "_fetch_rows", no_db)
     m = client.get("/api/metrics").json()
     assert m["source"] == "mock"
-    for key in ("total_turns", "topics", "languages", "outcomes", "days",
+    for key in ("total_turns", "topics", "languages", "outcome_counts", "days",
                 "escalation_rate", "unanswered_rate", "unanswered_topics", "cazas"):
         assert key in m
     assert m["total_turns"] > 0
@@ -339,9 +339,28 @@ def test_small_groups_are_withheld_from_breakdowns():
     out = metrics.summarise(rows, "metadata")
     labels = [c["label"] for c in out["cazas"]]
     assert "Bcharre" not in labels              # the identifying cell is gone
-    assert "Beirut" in labels
     withheld = [c for c in out["cazas"] if c.get("suppressed")]
-    assert withheld and withheld[0]["count"] == 1
+    # secondary suppression: the page shows the total, so a lone 1 would be derivable
+    # as total - published. Beirut is folded in too; the merged cell is never < MIN_CELL.
+    assert withheld and withheld[0]["count"] >= metrics.MIN_CELL
+    assert "Beirut" not in labels and withheld[0]["groups"] == 2
+
+
+def test_secondary_suppression_keeps_large_groups_when_the_merge_is_big_enough():
+    rows = [{"topic": "x", "caza": c, "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": n}
+            for c, n in (("Beirut", 40), ("Aley", 30), ("Bcharre", 1))]
+    cazas = metrics.summarise(rows, "metadata")["cazas"]
+    published = {c["label"]: c["count"] for c in cazas if not c.get("suppressed")}
+    other = [c for c in cazas if c.get("suppressed")][0]
+    assert published == {"Beirut": 40} and other["count"] == 31   # Aley folded in, 1 not derivable
+
+
+def test_two_small_groups_that_reach_the_minimum_are_merged_without_folding():
+    rows = [{"topic": "x", "caza": c, "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": n}
+            for c, n in (("Beirut", 40), ("A", 2), ("B", 3))]
+    cazas = metrics.summarise(rows, "metadata")["cazas"]
+    assert [c["label"] for c in cazas if not c.get("suppressed")] == ["Beirut"]
+    assert [c["count"] for c in cazas if c.get("suppressed")] == [5]
 
 
 def test_headline_totals_stay_exact_despite_suppression():
@@ -353,8 +372,8 @@ def test_headline_totals_stay_exact_despite_suppression():
              "outcome": "answered", "day": "2026-10-10", "n": 30}]
     out = metrics.summarise(rows, "metadata")
     assert out["total_turns"] == 32
-    assert out["escalations"] == 2              # counted, though withheld below
-    assert "emergency" not in [o["label"] for o in out["outcomes"]]
+    assert out["escalations"] == 2              # counted, though the caza is withheld below
+    assert out["outcome_counts"]["emergency"] == 2
 
 
 def test_threshold_is_published_so_the_page_can_explain_itself():
@@ -377,7 +396,7 @@ def test_the_withheld_notice_survives_the_top_n_cap():
     withheld = [c for c in cazas if c.get("suppressed")]
 
     assert len(published) == 10                      # the cap still applies
-    assert withheld and withheld[0]["count"] == 1     # and the notice came too
+    assert withheld and withheld[0]["count"] >= metrics.MIN_CELL   # and the notice came too
 
 
 def test_the_cap_counts_published_labels_only():
@@ -385,8 +404,9 @@ def test_the_cap_counts_published_labels_only():
     rows = [{"topic": "procedures", "caza": f"caza{i}", "lang": "ar",
              "outcome": "answered", "day": "2026-10-10", "n": 9}
             for i in range(10)]
-    rows.append({"topic": "procedures", "caza": "Tiny", "lang": "ar",
-                 "outcome": "answered", "day": "2026-10-10", "n": 2})
+    rows += [{"topic": "procedures", "caza": name, "lang": "ar",
+              "outcome": "answered", "day": "2026-10-10", "n": n}
+             for name, n in (("Tiny", 2), ("Tiny2", 3))]       # together they reach MIN_CELL
 
     cazas = metrics.summarise(rows, "metadata")["cazas"]
     assert len([c for c in cazas if not c.get("suppressed")]) == 10
@@ -497,3 +517,109 @@ def test_sufficient_real_data_is_not_sparse(monkeypatch):
                         lambda: [{"topic": "directory", "caza": "Beirut", "lang": "ar",
                                   "outcome": "answered", "day": "2026-10-10", "n": 40}])
     assert client.get("/api/metrics").json()["sparse"] is False
+
+
+# ---- dashboard statistics fixes -------------------------------------------
+def _row(day, outcome="answered", n=10, topic="procedures", caza="Beirut", lang="ar"):
+    return {"topic": topic, "caza": caza, "lang": lang, "outcome": outcome, "day": day, "n": n}
+
+
+def test_days_fill_gaps_and_report_the_real_period():
+    out = metrics.summarise([_row("2026-10-10"), _row("2026-10-13", n=3)], "metadata")
+    assert [d["label"] for d in out["days"]] == ["2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13"]
+    assert [d["count"] for d in out["days"]] == [10, 0, 0, 3]      # a 3-question day is not "withheld"
+    assert out["period"] == {"start": "2026-10-10", "end": "2026-10-13"}
+
+
+def test_one_day_of_data_has_a_period_and_one_point():
+    out = metrics.summarise([_row("2026-10-10")], "metadata")
+    assert len(out["days"]) == 1 and out["period"]["start"] == out["period"]["end"]
+
+
+def test_headline_numbers_and_outcome_table_share_one_source():
+    rows = [_row("2026-10-10", "answered", 30), _row("2026-10-10", "unanswered", 6, topic="other"),
+            _row("2026-10-10", "emergency", 2, topic="emergency", caza=None),
+            _row("2026-10-10", "escalated", 1), _row("2026-10-10", "refused", 3, topic="dosing_request")]
+    out = metrics.summarise(rows, "metadata")
+    oc = out["outcome_counts"]
+    assert oc == {"answered": 30, "unanswered": 6, "refused": 3, "escalated": 1, "emergency": 2}
+    assert sum(oc.values()) == out["total_turns"] == 42
+    assert (out["answered"], out["unanswered"], out["emergency"], out["escalated_to_person"]) == (30, 6, 2, 1)
+    assert out["answered_rate"] == round(100 * 30 / 42, 1)
+
+
+def test_targets_are_absent_unless_configured(monkeypatch):
+    for name in ("DASHBOARD_TARGET_ANSWERED_MIN", "DASHBOARD_TARGET_NO_SOURCE_MAX"):
+        monkeypatch.delenv(name, raising=False)
+    assert metrics.summarise([_row("2026-10-10")], "metadata")["targets"] == {
+        "answered_min": None, "no_source_max": None}
+    monkeypatch.setenv("DASHBOARD_TARGET_NO_SOURCE_MAX", "20")
+    monkeypatch.setenv("DASHBOARD_TARGET_ANSWERED_MIN", "bad")
+    assert metrics.summarise([_row("2026-10-10")], "metadata")["targets"] == {
+        "answered_min": None, "no_source_max": 20.0}
+
+
+def test_demo_mode_serves_synthetic_rows_and_never_touches_the_database(monkeypatch):
+    def boom():
+        raise AssertionError("demo mode must not read the database")
+
+    monkeypatch.setattr(metrics, "_fetch_rows", boom)
+    m = client.get("/api/metrics?demo=1").json()
+    assert m["source"] == "demo"
+    assert m["total_turns"] == 300 and len(m["days"]) == 30
+    assert {r["label"] for r in m["languages"] if not r.get("suppressed")} == {"ar", "arabizi", "fr", "en"}
+    assert all(m["outcome_counts"][k] > 0 for k in ("answered", "unanswered", "refused", "escalated", "emergency"))
+    assert m["min_cell"] == metrics.MIN_CELL                    # same suppression rule as real data
+
+
+def test_demo_flag_from_environment(monkeypatch):
+    monkeypatch.setenv("DASHBOARD_DEMO", "1")
+    assert client.get("/api/metrics").json()["source"] == "demo"
+    monkeypatch.delenv("DASHBOARD_DEMO")
+    monkeypatch.setattr(metrics, "_fetch_rows", lambda: [_row("2026-10-10")])
+    assert client.get("/api/metrics").json()["source"] == "metadata"   # real rows are never demo-tagged
+
+
+def test_demo_rows_use_only_the_metadata_columns_and_closed_topics():
+    from channels.demo_metrics import demo_rows
+    rows = demo_rows()
+    assert set(rows[0]) <= {"topic", "subtopic", "caza", "lang", "outcome", "day", "n"}
+    assert {r["topic"] for r in rows} <= set(metrics.MOCK_TOPICS)
+
+
+# ---- dashboard: "by kind" breakdowns ---------------------------------------
+def _krow(topic, sub, outcome="unanswered", n=6):
+    return {"topic": topic, "subtopic": sub, "caza": "Beirut", "lang": "ar", "outcome": outcome,
+            "day": "2026-10-10", "n": n}
+
+
+def test_kinds_are_listed_per_topic_and_only_for_topics_that_have_them():
+    rows = [_krow("procedures", "hospital_admission", n=9), _krow("drug_price", "diabetes", n=7),
+            _krow("other", "should_be_ignored", n=8), _krow("procedures", "sample", n=6)]
+    out = metrics.summarise(rows, "metadata")
+    labels = {c["label"]: c["count"] for c in out["unanswered_kinds"] if not c.get("suppressed")}
+    assert labels == {"procedures|hospital_admission": 9, "drug_price|diabetes": 7,
+                      "other|": 8, "procedures|": 6}     # 'sample' (rehearsal marker) is not a kind
+
+
+def test_kind_breakdown_uses_the_same_small_group_suppression():
+    rows = [_krow("procedures", "hospital_admission", n=40), _krow("procedures", "vaccination", n=1)]
+    kinds = metrics.summarise(rows, "metadata")["unanswered_kinds"]
+    assert [c["label"] for c in kinds if not c.get("suppressed")] == []      # the lone 1 forces the 40 into the merge too
+    assert kinds[-1]["suppressed"] and kinds[-1]["count"] == 41 and kinds[-1]["groups"] == 2
+
+
+def test_kinds_only_count_unanswered_questions_in_the_gaps_list():
+    rows = [_krow("procedures", "hospital_admission", "answered", 20), _krow("procedures", "vaccination", "unanswered", 6)]
+    out = metrics.summarise(rows, "metadata")
+    assert [c["label"] for c in out["unanswered_kinds"]] == ["procedures|vaccination"]
+    assert {c["label"] for c in out["topic_kinds"]} == {"procedures|hospital_admission", "procedures|vaccination"}
+
+
+def test_demo_rows_carry_kinds_from_the_closed_vocabulary():
+    from channels.demo_metrics import demo_rows
+    from ai import classifier
+    allowed = {k for table in classifier.DETAIL.values() for k, _ in table} | set(classifier._DETAIL_OTHER.values())
+    kinds = {r["subtopic"] for r in demo_rows() if r.get("subtopic")}
+    assert kinds and kinds <= allowed
+    assert all(r.get("subtopic") is None for r in demo_rows() if r["topic"] in ("other", "emergency", "dosing_request"))

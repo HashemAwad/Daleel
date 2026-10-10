@@ -71,3 +71,43 @@ def test_no_pii_leaks_into_fields():
     assert re.fullmatch(r"[a-z_]{1,40}", m.topic)
     assert m.subtopic is None or re.fullmatch(r"[a-z_]{1,40}", m.subtopic)
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", m.day)       # day only, no time
+
+
+# ---- dashboard "kinds" (metadata.subtopic) ---------------------------------
+@pytest.mark.parametrize("text,topic,kind", [
+    ("كيف آخذ دوا السرطان", "procedures", "chronic_medication_approval"),
+    ("how do I get the health coverage card", "procedures", "health_coverage_card"),
+    ("hospital admission papers", "procedures", "hospital_admission"),
+    ("medical certificate for school", "procedures", "medical_certificate"),
+    ("what do I need for the stamp", "procedures", "other_paper"),
+    ("price of insulin", "drug_price", "diabetes"),
+    ("سعر بنادول", "drug_price", "pain_fever"),
+    ("price of Concor 5", "drug_price", "heart_blood_pressure"),
+    ("price of Lipitor", "drug_price", "other_medicine"),
+    ("nearest pharmacy", "directory", "pharmacy"),
+    ("مستشفى قريب", "directory", "hospital"),
+])
+def test_detail_kinds(text, topic, kind):
+    assert classifier.detail(text, topic) == kind
+
+
+def test_detail_is_none_for_topics_without_kinds_and_stays_in_the_closed_vocabulary():
+    assert classifier.detail("anything", "other") is None
+    assert classifier.detail("chest pain", "emergency") is None
+    kinds = {k for table in classifier.DETAIL.values() for k, _ in table} | set(classifier._DETAIL_OTHER.values())
+    assert all(re.fullmatch(r"[a-z_]{1,40}", k) for k in kinds)        # metadata.subtopic CHECK
+
+
+def test_detail_never_returns_any_of_the_question_text():
+    out = classifier.detail("اسمي محمد 70123456 دوا السكري", "drug_price")
+    assert out == "diabetes" and "محمد" not in out and "70123456" not in out
+
+
+def test_transcripts_kind_skips_refused_and_emergency_turns():
+    from data import transcripts
+    from shared.contracts import Answer
+    ok = Answer(text="t", tool="procedure", outcome="answered")
+    assert transcripts.kind("hospital admission", ok) == "hospital_admission"
+    assert transcripts.kind("how much insulin", Answer(text="t", tool="none", outcome="refused")) is None
+    assert transcripts.kind("heart attack", Answer(text="t", tool="hotline", outcome="emergency")) is None
+    assert transcripts.kind("hello", Answer(text="t", tool="none", outcome="unanswered")) is None   # topic "other"

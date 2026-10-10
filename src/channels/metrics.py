@@ -11,6 +11,8 @@ labelled mock rows (`"source": "mock"`) so the page is demo-able today.
 from __future__ import annotations
 
 import logging
+import os
+from datetime import date, timedelta
 from typing import Any
 
 from fastapi import APIRouter
@@ -80,9 +82,9 @@ MOCK_ROWS: list[dict[str, Any]] = [
 ]
 
 _SQL = """
-SELECT topic, caza, lang, outcome, day::text AS day, COUNT(*) AS n
+SELECT topic, subtopic, caza, lang, outcome, day::text AS day, COUNT(*) AS n
 FROM metadata
-GROUP BY topic, caza, lang, outcome, day
+GROUP BY topic, subtopic, caza, lang, outcome, day
 """
 
 
@@ -109,16 +111,19 @@ def _tally(rows: list[dict[str, Any]], key: str,
            min_cell: int = MIN_CELL, top: int | None = None) -> list[dict[str, Any]]:
     """Counts per label, with small groups suppressed.
 
-    Any label seen fewer than `min_cell` times is withheld and rolled into a
-    single `withheld` entry. Publishing "drug_price · Bcharre · 1" on a
-    ministry screen can identify the one person who asked; the rolled-up count
-    keeps the totals honest without naming the group.
+    Any label seen fewer than `min_cell` times is rolled into one `other` entry
+    ("Other (under 5)" on the page). Publishing "drug_price · Bcharre · 1" on a
+    ministry screen can identify the one person who asked.
 
-    `top` caps how many *published* labels come back. The `withheld` entry is
-    never part of that cap: it sorts last by design, so a plain slice at the
-    call site would drop the suppression notice exactly when there is enough
-    data to need one — 26 cazas exist and a rehearsal seeds 12 labels, so the
-    notice fell off the end of the list while suppression was still happening.
+    Secondary suppression: the page also shows the overall total, so a reader can
+    subtract the published groups from it. If exactly one group was small, that
+    subtraction would hand back its exact count. So while the merged `other` entry
+    is still under `min_cell`, the smallest published group is folded into it. The
+    merged count is therefore never a single small group.
+
+    `top` caps how many *published* labels come back. The `other` entry is never
+    part of that cap: it sorts last by design, so a plain slice at the call site
+    would drop the suppression notice exactly when there is enough data to need one.
     """
     totals: dict[str, int] = {}
     for r in rows:
@@ -128,18 +133,80 @@ def _tally(rows: list[dict[str, Any]], key: str,
     published = {k: v for k, v in totals.items() if v >= min_cell}
     suppressed = {k: v for k, v in totals.items() if v < min_cell}
 
+    merged, groups = sum(suppressed.values()), len(suppressed)
+    if suppressed:
+        for k, v in sorted(published.items(), key=lambda kv: (kv[1], kv[0])):
+            if merged >= min_cell:
+                break
+            merged += v
+            groups += 1
+            del published[k]
+
     ordered = sorted(published.items(), key=lambda kv: (-kv[1], kv[0]))
     if top is not None:
         ordered = ordered[:top]
     out = [{"label": k, "count": v} for k, v in ordered]
-    if suppressed:
+    if groups:
         out.append({
-            "label": "withheld",
-            "count": sum(suppressed.values()),
+            "label": "other",
+            "count": merged,
             "suppressed": True,
-            "groups": len(suppressed),   # how many, never which
+            "groups": groups,            # how many, never which
         })
     return out
+
+
+def _days(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Questions per calendar day, oldest first, with quiet days filled in as 0 so a
+    chart has a continuous date axis. Day totals carry no attribute (no topic, caza or
+    language), so a count of 1-4 on one day identifies nobody and is published as is."""
+    per: dict[str, int] = {}
+    for r in rows:
+        d = str(r.get("day") or "")
+        if d:
+            per[d] = per.get(d, 0) + int(r.get("n", 1))
+    if not per:
+        return []
+    try:
+        first, last = date.fromisoformat(min(per)), date.fromisoformat(max(per))
+    except ValueError:
+        return [{"label": k, "count": per[k]} for k in sorted(per)]
+    out, d = [], first
+    while d <= last:
+        out.append({"label": d.isoformat(), "count": per.get(d.isoformat(), 0)})
+        d += timedelta(days=1)
+    return out
+
+
+# Topics whose questions have a "kind" (what paper, which medicine, what sort of place). Anything else
+# is listed by topic alone. `data.demo` marks its rehearsal rows subtopic='sample': that is not a kind.
+KIND_TOPICS = ("procedures", "drug_price", "directory")
+
+
+def _with_kind(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rows carrying a combined `kind` label, "topic|subtopic" (subtopic empty when unknown), so the
+    same suppression as every other breakdown applies to the more specific view."""
+    out = []
+    for r in rows:
+        topic = str(r.get("topic") or "other")
+        sub = str(r.get("subtopic") or "")
+        sub = sub if topic in KIND_TOPICS and sub != "sample" else ""
+        out.append({**r, "kind": f"{topic}|{sub}"})
+    return out
+
+
+def _float_env(name: str) -> float | None:
+    try:
+        return float(os.environ[name])
+    except (KeyError, ValueError):
+        return None
+
+
+def _targets() -> dict[str, float | None]:
+    """Optional service targets, in percent. Unset means no target: the page then shows
+    no verdict at all rather than an invented tick."""
+    return {"answered_min": _float_env("DASHBOARD_TARGET_ANSWERED_MIN"),
+            "no_source_max": _float_env("DASHBOARD_TARGET_NO_SOURCE_MAX")}
 
 
 def summarise(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
@@ -159,35 +226,61 @@ def summarise(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
     def pct(part: int) -> float:
         return round(100 * part / total, 1) if total else 0.0
 
+    days = _days(rows)
+    # ONE set of outcome counts feeds the headline cards AND the outcomes table, so the
+    # two can never disagree. Outcome has five fixed values; a whole-service count of one
+    # of them carries no attribute, so it is published exactly (see the comment above).
+    outcome_counts = {k: raw_outcomes.get(k, 0)
+                      for k in ("answered", "unanswered", "refused", "escalated", "emergency")}
+
     return {
-        "source": source,            # "metadata" (real) or "mock"
+        "source": source,            # "metadata" (real), "demo" (flag) or "mock" (DB empty)
         "total_turns": total,
+        "outcome_counts": outcome_counts,
         "unanswered": unanswered,
         "unanswered_rate": pct(unanswered),
-        "escalations": escalated,
+        "escalations": escalated,    # kept for older clients: escalated + emergency
         "escalation_rate": pct(escalated),
+        "emergency": raw_outcomes.get("emergency", 0),
+        "escalated_to_person": raw_outcomes.get("escalated", 0),
         "refused": raw_outcomes.get("refused", 0),
         "answered": raw_outcomes.get("answered", 0),
+        "answered_rate": pct(raw_outcomes.get("answered", 0)),
+        "period": {"start": days[0]["label"], "end": days[-1]["label"]} if days else None,
+        "targets": _targets(),
         # stated on the page so a ministry reader knows why a row is missing
         "min_cell": MIN_CELL,
         # Real data starts at one row and grows. Below the threshold every
-        # breakdown is withheld by design, which looks identical to a broken
-        # page — so say which it is rather than letting the reader guess.
-        "sparse": source != "mock" and total < MIN_CELL,
+        # breakdown is merged, which looks identical to a broken page — so say
+        # which it is rather than letting the reader guess.
+        "sparse": source == "metadata" and total < MIN_CELL,
         "topics": _tally(rows, "topic", top=10),
+        "topic_kinds": _tally(_with_kind(rows), "kind", top=12),
         "languages": _tally(rows, "lang"),
         "cazas": _tally(rows, "caza", top=10),
-        "outcomes": _tally(rows, "outcome"),
-        "days": sorted(_tally(rows, "day"), key=lambda d: d["label"]),
+        "days": days,
         "unanswered_topics": _tally(
             [r for r in rows if r.get("outcome") == "unanswered"], "topic", top=5
+        ),
+        "unanswered_kinds": _tally(
+            _with_kind([r for r in rows if r.get("outcome") == "unanswered"]), "kind", top=8
         ),
     }
 
 
+def _demo_wanted(demo: int) -> bool:
+    return demo == 1 or os.getenv("DASHBOARD_DEMO") == "1"
+
+
 @router.get("/api/metrics")
-def metrics() -> dict[str, Any]:
-    """Anonymised aggregates for the Phase-2 dashboard."""
+def metrics(demo: int = 0) -> dict[str, Any]:
+    """Anonymised aggregates for the Phase-2 dashboard.
+
+    Demo mode (`?demo=1` or DASHBOARD_DEMO=1) serves synthetic rows generated in memory and
+    ignores the database entirely, so demo and real rows can never be mixed."""
+    if _demo_wanted(demo):
+        from channels.demo_metrics import demo_rows
+        return summarise(demo_rows(), "demo")
     try:
         rows = _fetch_rows()
         if rows:
