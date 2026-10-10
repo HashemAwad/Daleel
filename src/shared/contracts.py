@@ -71,6 +71,8 @@ class Inquiry(BaseModel):
     lang: Optional[Lang] = None
     user_ref: str                     # SALTED HASH of phone/session — never raw PII
     audio_url: Optional[str] = None   # set for voice notes; channels fetch + B transcribes
+    lat: Optional[float] = None       # user location (web geolocation / WhatsApp pin) for true
+    lon: Optional[float] = None       # distance-based "nearest" — falls back to town when absent
 
 
 class ToolResult(BaseModel):

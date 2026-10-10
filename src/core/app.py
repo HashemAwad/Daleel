@@ -28,6 +28,8 @@ class ChatIn(BaseModel):
     text: str = ""
     user_ref: str = "anon"
     lang: str | None = None
+    lat: float | None = None
+    lon: float | None = None
 
 
 @app.get("/health")
@@ -39,7 +41,7 @@ def health() -> dict:
 def chat(body: ChatIn) -> Answer:
     inq = Inquiry(
         id=str(uuid.uuid4()), channel=body.channel, text=body.text,
-        lang=body.lang, user_ref=body.user_ref,
+        lang=body.lang, user_ref=body.user_ref, lat=body.lat, lon=body.lon,
     )
     return pipeline.handle(inq)
 

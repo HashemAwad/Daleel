@@ -14,6 +14,7 @@ the caza's name, then alphabetical.
 """
 from __future__ import annotations
 import logging
+import math
 from data.db import get_conn
 from data.normalize import place_key
 from shared.contracts import Facility
@@ -21,6 +22,15 @@ from shared.contracts import Facility
 log = logging.getLogger(__name__)
 KINDS = {"pharmacy", "hospital", "phc"}
 MAX_K = 10
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in km between two lat/lon points."""
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi, dlmb = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlmb / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
 
 # Caza spellings that are also everyday words: "shouf" = "look", "sur" = French "on", صور = "pictures".
 # Inside a sentence they only count right after a location word.
@@ -117,7 +127,33 @@ def order(rows: list[dict], caza: str, town: str | None, aliases: dict[str, str]
 class DirectorySearchImpl:
     def nearest(self, kind: str, caza: str | None = None, lat: float | None = None,
                 lon: float | None = None, k: int = 3) -> list[Facility]:
-        if kind not in KINDS or not caza:
+        if kind not in KINDS:
+            return []
+        k = max(1, min(k, MAX_K))
+
+        # TRUE nearest: if the user shared a location, rank ALL facilities of this
+        # kind by real distance and fill distance_km. This is the accurate path.
+        if lat is not None and lon is not None:
+            try:
+                with get_conn() as conn:
+                    rows = conn.execute(
+                        "SELECT id, name, type, caza, address, phone, lat, lon, is_synthetic "
+                        "FROM facilities WHERE type = %s AND lat IS NOT NULL AND lon IS NOT NULL",
+                        (kind,)).fetchall()
+                ranked = sorted(((_haversine_km(lat, lon, r["lat"], r["lon"]), r) for r in rows),
+                                key=lambda x: x[0])[:k]
+                return [Facility(
+                    id=str(r["id"]),
+                    name=r["name"] + (" [demo data]" if r["is_synthetic"] else ""),
+                    type=r["type"], caza=r["caza"], address=r["address"], phone=r["phone"],
+                    lat=r["lat"], lon=r["lon"], distance_km=round(dist, 1),
+                ) for dist, r in ranked]
+            except Exception as e:
+                log.warning("directory distance lookup failed: %s", type(e).__name__)
+                return []
+
+        # Fallback (no coordinates): city/caza-based, as before.
+        if not caza:
             return []
         try:
             aliases, towns = _load()

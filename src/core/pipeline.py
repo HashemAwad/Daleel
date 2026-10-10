@@ -98,6 +98,8 @@ def _render_facts(result: ToolResult) -> str:
         lines.append("أقرب المرافق · Nearest facilities:")
         for f in result.facilities[:3]:
             parts = [f.name] + [p for p in (f.caza, f.address, f.phone) if p]
+            if f.distance_km is not None:
+                parts.append(f"{f.distance_km} km")
             lines.append("• " + " — ".join(parts))
     elif result.drugs:
         for dr in result.drugs[:3]:

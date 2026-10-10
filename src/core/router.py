@@ -77,8 +77,10 @@ def choose_tool(inq: Inquiry) -> str:
 def run_tool(tool: str, inq: Inquiry) -> ToolResult:
     if tool == "directory":
         return ToolResult(tool="directory",
-                          facilities=providers.directory.nearest(_directory_kind(inq.text),
-                                                                  caza=_resolve_caza(inq.text)))
+                          facilities=providers.directory.nearest(
+                              _directory_kind(inq.text),
+                              caza=_resolve_caza(inq.text),
+                              lat=inq.lat, lon=inq.lon))
     if tool == "medicine":
         return ToolResult(tool="medicine", drugs=providers.medicine.find(inq.text))
     if tool == "hotline":

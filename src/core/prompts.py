@@ -23,7 +23,8 @@ def build_context(result: ToolResult) -> str:
         src = f" (source: {d.source.url})" if d.source else ""
         parts.append(f"[procedure] {d.title}: {d.content}{src}")
     for f in result.facilities:
-        parts.append(f"[facility] {f.name}, {f.type}, {f.caza or ''}, {f.address or ''}, {f.phone or ''}")
+        dist = f" ({f.distance_km} km away)" if f.distance_km is not None else ""
+        parts.append(f"[facility] {f.name}, {f.type}, {f.caza or ''}, {f.address or ''}, {f.phone or ''}{dist}")
     for dr in result.drugs:
         free = "free" if dr.is_free else ("not free" if dr.is_free is False else "unknown")
         parts.append(f"[medicine] {dr.name}: price {dr.price} {dr.currency}, {free}, list {dr.list_date}")
