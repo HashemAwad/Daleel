@@ -361,6 +361,38 @@ def test_threshold_is_published_so_the_page_can_explain_itself():
     assert metrics.summarise(metrics.MOCK_ROWS, "mock")["min_cell"] == metrics.MIN_CELL
 
 
+def test_the_withheld_notice_survives_the_top_n_cap():
+    """The `withheld` entry sorts last, so a plain slice used to drop it just
+    when there was enough data to need one: 26 cazas exist and a rehearsal
+    seeds 12 labels. Suppression must never be silent on a ministry screen.
+    """
+    rows = [{"topic": "procedures", "caza": f"caza{i}", "lang": "ar",
+             "outcome": "answered", "day": "2026-10-10", "n": 50 - i}
+            for i in range(12)]
+    rows.append({"topic": "procedures", "caza": "Bcharre", "lang": "ar",
+                 "outcome": "answered", "day": "2026-10-10", "n": 1})
+
+    cazas = metrics.summarise(rows, "metadata")["cazas"]
+    published = [c for c in cazas if not c.get("suppressed")]
+    withheld = [c for c in cazas if c.get("suppressed")]
+
+    assert len(published) == 10                      # the cap still applies
+    assert withheld and withheld[0]["count"] == 1     # and the notice came too
+
+
+def test_the_cap_counts_published_labels_only():
+    """A withheld entry must not consume one of the top-N slots."""
+    rows = [{"topic": "procedures", "caza": f"caza{i}", "lang": "ar",
+             "outcome": "answered", "day": "2026-10-10", "n": 9}
+            for i in range(10)]
+    rows.append({"topic": "procedures", "caza": "Tiny", "lang": "ar",
+                 "outcome": "answered", "day": "2026-10-10", "n": 2})
+
+    cazas = metrics.summarise(rows, "metadata")["cazas"]
+    assert len([c for c in cazas if not c.get("suppressed")]) == 10
+    assert len(cazas) == 11
+
+
 # ---- open item C2: OpenStreetMap attribution (ODbL) -----------------------
 def test_directory_answers_carry_the_osm_credit():
     ans = Answer(text="Pharmacy X, Main St", sources=[], tool="directory",
@@ -385,11 +417,56 @@ def test_mock_topics_are_all_in_the_declared_vocabulary():
     assert {r["topic"] for r in metrics.MOCK_ROWS} <= set(metrics.MOCK_TOPICS)
 
 
-def test_mock_vocabulary_matches_bs_classifier():
-    """If B widens or renames TOPICS, this fails loudly instead of the mock
-    dashboard quietly drifting into topics the retention job never writes."""
-    classifier = pytest.importorskip("ai.classifier")
-    assert set(metrics.MOCK_TOPICS) == set(classifier.TOPICS)
+def test_mock_vocabulary_matches_the_real_metadata_writer():
+    """`data.transcripts.topic()` is what actually fills `metadata.topic`, and
+    `data.demo._TOPICS` seeds the same six for a rehearsal. If either renames a
+    tool or adds a topic, this fails loudly instead of the mock dashboard
+    drifting into topics the live page can never show.
+
+    `ai.classifier.TOPICS` is deliberately NOT the reference: it is a wider,
+    third vocabulary and nothing calls the classifier at runtime (B6 / H2).
+    Pinning the mock to it is what hid `drug_price` — a quarter of every seeded
+    rehearsal — from the mock view.
+    """
+    from typing import get_args
+
+    from shared.contracts import Outcome, ToolName
+
+    transcripts = pytest.importorskip("data.transcripts")
+
+    # Both are closed Literals, so this is the complete set of topics any turn
+    # can ever produce — not a sample of likely ones.
+    reachable = {
+        transcripts.topic(Answer(text="x", sources=[], tool=tool, grounded=True,
+                                 outcome=outcome, lang="en"))
+        for tool in get_args(ToolName)
+        for outcome in get_args(Outcome)
+    }
+    assert set(metrics.MOCK_TOPICS) == reachable
+
+
+def test_mock_rows_drop_the_caza_exactly_where_real_turns_do():
+    """`transcripts.record` stores no caza for an emergency or a refusal, so a
+    mock row carrying one would put a caza on the map that the live page never
+    attributes to those topics."""
+    transcripts = pytest.importorskip("data.transcripts")
+    for row in metrics.MOCK_ROWS:
+        if row["outcome"] in transcripts._NO_DETAIL:
+            assert row["caza"] is None, row
+
+
+def test_mock_cazas_are_canonical_names():
+    """`metadata.caza` is a foreign key to `cazas.name_en`; an alias spelling
+    ("Metn", "Nabatieh", "Keserwan") can never appear in real data."""
+    import csv
+    import pathlib
+
+    seed = pathlib.Path(__file__).resolve().parents[1] / "src/data/seeds/cazas.csv"
+    if not seed.exists():                       # D owns the seed; skip if it moves
+        pytest.skip("cazas.csv not present")
+    canonical = {r["name_en"] for r in csv.DictReader(seed.open(encoding="utf-8"))}
+    used = {r["caza"] for r in metrics.MOCK_ROWS if r["caza"] is not None}
+    assert used <= canonical, used - canonical
 
 
 def test_mock_topics_satisfy_the_schema_check():

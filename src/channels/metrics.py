@@ -29,29 +29,54 @@ ESCALATED_OUTCOMES = {"escalated", "emergency"}
 MIN_CELL = 5
 
 # Shaped like real rows so the page layout is honest about what Phase 2 shows.
-# Topics MUST come from B's closed vocabulary (`ai.classifier.TOPICS`) — the
-# retention job only ever writes those, so inventing friendlier names here
-# would make the mock view a different page from the live one.
-# Kept as a literal rather than importing ai: channels does not depend on
+#
+# Topics MUST be the vocabulary that actually reaches `metadata`. Exactly two
+# writers exist and they agree on six values:
+#   * real turns  — `data.transcripts.topic()`: the `_TOPIC_BY_TOOL` values
+#                   (procedures / directory / drug_price) plus `emergency`
+#                   (outcome emergency), `dosing_request` (outcome refused)
+#                   and `other` (anything unrouted).
+#   * rehearsals  — `data.demo._TOPICS`, seeded by `infra/reset_demo.sh`.
+# `ai.classifier.TOPICS` is a THIRD, wider vocabulary (coverage, chronic_med,
+# mental_health, ...) that nothing writes: the classifier is not called at
+# runtime (open items B6 / H2). Mocking those names made the mock view a
+# different page from the live one — `drug_price`, a quarter of every seeded
+# rehearsal, was missing from it entirely.
+#
+# Kept as a literal rather than importing data: channels does not depend on
 # another owner's module. tests/test_channels.py asserts the two agree.
-MOCK_TOPICS = ("coverage", "referral_admission", "chronic_med", "acute_med",
-               "procedures", "directory", "mental_health", "emergency", "other")
+MOCK_TOPICS = ("procedures", "directory", "drug_price",
+               "dosing_request", "emergency", "other")
 
+# Proportions and outcome rules follow `data.demo.sample_rows` so the mock and
+# the rehearsal seed tell the same story: `other` is never answered, drug_price
+# is answered ~60% of the time, and `emergency` / `dosing_request` carry no caza
+# (the real writer drops it for those outcomes — `transcripts._NO_DETAIL`).
+# Caza labels are canonical `cazas.name_en` values, which is what the column is
+# a foreign key to — an alias like "Metn" or "Nabatieh" could never appear live.
+# Bcharre is deliberately left under MIN_CELL so the page still demonstrates
+# k-anonymity suppression on mock data.
 MOCK_ROWS: list[dict[str, Any]] = [
-    {"topic": "chronic_med", "caza": "Beirut", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 34},
-    {"topic": "chronic_med", "caza": "Aley", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 12},
-    {"topic": "referral_admission", "caza": "Tripoli", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 27},
-    {"topic": "referral_admission", "caza": "Saida", "lang": "ar", "outcome": "unanswered", "day": "2026-10-09", "n": 9},
-    {"topic": "directory", "caza": "Beirut", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 22},
+    {"topic": "procedures", "caza": "Beirut", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 18},
+    {"topic": "procedures", "caza": "Akkar", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 13},
+    {"topic": "procedures", "caza": "Tripoli", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 11},
+    {"topic": "procedures", "caza": "El Meten", "lang": "ar", "outcome": "unanswered", "day": "2026-10-10", "n": 11},
+    {"topic": "procedures", "caza": "Kesrwane", "lang": "fr", "outcome": "unanswered", "day": "2026-10-09", "n": 7},
+    {"topic": "directory", "caza": "Beirut", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 20},
+    {"topic": "directory", "caza": "Baabda", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 14},
     {"topic": "directory", "caza": "Zahle", "lang": "en", "outcome": "answered", "day": "2026-10-09", "n": 8},
-    {"topic": "acute_med", "caza": "Beirut", "lang": "fr", "outcome": "answered", "day": "2026-10-10", "n": 19},
-    {"topic": "acute_med", "caza": "Baabda", "lang": "ar", "outcome": "unanswered", "day": "2026-10-10", "n": 7},
-    {"topic": "procedures", "caza": "Akkar", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 16},
-    {"topic": "procedures", "caza": "Keserwan", "lang": "fr", "outcome": "answered", "day": "2026-10-09", "n": 6},
-    {"topic": "coverage", "caza": "Metn", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 11},
-    {"topic": "mental_health", "caza": "Beirut", "lang": "arabizi", "outcome": "escalated", "day": "2026-10-10", "n": 5},
-    {"topic": "emergency", "caza": "Nabatieh", "lang": "ar", "outcome": "emergency", "day": "2026-10-10", "n": 4},
-    {"topic": "other", "caza": "Beirut", "lang": "en", "outcome": "refused", "day": "2026-10-10", "n": 6},
+    {"topic": "directory", "caza": "Sour", "lang": "ar", "outcome": "unanswered", "day": "2026-10-09", "n": 8},
+    {"topic": "drug_price", "caza": "Beirut", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 14},
+    {"topic": "drug_price", "caza": "Aley", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 13},
+    {"topic": "drug_price", "caza": "Bcharre", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 3},
+    {"topic": "drug_price", "caza": "Saida", "lang": "ar", "outcome": "unanswered", "day": "2026-10-09", "n": 12},
+    {"topic": "drug_price", "caza": "Baalbek", "lang": "en", "outcome": "unanswered", "day": "2026-10-10", "n": 8},
+    {"topic": "other", "caza": "Beirut", "lang": "en", "outcome": "unanswered", "day": "2026-10-10", "n": 12},
+    {"topic": "other", "caza": None, "lang": "fr", "outcome": "unanswered", "day": "2026-10-09", "n": 8},
+    {"topic": "dosing_request", "caza": None, "lang": "ar", "outcome": "refused", "day": "2026-10-10", "n": 7},
+    {"topic": "dosing_request", "caza": None, "lang": "arabizi", "outcome": "refused", "day": "2026-10-09", "n": 5},
+    {"topic": "emergency", "caza": None, "lang": "ar", "outcome": "emergency", "day": "2026-10-10", "n": 5},
+    {"topic": "emergency", "caza": None, "lang": "arabizi", "outcome": "emergency", "day": "2026-10-09", "n": 3},
 ]
 
 _SQL = """
@@ -81,13 +106,19 @@ def _fetch_rows() -> list[dict[str, Any]]:
 
 
 def _tally(rows: list[dict[str, Any]], key: str,
-           min_cell: int = MIN_CELL) -> list[dict[str, Any]]:
+           min_cell: int = MIN_CELL, top: int | None = None) -> list[dict[str, Any]]:
     """Counts per label, with small groups suppressed.
 
     Any label seen fewer than `min_cell` times is withheld and rolled into a
-    single `withheld` entry. Publishing "mental_health · Bcharre · 1" on a
+    single `withheld` entry. Publishing "drug_price · Bcharre · 1" on a
     ministry screen can identify the one person who asked; the rolled-up count
     keeps the totals honest without naming the group.
+
+    `top` caps how many *published* labels come back. The `withheld` entry is
+    never part of that cap: it sorts last by design, so a plain slice at the
+    call site would drop the suppression notice exactly when there is enough
+    data to need one — 26 cazas exist and a rehearsal seeds 12 labels, so the
+    notice fell off the end of the list while suppression was still happening.
     """
     totals: dict[str, int] = {}
     for r in rows:
@@ -98,6 +129,8 @@ def _tally(rows: list[dict[str, Any]], key: str,
     suppressed = {k: v for k, v in totals.items() if v < min_cell}
 
     ordered = sorted(published.items(), key=lambda kv: (-kv[1], kv[0]))
+    if top is not None:
+        ordered = ordered[:top]
     out = [{"label": k, "count": v} for k, v in ordered]
     if suppressed:
         out.append({
@@ -141,14 +174,14 @@ def summarise(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
         # breakdown is withheld by design, which looks identical to a broken
         # page — so say which it is rather than letting the reader guess.
         "sparse": source != "mock" and total < MIN_CELL,
-        "topics": _tally(rows, "topic")[:10],
+        "topics": _tally(rows, "topic", top=10),
         "languages": _tally(rows, "lang"),
-        "cazas": _tally(rows, "caza")[:10],
+        "cazas": _tally(rows, "caza", top=10),
         "outcomes": _tally(rows, "outcome"),
         "days": sorted(_tally(rows, "day"), key=lambda d: d["label"]),
         "unanswered_topics": _tally(
-            [r for r in rows if r.get("outcome") == "unanswered"], "topic"
-        )[:5],
+            [r for r in rows if r.get("outcome") == "unanswered"], "topic", top=5
+        ),
     }
 
 
