@@ -105,6 +105,20 @@ def test_audio_reaches_the_model_in_memory_only():
     assert m.audio_types == [io.BytesIO]                              # not a path: no temp file
 
 
+def test_whisper_is_given_the_vocabulary_hints(monkeypatch):
+    seen = {}
+
+    class M(FakeWhisper):
+        def transcribe(self, audio, language=None, **kw):
+            seen.update(kw)
+            return super().transcribe(audio, language, **kw)
+    TranscriberImpl(M()).transcribe(b"x")
+    assert "Aley" in seen["hotwords"] and "عاليه" in seen["hotwords"] and "Concor" in seen["hotwords"]
+    monkeypatch.setenv("WHISPER_HINTS", "Hamra")
+    TranscriberImpl(M()).transcribe(b"x")
+    assert seen["hotwords"] == "Hamra"
+
+
 def _broken_whisper(monkeypatch, seen):
     def boom(*args, **kwargs):
         seen.append(kwargs)
@@ -234,6 +248,11 @@ def test_a_phone_number_spoken_as_words_is_masked(heard):
     assert "[PHONE]" in out
     for word in ("صفر", "مية", "وعشرين", "وخمسين", "تمانية", "three", "cent", "vingt"):
         assert word not in out
+
+
+def test_a_name_with_diacritics_is_masked_whole():
+    out = providers.redact("اسمي هاشي معوّاد ورقمي 0-3-123-456 وين أقرب صيدلية بعليه؟")   # real Whisper output
+    assert "هاشي" not in out and "اد" not in out.replace("[", " ").split() and "123" not in out and "صيدلية" in out
 
 
 @pytest.mark.parametrize("heard", ["قديش سعر كونكور خمسة", "how much is concor five", "one or two pharmacies in Aley",

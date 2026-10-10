@@ -7,7 +7,8 @@ no temp file.
 
 Config (env): WHISPER_MODEL (default "small"; use "medium"/"large-v3" for better Arabic),
 WHISPER_DEVICE (default "auto"), WHISPER_COMPUTE (default "int8"),
-WHISPER_MAX_SECONDS (default 60: only the first minute of a long note is transcribed).
+WHISPER_MAX_SECONDS (default 60: only the first minute of a long note is transcribed),
+WHISPER_HINTS (words Whisper should expect; replaces the default list below).
 Never log audio, transcripts, or exception messages from here.
 
 Try a file by hand:  PYTHONPATH=src python -m ai.transcribe clip.ogg [--answer]
@@ -27,6 +28,18 @@ log = logging.getLogger("daleel.ai.transcribe")
 # Whisper codes we map straight onto Lang. Arabic first: Lebanese audio mis-detected as
 # fa/ur/he falls back to the likeliest of these three, and to Arabic on a tie.
 _SUPPORTED = ("ar", "fr", "en")
+
+
+# Words a caller is likely to say and Whisper otherwise misspells: with them, "Ailey" / "aller" /
+# "بعالي" come out as Aley / عاليه and "كنكور" as كونكور, which is what the lookups match on.
+# Whisper reads about 220 tokens of this (Arabic costs more), so keep it short.
+_HINTS = (
+    "Concor, Panadol, Nexium, Augmentin, Brufen, Crestor, Aspirin, pharmacie, hôpital, "
+    "Aley, Beirut, Baabda, Chouf, Meten, Kesrwane, Jbeil, Tripoli, Akkar, Zgharta, Koura, Batroun, "
+    "Bcharre, Zahle, Baalbek, Hermel, Saida, Sour, Nabatieh, Jezzine, Marjaayoun, "
+    "صيدلية، مستشفى، مستوصف، وزارة الصحة، عاليه، بيروت، صيدا، صور، طرابلس، زحلة، بعبدا، جبيل، "
+    "كونكور، بنادول، قديش سعر، ما عم يتنفس"
+)
 
 
 def _max_seconds() -> float:
@@ -66,7 +79,8 @@ class TranscriberImpl:
     def _run(self, audio: bytes, language: Optional[str]):
         """Returns (lazy segments, info): language detection has run, decoding has not."""
         return self._load(local_only=True).transcribe(
-            io.BytesIO(audio), language=language, vad_filter=True, beam_size=5)
+            io.BytesIO(audio), language=language, vad_filter=True, beam_size=5,
+            hotwords=os.getenv("WHISPER_HINTS") or _HINTS)
 
     def transcribe(self, audio: bytes, mime: str = "") -> tuple[str, Optional[Lang]]:
         """`mime` is accepted for the contract; PyAV sniffs the container itself.
