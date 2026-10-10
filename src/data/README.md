@@ -40,6 +40,13 @@ PYTHONPATH=src python -m data.loaders      # idempotent; prints counts only
 - anything doubtful, or a DB error → `[]` → the 1787 fallback
 - Arabic-script brand spellings: add to `ALIASES` only after the healthcare teammate has checked them (empty for now)
 
+## Directory search (`directory.py`)
+`DirectorySearchImpl().nearest(kind, caza=...)` — `caza` may be a caza name in any spelling, a town, or the whole user sentence.
+- no recognisable place → `[]` (never arbitrary facilities presented as "nearest")
+- **not ranked by distance**: named town first, then the town sharing the caza's name, then alphabetical; `lat`/`lon` are ignored for now
+- `resolve_caza(text)` → caza or `None`, never raises — for the router
+- everyday words that are also caza spellings (شوف, sur, sour) only count after a location word, unless they are the whole input
+
 ## Tables (`init/schema.sql`)
 | Table | Notes |
 |-------|-------|
