@@ -20,6 +20,32 @@ def test_router_picks_tool(text, expected):
     assert router.route(_inq(text)).tool == expected
 
 
+# ---- A4: model-driven routing overrides keywords when a real model exists --
+def test_model_routing_overrides_keywords(monkeypatch):
+    class FakeLLM:  # not a StubLLM -> model path is used
+        def classify(self, text, labels):
+            return "directory"
+        def generate(self, system, prompt, context=""):
+            return "ok"
+        def embed(self, texts):
+            return []
+    monkeypatch.setattr(router.providers, "llm", FakeLLM())
+    # text has no directory keywords, but the model says "directory"
+    assert router.choose_tool(_inq("I want to find a place")) == "directory"
+
+
+def test_model_routing_falls_back_on_error(monkeypatch):
+    class BoomLLM:
+        def classify(self, text, labels):
+            raise RuntimeError("model down")
+        def generate(self, system, prompt, context=""):
+            return "ok"
+        def embed(self, texts):
+            return []
+    monkeypatch.setattr(router.providers, "llm", BoomLLM())
+    assert router.choose_tool(_inq("nearest pharmacy")) == "directory"  # keyword fallback
+
+
 # ---- A5: safety, multilingual ---------------------------------------------
 @pytest.mark.parametrize("text", [
     "my father is not breathing",

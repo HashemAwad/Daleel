@@ -32,9 +32,14 @@ def handle(inq: Inquiry) -> Answer:
     if result.is_empty():
         return _fallback(inq)
 
-    # 5. Build grounded answer from tool results only
+    # 5. Build grounded answer from tool results only.
+    #    If the model is unavailable (not pulled yet, down mid-demo), degrade
+    #    gracefully to a hotline fallback instead of 500-ing.
     context = build_context(result)
-    text = providers.llm.generate(SYSTEM_PROMPT, inq.text, context)
+    try:
+        text = providers.llm.generate(SYSTEM_PROMPT, inq.text, context)
+    except Exception:
+        return _fallback(inq)
     return Answer(text=text, sources=_sources(result), tool=result.tool,
                   grounded=True, outcome="answered", lang=inq.lang)
 
