@@ -65,7 +65,8 @@
   .titles{display:flex; flex-direction:column; line-height:1.25; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2)}
   .svc{font-size:20px; font-weight:700}
   .grow{flex:1}
-  .chatlink{display:inline-flex; align-items:center; min-height:44px; font-weight:600}
+  .chatlink{display:inline-flex; align-items:center; min-height:44px; font-weight:600; margin-inline-end:6px}
+  .masthead .btn{padding:8px 18px}
 
   /* ---- page head ---- */
   .top{display:flex; align-items:flex-end; gap:20px 24px; flex-wrap:wrap; padding-top:48px}
@@ -179,6 +180,8 @@
     <span class="svc" lang="ar">دليل</span>
     <div class="grow"></div>
     <a class="chatlink" href="/">Open the chat service</a>
+    <button class="btn" id="theme" type="button"></button>
+    <button class="btn" id="refresh" type="button"></button>
   </div>
 </header>
 
@@ -193,8 +196,6 @@
       <div class="actions">
         <span class="pill" id="period" hidden></span>
         <button class="btn" id="demo" type="button" hidden></button>
-        <button class="btn" id="theme" type="button"></button>
-        <button class="btn" id="refresh" type="button"></button>
       </div>
     </div>
     <p class="updated" id="updated"></p>
