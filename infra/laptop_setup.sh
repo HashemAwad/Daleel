@@ -38,7 +38,7 @@ EOF
   echo "created .env with demo settings (Twilio values and PUBLIC_BASE_URL still empty)"
 fi
 chmod 600 .env
-MODEL=$(sed -n 's/^DALEEL_MODEL=\([^ #]*\).*/\1/p' .env)
+MODEL=$(sed -n 's/^DALEEL_LOCAL_MODEL=\([^ #]*\).*/\1/p' .env)
 [ -n "$MODEL" ] || fail "DALEEL_MODEL is not set in .env"
 
 echo "== database"

@@ -38,7 +38,7 @@ ranking and grounding remain deterministic.
 
 **Gemini (best answer quality for the demo):**
 ```
-DALEEL_MODEL=gemini-3.6-flash
+DALEEL_HOSTED_MODEL=gemini-3.6-flash
 DALEEL_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 DALEEL_LLM_API_KEY=...                 # key from aistudio.google.com/app/apikey
 ```
@@ -48,7 +48,7 @@ DALEEL_LLM_API_KEY=...                 # key from aistudio.google.com/app/apikey
 2. In `.env`:
    ```
    DALEEL_MODEL_PROVIDER=hosted
-   DALEEL_MODEL=llama-3.3-70b-versatile
+   DALEEL_HOSTED_MODEL=llama-3.3-70b-versatile
    DALEEL_LLM_BASE_URL=https://api.groq.com/openai/v1
    DALEEL_LLM_API_KEY=gsk_...          # your Groq key
    ```
@@ -62,12 +62,14 @@ switch providers without running the same multilingual evaluation set.
 > a persistent provider failure falls back to plain (still accurate) answers, never an error.
 
 ## Switch to self-hosted (when `ollama list` shows `qwen2.5:7b`)
-Change two lines in `.env` and restart:
+Keep separate names for the local and hosted models, then change the provider and restart:
 ```
 DALEEL_MODEL_PROVIDER=selfhost
-DALEEL_MODEL=qwen2.5:7b
+DALEEL_LOCAL_MODEL=qwen2.5:7b
+DALEEL_HOSTED_MODEL=gemini-3.6-flash
 ```
-That's the whole switch. This is the private, on-device production model.
+The separate variables matter: if local generation fails, the hosted fallback
+must retain its own Gemini/Groq model name rather than receiving the Ollama tag.
 
 ### Post-demo upgrade: Qwen3 8B
 

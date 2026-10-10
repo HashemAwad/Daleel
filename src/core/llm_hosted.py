@@ -23,7 +23,7 @@ class HostedLLM:
                  model: str | None = None) -> None:
         self.base_url = (base_url or settings.llm_base_url).rstrip("/")
         self.api_key = api_key or settings.llm_api_key
-        self.model = model or settings.model
+        self.model = model or settings.hosted_model
 
     @classmethod
     def available(cls) -> bool:

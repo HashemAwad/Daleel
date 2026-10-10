@@ -9,6 +9,8 @@ load_dotenv()
 class Settings:
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
     model = os.getenv("DALEEL_MODEL", "claude-sonnet-4-6")
+    local_model = os.getenv("DALEEL_LOCAL_MODEL", os.getenv("DALEEL_MODEL", "qwen2.5:7b"))
+    hosted_model = os.getenv("DALEEL_HOSTED_MODEL", os.getenv("DALEEL_MODEL", "gemini-3.6-flash"))
     model_provider = os.getenv("DALEEL_MODEL_PROVIDER", "anthropic")  # anthropic | selfhost | hosted
     ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
     llm_base_url = os.getenv("DALEEL_LLM_BASE_URL", "")   # hosted bridge (OpenAI-compatible), e.g. Groq

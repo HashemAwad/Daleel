@@ -66,6 +66,18 @@ def test_llm_failover_uses_hosted_when_local_fails():
     assert llm.generate("system", "question", "facts") == "hosted answer"
 
 
+def test_local_and_hosted_backends_keep_separate_model_names(monkeypatch):
+    from core.llm_ollama import OllamaLLM
+    from core.llm_hosted import HostedLLM
+    import core.llm_ollama as ollama_module
+    import core.llm_hosted as hosted_module
+
+    monkeypatch.setattr(ollama_module.settings, "local_model", "qwen2.5:7b")
+    monkeypatch.setattr(hosted_module.settings, "hosted_model", "gemini-3.6-flash")
+    assert OllamaLLM().model == "qwen2.5:7b"
+    assert HostedLLM(base_url="https://example.com", api_key="key").model == "gemini-3.6-flash"
+
+
 def test_native_gemini_response_is_parsed(monkeypatch):
     from core.llm_hosted import HostedLLM
     import core.llm_hosted as hosted_module
