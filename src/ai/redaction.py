@@ -1,8 +1,10 @@
 """PII redaction (B3). Owner: B. `redact(text) -> text` runs BEFORE any model call.
 
 Regex-only (no model, no network) so it is fast and deterministic. Masks:
-  [PHONE] Lebanese/intl phone numbers      [ID]    long digit runs (national ID, etc.)
-  [EMAIL] e-mail addresses                 [NAME]  names the user introduces themselves with
+  [PHONE] Lebanese/intl phone numbers, also spoken as 3+ number words (voice notes)
+  [ID]    long digit runs (national ID, etc.)
+  [EMAIL] e-mail addresses
+  [NAME]  names the user introduces themselves with
 Names can't be detected in general without NER; we catch introductions in AR / EN / FR /
 Arabizi ("اسمي X", "أنا X", "my name is X", "je m'appelle X", "ismi X"). Over-masking is
 preferred to leaking. Hotlines (1787, 1214, 140...) and prices are short and are left alone.
@@ -21,6 +23,16 @@ _PHONE = re.compile(
     r"(?<![\d\w])(?:(?:\+|00)961" + _SEP + r"|961" + _SEP + r")?\(?0?\d{1,2}\)?"
     r"(?:" + _SEP + r"\d{2,3}){2,3}(?!\d)")
 _LONG_DIGITS = re.compile(r"(?<!\d)\d{9,}(?!\d)")
+
+# Voice notes: Whisper writes a number spoken in Arabic as words ("صفر تلاتة، مية وتلاتة وعشرين"),
+# which no digit pattern sees. One or two number words is a strength or a price ("كونكور خمسة");
+# three or more in a row is a phone number or an ID. Stems, because dialect spellings vary.
+_NUM = (r"(?:و?(?:صفر|واحد|وحد|[إا]?[تث]نين|[إا]ثن|[تث]لا[تث]|[أا]ربع|خمس|ست|سبع|[تث]مان|تسع|عشر|مي[ةهت]|مئ)\w*"
+        r"|و?[أا]لف(?:ين)?"
+        r"|(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|ten|double|triple|hundred)"
+        r"|(?:z[ée]ro|un|deux|trois|quatre|cinq|sept|huit|neuf|dix|vingt|trente|quarante|cinquante|"
+        r"soixante|cent)(?:-\w+)*)")
+_SPOKEN_NUMBER = re.compile(rf"(?<!\w){_NUM}(?:[\s,،.\-]+{_NUM}){{2,}}(?!\w)", re.I)
 
 _W = r"[^\W\d_]+"                      # one letter-only word (any script)
 _NAME_WORDS = rf"{_W}(?:\s+{_W}){{0,2}}"
@@ -63,6 +75,7 @@ def redact(text: str) -> str:
     t = t.translate(_DIGITS)
     t = _LONG_DIGITS.sub("[ID]", t)
     t = _PHONE.sub(lambda m: "[PHONE]" if len(re.sub(r"\D", "", m.group(0))) >= 7 else m.group(0), t)
+    t = _SPOKEN_NUMBER.sub("[PHONE]", t)
     for rx in _NAME_INTRO:
         t = rx.sub(_mask_intro, t)
     t = _ANA.sub(_mask_ana, t)

@@ -223,6 +223,25 @@ def test_spoken_phone_and_name_are_redacted_before_the_model_and_never_logged(mo
         assert secret not in caplog.text
 
 
+@pytest.mark.parametrize("heard", [
+    "اسميها شمعوال ورقم صفرتلاتة، مية وثلاتة وعشرين، أربع مية وستة وخمسين، وين أقرب صيدالية بعالي؟",   # real Whisper output
+    "رقمي صفر تلاتة تمانية خمسة ستة واحد تنين",
+    "my number is zero three one two three four five six",
+    "mon numéro est zéro trois, cent vingt-trois, quatre cent cinquante-six",
+])
+def test_a_phone_number_spoken_as_words_is_masked(heard):
+    out = providers.redact(heard)
+    assert "[PHONE]" in out
+    for word in ("صفر", "مية", "وعشرين", "وخمسين", "تمانية", "three", "cent", "vingt"):
+        assert word not in out
+
+
+@pytest.mark.parametrize("heard", ["قديش سعر كونكور خمسة", "how much is concor five", "one or two pharmacies in Aley",
+                                   "بدي خمسة وعشرين حبة", "le prix du concor cinq", "وين أقرب صيدلية بعاليه"])
+def test_a_strength_or_a_small_count_is_not_mistaken_for_a_phone_number(heard):
+    assert providers.redact(heard) == heard
+
+
 def test_emergency_voice_note_gets_140_and_stores_no_text(monkeypatch):
     llm, recorded = RecordingLLM(), []
     monkeypatch.setattr(providers, "llm", llm)
