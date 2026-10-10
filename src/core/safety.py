@@ -36,7 +36,7 @@ EMERGENCY_TERMS = [
 # Medical advice / dosing: refuse and point to a human.
 ADVICE_TERMS = [
     # EN
-    "dose", "dosage", "how much should i take", "how many pills", "mg of", "diagnose",
+    "dose", "dosage", "how much should i take", "how many pills", "diagnose",
     "what do i have", "is it safe to take",
     # FR
     "dose", "posologie", "combien de comprimés", "diagnostic",

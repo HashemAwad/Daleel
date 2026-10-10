@@ -24,7 +24,7 @@ def sources_lines(answer: Answer) -> list[str]:
             continue
         seen.add(src.url)
         checked = f" (checked {src.checked_on})" if src.checked_on else ""
-        lines.append(f"↗ {src.title}{checked}\n{src.url}")
+        lines.append(f"{src.title}{checked}\n{src.url}")
     return lines
 
 

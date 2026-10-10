@@ -27,3 +27,8 @@ def test_emergency_shortcircuits():
 def test_medical_advice_refused():
     r = client.post("/chat", json={"channel": "web", "text": "what dose of panadol for my baby?", "user_ref": "t"})
     assert r.json()["outcome"] == "refused"
+
+
+def test_chat_rejects_oversized_text_and_invalid_coordinates():
+    assert client.post("/chat", json={"text": "x" * 2001}).status_code == 422
+    assert client.post("/chat", json={"text": "nearest hospital", "lat": 91, "lon": 0}).status_code == 422

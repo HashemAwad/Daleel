@@ -97,7 +97,9 @@ def test_directory_outage_gives_the_hotline_not_an_endless_town_question(app, se
         raise RuntimeError("db down")
     monkeypatch.setattr(directory, "get_conn", down)
     a = _ask(app, session, "nearest pharmacy in Aley")
-    assert a["tool"] == "hotline" and "1787" in a["text"]
+    # The reply still gives the hotline, but keeps the failed topic so analytics
+    # can show that a directory question went unanswered.
+    assert a["tool"] == "directory" and "1787" in a["text"]
 
 
 def test_shared_location_ranks_by_distance(app, session):

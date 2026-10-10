@@ -81,6 +81,7 @@ class ToolResult(BaseModel):
     facilities: list[Facility] = Field(default_factory=list)
     drugs: list[DrugRecord] = Field(default_factory=list)
     hotlines: list[Hotline] = Field(default_factory=list)
+    clarification: Optional[Literal["facility_type", "location"]] = None
 
     def is_empty(self) -> bool:
         return not (self.docs or self.facilities or self.drugs or self.hotlines)

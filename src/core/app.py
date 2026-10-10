@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from shared.contracts import Inquiry, Answer
 from core import pipeline
 
@@ -20,16 +20,16 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 @app.get("/")
 def widget() -> FileResponse:
     """Serve the chat widget same-origin so /chat works with no CORS fuss."""
-    return FileResponse(WEB_DIR / "index.html")
+    return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
 class ChatIn(BaseModel):
     channel: str = "web"
-    text: str = ""
+    text: str = Field(default="", max_length=2000)
     user_ref: str = "anon"
     lang: str | None = None
-    lat: float | None = None
-    lon: float | None = None
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lon: float | None = Field(default=None, ge=-180, le=180)
 
 
 @app.get("/health")
@@ -39,9 +39,13 @@ def health() -> dict:
 
 @app.post("/chat", response_model=Answer)
 def chat(body: ChatIn) -> Answer:
+    # Never let unrelated API clients share the literal "anon" session.
+    # `ephemeral_` is deliberately outside the trusted/storable session format.
+    user_ref = (body.user_ref if body.user_ref and body.user_ref != "anon"
+                else f"ephemeral_{uuid.uuid4().hex}")
     inq = Inquiry(
         id=str(uuid.uuid4()), channel=body.channel, text=body.text,
-        lang=body.lang, user_ref=body.user_ref, lat=body.lat, lon=body.lon,
+        lang=body.lang, user_ref=user_ref, lat=body.lat, lon=body.lon,
     )
     return pipeline.handle(inq)
 

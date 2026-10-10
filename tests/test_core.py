@@ -15,6 +15,7 @@ def _inq(text="", audio_url=None, lang=None):
     ("أقرب مستشفى", "directory"),
     ("combien coûte le Concor 5?", "medicine"),
     ("سعر الدوا", "medicine"),
+    ("adde se3er el Concor 5?", "medicine"),
     ("pharmacie la plus proche", "directory"),
 ])
 def test_keyword_router_picks_tool(text, expected):
@@ -33,10 +34,17 @@ def test_model_routing_overrides_keywords(monkeypatch):
             return "ok"
         def embed(self, texts):
             return []
-    monkeypatch.setenv("MODEL_ROUTER", "1")  # model routing is opt-in
     monkeypatch.setattr(router.providers, "llm", FakeLLM())
     # text has no directory keywords, but the model says "directory"
     assert router.choose_tool(_inq("I want to find a place")) == "directory"
+
+
+def test_semantic_router_understands_unlisted_arabizi_spelling(monkeypatch):
+    class SemanticLLM:
+        def classify(self, text, labels):
+            return "directory"
+    monkeypatch.setattr(router.providers, "llm", SemanticLLM())
+    assert router.choose_tool(_inq("wena a2rab mestashfa?")) == "directory"
 
 
 def test_model_routing_falls_back_on_error(monkeypatch):
@@ -120,7 +128,7 @@ def test_keep_real_procedure_source_url():
                      docs=[Doc(id="1", title="T", content="c", source=Source(title="T", url=real))])
     kept = pipeline._strip_unsourced_urls(f"Steps... source: {real}", res)
     fake = pipeline._strip_unsourced_urls("Steps... source: https://made-up.example", res)
-    assert real in kept                 # the genuine source survives
+    assert real not in kept             # channel renders the genuine source once
     assert "made-up" not in fake        # an invented one is removed
 
 
@@ -156,6 +164,37 @@ def test_directory_followup_keeps_hospital_and_requests_one(monkeypatch):
     assert out.text == "closest hospital only one"
 
 
+@pytest.mark.parametrize("text", ["a2rab wa7de pls", "a2rab wa7dE!!", "2a2rab we7de"])
+def test_arabizi_closest_followup_requests_one(text, monkeypatch):
+    from core import memory
+    class SemanticLLM:
+        def classify(self, text, labels):
+            return "closest_one"
+    monkeypatch.setattr(router.providers, "llm", SemanticLLM())
+    memory.remember_directory_kind("u3-arabizi", "pharmacy")
+    inq = _inq(text).model_copy(update={"user_ref": "u3-arabizi", "lang": "arabizi"})
+    out = pipeline._apply_directory_followup(inq)
+    assert isinstance(out, Inquiry)
+    assert out.text == "closest pharmacy only one"
+
+
+def test_arabizi_hospital_spelling_keeps_hospital_kind(monkeypatch):
+    class SemanticLLM:
+        def classify(self, text, labels):
+            return "hospital"
+    monkeypatch.setattr(router.providers, "llm", SemanticLLM())
+    assert router._directory_kind("wena a2rab mestashfa?") == "hospital"
+
+
+def test_unknown_facility_type_is_not_assumed_to_be_pharmacy(monkeypatch):
+    class SemanticLLM:
+        def classify(self, text, labels):
+            return "unknown"
+    monkeypatch.setattr(router.providers, "llm", SemanticLLM())
+    result = router.run_tool("directory", _inq("what is closest to me?"))
+    assert result.is_empty() and result.clarification == "facility_type"
+
+
 def test_private_followup_explains_missing_ownership_data():
     from core import memory
     memory.remember_directory_kind("u4", "hospital")
@@ -164,6 +203,7 @@ def test_private_followup_explains_missing_ownership_data():
     assert out.tool == "directory"
     assert "private or public" in out.text
     assert "MediTrack" not in out.text
+    assert out.outcome == "answered"
 
 
 # ---- A5: safety, multilingual ---------------------------------------------
@@ -191,18 +231,31 @@ def test_advice_refused(text):
     assert pipeline.handle(_inq(text)).outcome == "refused"
 
 
+def test_strength_in_price_question_is_not_mistaken_for_dosing():
+    assert pipeline.safety.check(_inq("price of Concor 5 mg")) is None
+
+
 # ---- A3: grounding gate falls back when no tool result --------------------
 def test_grounding_fallback(monkeypatch):
-    monkeypatch.setattr(router, "route", lambda inq: ToolResult(tool="procedure"))
+    monkeypatch.setattr(router, "choose_tool", lambda inq: "procedure")
+    monkeypatch.setattr(router, "run_tool", lambda tool, inq: ToolResult(tool="procedure"))
     a = pipeline.handle(_inq("something with no source"))
     assert a.grounded is False and a.outcome == "unanswered" and "1787" in a.text
+
+
+def test_unanswered_result_preserves_original_tool(monkeypatch):
+    monkeypatch.setattr(router, "choose_tool", lambda inq: "medicine")
+    monkeypatch.setattr(router, "run_tool", lambda tool, inq: ToolResult(tool="medicine"))
+    a = pipeline.handle(_inq("price of unavailable medicine"))
+    assert a.outcome == "unanswered" and a.tool == "medicine"
 
 
 def test_stub_llm_uses_clean_direct_renderer(monkeypatch):
     from core import providers, stubs
     from shared.contracts import Facility
     monkeypatch.setattr(providers, "llm", stubs.StubLLM())
-    monkeypatch.setattr(router, "route", lambda inq: ToolResult(
+    monkeypatch.setattr(router, "choose_tool", lambda inq: "directory")
+    monkeypatch.setattr(router, "run_tool", lambda tool, inq: ToolResult(
         tool="directory",
         facilities=[Facility(id="1", name="Test Pharmacy", type="pharmacy", distance_km=0.3)],
     ))

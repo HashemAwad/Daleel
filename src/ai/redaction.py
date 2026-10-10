@@ -17,9 +17,10 @@ import re
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
 
 _TASHKEEL = re.compile("[\u064b-\u0652\u0670]")
-_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_INVISIBLE = re.compile("[\u200b-\u200f\u202a-\u202e\u2060\ufeff]")
+_EMAIL = re.compile(r"[\w.+-]{1,64}@[\w-]{1,63}(?:\.[\w-]{1,63})+")
 # optional +961 / 00961 / 961, then 7-8 digits (optionally 0-prefixed local), with separators
-_SEP = r"[ \-./]?"
+_SEP = r"[\s\-./_]{0,3}"
 _PHONE = re.compile(
     r"(?<![\d\w])(?:(?:\+|00)961" + _SEP + r"|961" + _SEP + r")?\(?0?\d{1,2}\)?"
     r"(?:" + _SEP + r"\d{2,3}){2,3}(?!\d)")
@@ -72,6 +73,7 @@ def redact(text: str) -> str:
     if not text:
         return text
     t = _TASHKEEL.sub("", text)          # Whisper adds diacritics ("معوّاد"); they split a name in two
+    t = _INVISIBLE.sub("", t)            # strip zero-width / bidi control chars that evade the patterns
     t = _EMAIL.sub("[EMAIL]", t)
     # match digits on an ASCII-digit view so Arabic-Indic numerals are caught too
     t = t.translate(_DIGITS)

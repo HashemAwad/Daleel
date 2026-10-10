@@ -13,7 +13,10 @@ expected class names stable (they are part of the contract):
   A: core.llm.AnthropicLLM
 """
 from __future__ import annotations
+import logging
 from core import stubs
+
+log = logging.getLogger(__name__)
 
 # --- LLM (A) ---
 # Preferred order for the demo:
@@ -40,45 +43,52 @@ try:
     elif settings.anthropic_api_key:
         from core.llm import AnthropicLLM
         llm = AnthropicLLM()
-except Exception:
+except Exception as exc:
+    log.error("LLM provider unavailable; using direct renderer: %s", type(exc).__name__)
     llm = stubs.StubLLM()
 
 # --- Procedure search (B) ---
 try:
     from ai.retrieval import ProcedureSearchImpl
     procedures = ProcedureSearchImpl()
-except Exception:
+except Exception as exc:
+    log.error("procedure provider unavailable; answers will be withheld: %s", type(exc).__name__)
     procedures = stubs.StubProcedureSearch()
 
 # --- Directory + medicine (D) ---
 try:
     from data.directory import DirectorySearchImpl
     directory = DirectorySearchImpl()
-except Exception:
+except Exception as exc:
+    log.error("directory provider unavailable; answers will be withheld: %s", type(exc).__name__)
     directory = stubs.StubDirectory()
 
 try:
     from data.medicine import MedicineLookupImpl
     medicine = MedicineLookupImpl()
-except Exception:
+except Exception as exc:
+    log.error("medicine provider unavailable; answers will be withheld: %s", type(exc).__name__)
     medicine = stubs.StubMedicine()
 
 # --- Transcriber (B) ---
 try:
     from ai.transcribe import TranscriberImpl
     transcriber = TranscriberImpl()
-except Exception:
+except Exception as exc:
+    log.error("transcriber unavailable; voice notes disabled: %s", type(exc).__name__)
     transcriber = stubs.StubTranscriber()
 
 # --- redact / classify (B) ---
 try:
     from ai.redaction import redact
-except Exception:
+except Exception as exc:
+    log.error("redactor unavailable; hosted model calls remain blocked by deployment checks: %s", type(exc).__name__)
     redact = stubs.stub_redact
 
 try:
     from ai.classifier import classify
-except Exception:
+except Exception as exc:
+    log.error("metadata classifier unavailable: %s", type(exc).__name__)
     classify = stubs.stub_classify
 
 HOTLINES = stubs.HOTLINES

@@ -33,23 +33,17 @@ class StubTranscriber:
 
 class StubProcedureSearch:
     def search(self, query: str, lang: Optional[Lang] = None, k: int = 4) -> list[Doc]:
-        return [Doc(
-            id="stub-1", title="Example procedure",
-            content="Bring your ID and a prescription to the nearest MoPH office.",
-            source=Source(title="MoPH (stub)", url="https://moph.gov.lb", checked_on="2026-10-10"),
-            lang=lang, score=0.9,
-        )]
+        return []
 
 
 class StubDirectory:
     def nearest(self, kind, caza=None, lat=None, lon=None, k=3) -> list[Facility]:
-        return [Facility(id="stub-f1", name=f"Example {kind}", type=kind, caza=caza,
-                         address="Main St", phone="01-000000")]
+        return []
 
 
 class StubMedicine:
     def find(self, name: str) -> list[DrugRecord]:
-        return [DrugRecord(name=name, price=0.0, generics=[], is_free=None, list_date="2026-10-05")]
+        return []
 
 
 def stub_redact(text: str) -> str:

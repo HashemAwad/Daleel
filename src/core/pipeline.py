@@ -52,22 +52,27 @@ def _handle(inq: Inquiry) -> Answer:
     # 3. Route to exactly one tool. A tool may raise (missing dependency, DB
     #    down, bug in another module) — never let that 500 the request; degrade
     #    to the hotline fallback so the user always gets a reply.
+    chosen_tool = router.choose_tool(inq)
     try:
-        result: ToolResult = router.route(inq)
+        result: ToolResult = router.run_tool(chosen_tool, inq)
     except Exception:
-        return _fallback(inq)
+        return _fallback(inq, chosen_tool)
 
     # 4. Grounding gate — no tool support => fallback to a hotline, never guess.
     #    Special case: a directory question with no results is usually a missing
     #    town — ask for it instead of a dead-end hotline message.
     if result.is_empty():
         if result.tool == "directory":
+            if result.clarification == "facility_type":
+                return _ask_facility_type(inq)
             memory.remember_pending_town(inq.user_ref, inq.text)
             return _ask_town(inq)
-        return _fallback(inq)
+        return _fallback(inq, result.tool)
 
     if result.tool == "directory":
-        memory.remember_directory_kind(inq.user_ref, router._directory_kind(inq.text))
+        kind = router._directory_kind(inq.text)
+        if kind:
+            memory.remember_directory_kind(inq.user_ref, kind)
 
     # 5. Build grounded answer from tool results only.
     #    If the model is unavailable (not pulled yet, down mid-demo), we still have
@@ -77,8 +82,8 @@ def _handle(inq: Inquiry) -> Answer:
     lang = reply_lang(inq)
     # Facility records are already structured. Rendering them directly is both
     # clearer and safer than asking an LLM to repeat names, types and distances.
-    if result.tool == "directory":
-        return Answer(text=_render_facts(result, lang), sources=[], tool="directory",
+    if result.tool in {"directory", "medicine"}:
+        return Answer(text=_render_facts(result, lang), sources=[], tool=result.tool,
                       grounded=True, outcome="answered", lang=lang)
     if isinstance(providers.llm, stubs.StubLLM):
         return Answer(text=_render_facts(result, lang), sources=_sources(result), tool=result.tool,
@@ -118,21 +123,18 @@ def _apply_directory_followup(inq: Inquiry) -> Inquiry | Answer:
     if not kind:
         return inq
     text = inq.text.strip().lower()
-    ownership = ("private", "public", "government", "خاص", "خاصة", "حكومي",
-                 "privé", "prive", "publique", "publics")
-    if any(term in text for term in ownership):
+    action = router.directory_followup_action(text) if len(text.split()) <= 10 else "other"
+    if action == "ownership_filter":
         lang = reply_lang(inq)
         messages = {
-            "ar": "لا تتضمن بيانات المرافق الحالية تصنيفاً موثوقاً للمستشفى كخاص أو حكومي. يمكنني ترتيب المستشفيات حسب المسافة فقط.",
-            "arabizi": "Ma 3enna tasnif mawthou2 iza l mostashfa khas aw 7koume. Fina nrattebon 7asab l masafe bas.",
-            "fr": "Les données actuelles n’indiquent pas de façon fiable si un hôpital est privé ou public. Je peux seulement les classer par distance.",
-            "en": "The current facility data does not reliably identify hospitals as private or public. I can only rank them by distance.",
+            "ar": "لا تتضمن بيانات المرافق الحالية تصنيفاً موثوقاً للمرافق كخاصة أو حكومية. يمكنني ترتيبها حسب المسافة فقط.",
+            "arabizi": "Ma 3enna tasnif mawthou2 iza hal marafe2 khassa aw 7koumiye. Fina nratteba 7asab l masafe bas.",
+            "fr": "Les données actuelles n’indiquent pas de façon fiable si ces établissements sont privés ou publics. Je peux seulement les classer par distance.",
+            "en": "The current facility data does not reliably identify facilities as private or public. I can only rank them by distance.",
         }
         return Answer(text=messages.get(lang, messages["en"]), tool="directory",
-                      grounded=False, outcome="unanswered", lang=lang)
-    closest = ("closest one", "nearest one", "only one", "the closest",
-               "الأقرب", "اقرب واحد", "أقرب واحد", "le plus proche")
-    if any(term in text for term in closest):
+                      grounded=False, outcome="answered", lang=lang)
+    if action == "closest_one":
         return inq.model_copy(update={"text": f"closest {kind} only one"})
     return inq
 
@@ -142,17 +144,16 @@ _URL_RE = re.compile(r"https?://[^\s)>\]]+")
 
 
 def _strip_unsourced_urls(text: str, result: ToolResult) -> str:
-    """Remove any link the model emitted that isn't a real source from the
-    retrieved records. Facilities/medicines have no source URLs, so every link
-    is dropped there; procedures keep only their actual source link. The true
-    source is still attached via Answer.sources regardless."""
-    allowed = {d.source.url for d in result.docs if d.source}
+    """Strip URLs from generated prose.
 
-    def repl(m: re.Match) -> str:
-        return m.group(0) if m.group(0).rstrip(".,);:،") in allowed else ""
-
-    cleaned = _URL_RE.sub(repl, text)
-    return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
+    Verified links are rendered once from ``Answer.sources`` by each channel;
+    generated URLs are never trusted, and repeating real URLs makes the answer
+    noisy. Remove a source-only line left behind after stripping as well.
+    """
+    cleaned = _URL_RE.sub("", text)
+    cleaned = re.sub(r"(?im)^\s*(?:source|official source|المصدر|المصدر الرسمي)\s*:?\s*$", "", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
 
 # ---- Google Maps links (built from our real coordinates, never fabricated) ----
@@ -186,10 +187,7 @@ def _render_facts(result: ToolResult, lang: str = "en") -> str:
     LLM is unavailable, so the bot still helps nicely."""
     if result.docs:
         d = result.docs[0]
-        out = d.content[:500].strip()
-        if d.source:
-            out += f"\n\nSource: {d.source.url}"
-        return out
+        return d.content[:500].strip()
 
     if result.facilities:
         headings = {"ar": "أقرب الأماكن إليك:", "arabizi": "A2rab amekin elak:",
@@ -257,18 +255,41 @@ def _hotline(number: str):
     return next(x for x in providers.HOTLINES if x.number == number)
 
 
-def _fallback(inq: Inquiry) -> Answer:
+def _fallback(inq: Inquiry, tool: str = "none") -> Answer:
     h = _hotline("1787")
+    lang = reply_lang(inq)
+    messages = {
+        "ar": f"لا أملك جواباً رسمياً موثوقاً عن هذا السؤال حالياً. يمكنك الاتصال بوزارة الصحة على {h.number}.",
+        "arabizi": f"Ma 3ende jawab rasmi mawthou2 3an hal so2al halla2. Fik tettel b wezaret el sa7a 3a {h.number}.",
+        "fr": f"Je n’ai pas encore de réponse officielle vérifiée à cette question. Vous pouvez appeler le ministère au {h.number}.",
+        "en": f"I don't have a verified official answer for that yet. You can call the Ministry of Public Health on {h.number}.",
+    }
     return Answer(
-        text=f"I don't have an official answer for that yet. Please call {h.name} on {h.number}.",
-        tool="hotline", grounded=False, outcome="unanswered", lang=inq.lang)
+        text=messages[lang], tool=tool, grounded=False, outcome="unanswered", lang=lang)
 
 
 def _ask_town(inq: Inquiry) -> Answer:
+    lang = reply_lang(inq)
+    messages = {
+        "ar": "في أي منطقة أو قضاء؟ مثلاً: بيروت، عاليه، أو طرابلس.",
+        "arabizi": "Bi aya manta2a aw caza? Masalan Beirut, Aley, aw Tripoli.",
+        "fr": "Dans quelle ville ou région ? Par exemple : Beyrouth, Aley ou Tripoli.",
+        "en": "Which town or area? For example: Beirut, Aley or Tripoli.",
+    }
     return Answer(
-        text="أي منطقة أو قضاء؟ مثلاً: بيروت، عاليه، طرابلس.\n"
-             "Which town or area? e.g. Beirut, Aley, Tripoli.",
-        tool="directory", grounded=False, outcome="unanswered", lang=inq.lang)
+        text=messages[lang], tool="directory", grounded=False, outcome="unanswered", lang=lang)
+
+
+def _ask_facility_type(inq: Inquiry) -> Answer:
+    lang = reply_lang(inq)
+    messages = {
+        "ar": "هل تبحث عن مستشفى، صيدلية، أم مركز رعاية صحية؟",
+        "arabizi": "3am tdawwer 3a mostashfa, saydaliye, aw markaz se77e?",
+        "fr": "Cherchez-vous un hôpital, une pharmacie ou un centre de santé ?",
+        "en": "Are you looking for a hospital, pharmacy or primary healthcare centre?",
+    }
+    return Answer(text=messages[lang], tool="directory", grounded=False,
+                  outcome="unanswered", lang=lang)
 
 
 def _cannot_read(inq: Inquiry) -> Answer:

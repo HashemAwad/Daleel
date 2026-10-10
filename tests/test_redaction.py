@@ -53,3 +53,8 @@ def test_idempotent_and_empty():
     once = redact("اسمي علي 70123456")
     assert redact(once) == once
     assert redact("") == ""
+
+
+@pytest.mark.parametrize("raw", ["03  123  456", "03_123_456", "03\u200f123456"])
+def test_obfuscated_phones_are_masked(raw):
+    assert "[PHONE]" in redact(f"my number is {raw}")
