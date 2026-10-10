@@ -1,12 +1,21 @@
-# Each module has ONE owner who reviews changes to it.
-# Fill in GitHub usernames once modules are assigned.
+# One owner per folder — that owner reviews changes to it.
+# Fill in GitHub usernames once you assign A/B/C/D.
 # Syntax: <path>  @github-username
-#
-# Example:
-# /src/modules/module-a/   @mariamelwirish
-# /src/modules/module-b/   @teammate2
-# /src/modules/module-c/   @teammate3
-# /src/modules/module-d/   @teammate4
-#
-# Shared code requires broader awareness — list everyone:
-# /src/shared/   @mariamelwirish @teammate2 @teammate3 @teammate4
+
+# Member A — Backend core & orchestration
+# /src/core/      @memberA
+# /src/app/       @memberA
+
+# Member B — AI & retrieval
+# /src/ai/        @memberB
+
+# Member C — Channels & frontend
+# /src/channels/  @memberC
+# /web/           @memberC
+
+# Member D — Data & infrastructure
+# /src/data/      @memberD
+# /infra/         @memberD
+
+# Shared contracts — changes reviewed by everyone (A stewards)
+# /src/shared/    @memberA @memberB @memberC @memberD

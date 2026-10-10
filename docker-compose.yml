@@ -1,0 +1,15 @@
+# Postgres with pgvector + PostGIS, one container. `docker compose up -d`
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: daleel
+      POSTGRES_PASSWORD: daleel
+      POSTGRES_DB: daleel
+    ports:
+      - "5432:5432"
+    volumes:
+      - daleel_pg:/var/lib/postgresql/data
+      - ./src/data/init:/docker-entrypoint-initdb.d   # D puts schema.sql here
+volumes:
+  daleel_pg:
