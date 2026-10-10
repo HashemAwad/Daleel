@@ -89,6 +89,9 @@ def channel_health() -> JSONResponse:
             "directory": type(providers.directory).__name__,
             "medicine": type(providers.medicine).__name__,
         },
+        # the class name above is not enough: TranscriberImpl imports fine with no
+        # model on disk. This actually loads it (instant once warm).
+        "voice_ready": bool(getattr(providers.transcriber, "ready", lambda: False)()),
     }
     return JSONResponse(body)
 

@@ -58,5 +58,20 @@ def register(app: Any) -> list[str]:
         app.include_router(router)
         added.extend(sorted(router_paths))
 
+    # Load Whisper when the server starts (a TestClient built without `with` never does),
+    # so a missing model is an ERROR line at boot, not a string of "couldn't read" replies,
+    # and the first voice note does not pay the load time inside Twilio's 15 seconds.
+    app.router.on_startup.append(_warm_voice)
+
     setattr(app.state, _FLAG, True)
     return added
+
+
+def _warm_voice() -> None:
+    import threading
+
+    from core import providers
+
+    ready = getattr(providers.transcriber, "ready", None)
+    if ready:
+        threading.Thread(target=ready, daemon=True, name="whisper-warmup").start()
