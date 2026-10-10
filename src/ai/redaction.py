@@ -16,6 +16,7 @@ import re
 
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
 
+_TASHKEEL = re.compile("[\u064b-\u0652\u0670]")
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 # optional +961 / 00961 / 961, then 7-8 digits (optionally 0-prefixed local), with separators
 _SEP = r"[ \-./]?"
@@ -70,7 +71,8 @@ def _mask_intro(m: re.Match) -> str:
 def redact(text: str) -> str:
     if not text:
         return text
-    t = _EMAIL.sub("[EMAIL]", text)
+    t = _TASHKEEL.sub("", text)          # Whisper adds diacritics ("معوّاد"); they split a name in two
+    t = _EMAIL.sub("[EMAIL]", t)
     # match digits on an ASCII-digit view so Arabic-Indic numerals are caught too
     t = t.translate(_DIGITS)
     t = _LONG_DIGITS.sub("[ID]", t)
