@@ -126,6 +126,10 @@ def test_voice_note_is_transcribed(monkeypatch):
     monkeypatch.setattr(settings, "twilio_auth_token", "")
     monkeypatch.setattr(channel_settings, "require_twilio_signature", False)
     monkeypatch.setattr(whatsapp, "fetch_media", lambda url, form: b"fake-ogg-bytes")
+    # B4's real Whisper transcriber rejects fake bytes; pin a fake so this tests the channel only
+    from core import providers
+    monkeypatch.setattr(providers, "transcriber", type("T", (), {
+        "transcribe": lambda self, audio, mime: ("how do I get a health card", "en")})())
 
     payload = form(Body="", NumMedia="1",
                    MediaUrl0="https://api.twilio.com/media/ME1",
