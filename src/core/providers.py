@@ -24,6 +24,10 @@ try:
         from core.llm_ollama import OllamaLLM
         if OllamaLLM.available():
             llm = OllamaLLM()
+    elif settings.model_provider == "hosted":
+        from core.llm_openai import OpenAICompatLLM
+        if OpenAICompatLLM.available():
+            llm = OpenAICompatLLM()
     elif settings.anthropic_api_key:
         from core.llm import AnthropicLLM
         llm = AnthropicLLM()
