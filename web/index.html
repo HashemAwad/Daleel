@@ -1,12 +1,16 @@
 <!doctype html>
 <!-- Daleel. Owner: C (tickets C0, C1, C5).
-     Arabic-first, RTL, per-message bidi so Arabic, Arabizi, French and English
-     read correctly in one thread. Language is detected per message by the
-     backend — the reader is never asked to choose.
+     Two independent axes, deliberately not conflated:
+       * the INTERFACE language (ar/en) sets document lang + dir. Detected from
+         the browser, overridable, remembered.
+       * the MESSAGE language is detected per message by the backend and is
+         never asked for. A reader can write Arabizi into an English interface
+         and get an Arabizi answer back.
+     Theme is the same pattern: follow the system, allow an override, remember.
 
-     Design: the interface is an official record, not a messaging app. Answers
-     are entries; the source is a reference line; the cedar appears once, blind-
-     embossed, the way a seal sits on ministry letterhead.
+     Design: an official record, not a messaging app. Answers are entries, the
+     source is a reference line, and the cedar appears once, blind-embossed,
+     the way a seal sits on ministry letterhead.
 
      No external assets — the venue network cannot be trusted, so the cedar is
      inline SVG and both typefaces are resident on-device. -->
@@ -18,9 +22,11 @@
 <meta name="theme-color" content="#14130F" media="(prefers-color-scheme: dark)"/>
 <title>دليل — وزارة الصحة العامة</title>
 <style>
+  /* Light is the base. Dark is declared twice on purpose: the media query
+     follows the system, the data-theme scope follows an explicit choice and
+     has to win in both directions. */
   :root{
     color-scheme: light;
-    /* Five values, every one of them taken from the ministry's own lockup. */
     --cedar:#15693A;
     --cedar-deep:#0D4426;
     --seal:#C62127;        /* emergencies and the identity rule. Nowhere else. */
@@ -28,37 +34,49 @@
     --ink-2:#4A453D;
     --quiet:#6B655C;
     --paper:#FCFCFA;
-    --paper-2:#F4F3EE;     /* the reader's own entry */
+    --paper-2:#F4F3EE;
     --rule:#DFDCD3;
     --rule-soft:#EBE9E2;
     --amber:#7A5200; --amber-wash:#F7F0DE;
     --seal-wash:#F9EAE9;
+    --emboss:.032;
 
     --measure:40rem;
     --swift:cubic-bezier(.2,.65,.3,1);
   }
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       color-scheme: dark;
       --cedar:#5FB98A; --cedar-deep:#93D8B2; --seal:#FF8F8A;
       --ink:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
       --paper:#14130F; --paper-2:#1D1B16;
       --rule:#302D26; --rule-soft:#23211B;
       --amber:#E2BC72; --amber-wash:#2A2109; --seal-wash:#2E1512;
+      --emboss:.055;      /* an emboss needs more presence on dark paper */
     }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --cedar:#5FB98A; --cedar-deep:#93D8B2; --seal:#FF8F8A;
+    --ink:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
+    --paper:#14130F; --paper-2:#1D1B16;
+    --rule:#302D26; --rule-soft:#23211B;
+    --amber:#E2BC72; --amber-wash:#2A2109; --seal-wash:#2E1512;
+    --emboss:.055;
   }
 
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
     margin:0; background:var(--paper); color:var(--ink);
-    /* Naskh for Arabic, a transitional serif for Latin: one document voice. */
     font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
                 "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
-    font-size:17px; line-height:1.85;   /* serif wants the extra leading */
+    font-size:17px; line-height:1.85;
     font-variant-numeric:tabular-nums;
     -webkit-font-smoothing:antialiased;
   }
+  /* Latin interface text wants slightly tighter leading than Naskh. */
+  html[lang="en"] body{line-height:1.7}
   .bidi{unicode-bidi:plaintext; text-align:start}
   bdi{unicode-bidi:isolate}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
@@ -74,19 +92,32 @@
   .titles{display:flex; flex-direction:column; line-height:1.2}
   /* Caps here are the ministry's actual logotype, not a decorative eyebrow. */
   .titles span{font-size:10px; font-weight:700; letter-spacing:.11em;
-               text-transform:uppercase; font-family:"Iowan Old Style",Palatino,Georgia,serif}
+               text-transform:uppercase}
+  html[lang="ar"] .titles span{letter-spacing:0; font-size:11px; text-transform:none}
   .t-state{color:var(--cedar)}
   .t-ministry{color:var(--seal)}
   .vrule{width:1px; align-self:stretch; background:var(--rule); margin-inline:5px}
-  .svc{font-size:16px; font-weight:600; letter-spacing:.01em}
+  .svc{font-size:16px; font-weight:600}
   .grow{flex:1}
   .letterhead nav{display:flex; gap:19px; font-size:14px}
   .letterhead nav a{
     color:var(--ink-2); text-decoration:none; padding-bottom:2px;
-    border-bottom:1px solid transparent; transition:color .2s var(--swift), border-color .2s var(--swift);
+    border-bottom:1px solid transparent;
+    transition:color .2s var(--swift), border-color .2s var(--swift);
   }
   .letterhead nav a:hover{color:var(--cedar); border-bottom-color:var(--cedar)}
-  @media (max-width:560px){ .letterhead nav{display:none} }
+
+  .controls{display:flex; gap:14px; align-items:center; margin-inline-start:16px}
+  .controls button{
+    font:inherit; font-size:13.5px; background:none; border:0; cursor:pointer;
+    color:var(--quiet); padding:0 0 2px; border-bottom:1px solid var(--rule);
+    transition:color .2s var(--swift), border-color .2s var(--swift);
+  }
+  .controls button:hover{color:var(--cedar); border-bottom-color:var(--cedar)}
+  @media (max-width:620px){
+    .letterhead nav{display:none}
+    .controls{margin-inline-start:auto}
+  }
 
   /* The identity rule: cedar green, broken by the ministry's red. */
   .band{height:2px; background:var(--cedar); position:relative}
@@ -99,16 +130,14 @@
 
   .m{max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere}
   .m + .m{margin-top:26px}
-
-  /* The reader's question: indented, ruled on the leading edge — a margin note.
-     Not a bubble; bubbles make a ministry read as a chat app. */
+  /* The reader's question: a margin note, indented and ruled on the leading
+     edge. Logical properties throughout, so it mirrors with the interface. */
   .m.u{
     color:var(--ink-2); font-size:16px;
     padding:4px 15px; margin-inline-start:auto; max-width:82%;
     border-inline-start:2px solid var(--rule);
     background:var(--paper-2);
   }
-  /* The answer: full measure, plain, with a cedar tick in the margin. */
   .m.b{position:relative; padding-inline-start:19px}
   .m.b::before{
     content:""; position:absolute; inset-inline-start:0; top:.72em;
@@ -128,14 +157,12 @@
   .flag.emergency{background:var(--seal-wash); color:var(--seal)}
   .flag.refused,.flag.unanswered{background:var(--amber-wash); color:var(--amber)}
 
-  /* Reference line — reads like a citation on a record, so no label above it. */
   .srcs{margin-top:15px; padding-top:10px; border-top:1px solid var(--rule-soft);
         display:flex; flex-direction:column; gap:5px}
   .src{font-size:14.5px; line-height:1.6; color:var(--quiet)}
   .src a{color:var(--cedar); text-decoration:none;
          border-bottom:1px solid var(--rule); transition:border-color .2s var(--swift)}
   .src a:hover{border-bottom-color:var(--cedar)}
-  .src .when{font-size:13.5px}
 
   .typing{display:flex; gap:5px; align-items:center; height:26px; padding-inline-start:19px}
   .typing i{width:5px; height:5px; border-radius:50%; background:var(--quiet);
@@ -146,22 +173,21 @@
 
   /* ---- opening: the seal ------------------------------------------------ */
   #open{padding-block:9vh 0; position:relative}
-  /* Blind emboss: the cedar pressed into the paper rather than printed on it. */
   .seal{
     position:absolute; inset-block-start:5vh; inset-inline-end:-18px;
     width:188px; height:188px; pointer-events:none;
-    fill:var(--ink); opacity:.032;
+    fill:var(--ink); opacity:var(--emboss);
   }
   #open h1{
     font-size:clamp(30px, 7vw, 44px); font-weight:600; line-height:1.3;
     margin:0 0 14px; letter-spacing:-.01em; max-width:19ch;
   }
-  #open .lede{margin:0; color:var(--quiet); font-size:16.5px; max-width:36ch}
+  #open .lede{margin:0; color:var(--quiet); font-size:16.5px; max-width:38ch}
   .examples{margin-top:34px; border-top:1px solid var(--rule)}
   .ex{
     display:block; width:100%; font:inherit; font-size:16px; cursor:pointer;
     background:none; border:0; border-bottom:1px solid var(--rule-soft);
-    color:var(--ink-2); text-align:start; padding:14px 2px 14px 0;
+    color:var(--ink-2); text-align:start; padding:14px 2px;
     transition:color .22s var(--swift), padding .28s var(--swift),
                background .22s var(--swift);
   }
@@ -180,12 +206,15 @@
   #send{
     width:40px; height:40px; flex:none; border:0; cursor:pointer;
     background:var(--cedar); color:var(--paper); display:grid; place-items:center;
-    transition:background .22s var(--swift), opacity .22s var(--swift), transform .22s var(--swift);
+    transition:background .22s var(--swift), opacity .22s var(--swift),
+               transform .22s var(--swift);
   }
   #send:hover:not(:disabled){background:var(--cedar-deep)}
   #send:active:not(:disabled){transform:scale(.94)}
   #send:disabled{opacity:.28; cursor:default}
+  /* The arrow points the way the interface reads. */
   #send svg{width:17px; height:17px; fill:currentColor; display:block}
+  html[dir="rtl"] #send svg{transform:scaleX(-1)}
   .standing{
     font-size:13.5px; color:var(--quiet); line-height:1.6;
     padding-bottom:calc(11px + env(safe-area-inset-bottom));
@@ -217,16 +246,20 @@
     <div class="col lockup">
       <svg class="cedar" aria-hidden="true"><use href="#cedar"/></svg>
       <div class="titles">
-        <span class="t-state" lang="en">Republic of Lebanon</span>
-        <span class="t-ministry" lang="en">Ministry of Public Health</span>
+        <span class="t-state" id="tState">الجمهورية اللبنانية</span>
+        <span class="t-ministry" id="tMinistry">وزارة الصحة العامة</span>
       </div>
       <div class="vrule" aria-hidden="true"></div>
-      <span class="svc">دليل</span>
+      <span class="svc" id="svc">دليل</span>
       <div class="grow"></div>
       <nav>
-        <a href="/join">واتساب</a>
-        <a href="/dashboard">الإحصاءات</a>
+        <a href="/join" id="navWa">واتساب</a>
+        <a href="/dashboard" id="navStats">الإحصاءات</a>
       </nav>
+      <div class="controls">
+        <button type="button" id="langBtn" lang="en">English</button>
+        <button type="button" id="themeBtn"></button>
+      </div>
     </div>
     <div class="band" aria-hidden="true"></div>
   </div>
@@ -235,12 +268,12 @@
     <div class="col">
       <section id="open">
         <svg class="seal" aria-hidden="true"><use href="#cedar"/></svg>
-        <h1>اسأل عن أي معاملة أو دواء أو مستشفى</h1>
-        <p class="lede">اكتب بالعربية، بالعامية المكتوبة بالأحرف اللاتينية، بالفرنسية أو بالإنكليزية. نجيب من المصادر الرسمية فقط.</p>
+        <h1 id="openH"></h1>
+        <p class="lede" id="openP"></p>
         <div class="examples" id="examples"></div>
       </section>
 
-      <div id="log" role="log" aria-live="polite" aria-label="المحادثة"></div>
+      <div id="log" role="log" aria-live="polite"></div>
       <div class="more" id="more"></div>
     </div>
   </div>
@@ -248,18 +281,15 @@
   <div class="composer">
     <div class="col">
       <form id="f" autocomplete="off">
-        <label class="sr" for="t">اكتب سؤالك</label>
+        <label class="sr" for="t" id="tLabel"></label>
         <div class="well">
-          <textarea id="t" rows="1" dir="auto" class="bidi" enterkeyhint="send"
-                    placeholder="اكتب سؤالك هنا"></textarea>
-          <button id="send" type="submit" aria-label="إرسال">
+          <textarea id="t" rows="1" dir="auto" class="bidi" enterkeyhint="send"></textarea>
+          <button id="send" type="submit">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l15-7-4.5 7L19 19z"/></svg>
           </button>
         </div>
       </form>
-      <p class="standing" dir="auto">
-        معلومات رسمية فقط. لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل بالرقم <b><bdi dir="ltr">140</bdi></b>.
-      </p>
+      <p class="standing" id="standing"></p>
     </div>
   </div>
 </div>
@@ -271,7 +301,7 @@ const log     = document.getElementById("log");
 const scroller= document.getElementById("scroll");
 const input   = document.getElementById("t");
 const sendBtn = document.getElementById("send");
-const opening = document.getElementById("open");
+const root    = document.documentElement;
 
 let hotlines = [];
 let busy = false;
@@ -281,6 +311,130 @@ const CALM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function scrollDown(){
   scroller.scrollTo({ top: scroller.scrollHeight, behavior: CALM ? "auto" : "smooth" });
 }
+
+/* ================= interface language =====================================
+   Chrome only. What the reader types is classified by the backend, so an
+   English interface still answers an Arabic question in Arabic. */
+const STRINGS = {
+  ar: {
+    dir:"rtl", title:"دليل — وزارة الصحة العامة",
+    state:"الجمهورية اللبنانية", ministry:"وزارة الصحة العامة", svc:"دليل",
+    navWa:"واتساب", navStats:"الإحصاءات",
+    otherLang:"English",
+    toDark:"داكن", toLight:"فاتح",
+    openH:"اسأل عن أي معاملة أو دواء أو مستشفى",
+    openP:"اكتب بالعربية، بالعامية المكتوبة بالأحرف اللاتينية، بالفرنسية أو بالإنكليزية. نجيب من المصادر الرسمية فقط.",
+    tLabel:"اكتب سؤالك", placeholder:"اكتب سؤالك هنا", sendLabel:"إرسال",
+    logLabel:"المحادثة",
+    standing:["معلومات رسمية فقط. لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل بالرقم ", "."],
+    srcPrefix:"المصدر: ", checked:"، روجع في ",
+    another:"اسأل سؤالاً آخر", hotlinesBtn:"أرقام الطوارئ",
+    hotlinesHead:"أرقام الطوارئ والخطوط الساخنة",
+    offline:"الخدمة غير متاحة الآن. تحقق من اتصالك ثم أعد المحاولة.",
+    retry:"أعد المحاولة",
+    flags:{ emergency:"طوارئ", refused:"لا نصائح طبية", unanswered:"لا يوجد مصدر رسمي" },
+    fallbackLines:[
+      { name:"الخط الساخن لوزارة الصحة", number:"1787", purpose:"معلومات صحية عامة" },
+      { name:"الصليب الأحمر اللبناني",    number:"140",  purpose:"طوارئ وإسعاف" },
+    ],
+  },
+  en: {
+    dir:"ltr", title:"Daleel — Ministry of Public Health",
+    state:"Republic of Lebanon", ministry:"Ministry of Public Health", svc:"Daleel",
+    navWa:"WhatsApp", navStats:"Statistics",
+    otherLang:"العربية",
+    toDark:"Dark", toLight:"Light",
+    openH:"Ask about a procedure, a medicine, or a hospital",
+    openP:"Write in Arabic, in Arabizi, in French or in English. Every answer comes from an official source.",
+    tLabel:"Type your question", placeholder:"Type your question here", sendLabel:"Send",
+    logLabel:"Conversation",
+    standing:["Official information only. No medical or dosing advice. In an emergency call ", "."],
+    srcPrefix:"Source: ", checked:", checked ",
+    another:"Ask another question", hotlinesBtn:"Emergency numbers",
+    hotlinesHead:"Emergency and hotline numbers",
+    offline:"The service is unavailable. Check your connection, then try again.",
+    retry:"Try again",
+    flags:{ emergency:"Emergency", refused:"No medical advice", unanswered:"No official source" },
+    fallbackLines:[
+      { name:"Ministry of Public Health hotline", number:"1787", purpose:"general health information" },
+      { name:"Lebanese Red Cross",                number:"140",  purpose:"emergency and ambulance" },
+    ],
+  },
+};
+
+const UI_KEY = "daleel_ui_lang";
+let ui = "ar";
+let T = STRINGS.ar;
+
+function detectUi(){
+  try {
+    const saved = localStorage.getItem(UI_KEY);
+    if (saved && STRINGS[saved]) return saved;
+  } catch(e){}
+  const tags = navigator.languages || [navigator.language || "ar"];
+  return tags.some(t => String(t).toLowerCase().startsWith("ar")) ? "ar" : "en";
+}
+
+function applyUi(code){
+  ui = STRINGS[code] ? code : "ar";
+  T = STRINGS[ui];
+  try { localStorage.setItem(UI_KEY, ui); } catch(e){}
+
+  root.lang = ui;
+  root.dir  = T.dir;
+  document.title = T.title;
+
+  const set = (id, text) => { document.getElementById(id).textContent = text; };
+  set("tState", T.state); set("tMinistry", T.ministry); set("svc", T.svc);
+  set("navWa", T.navWa);  set("navStats", T.navStats);
+  set("openH", T.openH);  set("openP", T.openP);
+  set("tLabel", T.tLabel);
+  input.placeholder = T.placeholder;
+  sendBtn.setAttribute("aria-label", T.sendLabel);
+  log.setAttribute("aria-label", T.logLabel);
+  document.getElementById("langBtn").textContent = T.otherLang;
+  document.getElementById("langBtn").lang = ui === "ar" ? "en" : "ar";
+  paintTheme();
+
+  // the emergency number stays LTR inside either script
+  const st = document.getElementById("standing");
+  st.textContent = "";
+  st.appendChild(document.createTextNode(T.standing[0]));
+  const b = document.createElement("b");
+  const num = document.createElement("bdi"); num.dir = "ltr"; num.textContent = "140";
+  b.appendChild(num); st.appendChild(b);
+  st.appendChild(document.createTextNode(T.standing[1]));
+
+  openers();
+  if (document.getElementById("more").children.length) followUps();
+}
+
+/* ================= theme ================================================= */
+const THEME_KEY = "daleel_theme";
+function currentTheme(){
+  try { return localStorage.getItem(THEME_KEY) || "auto"; } catch(e){ return "auto"; }
+}
+function systemDark(){ return window.matchMedia("(prefers-color-scheme: dark)").matches; }
+function isDark(){
+  const t = currentTheme();
+  return t === "auto" ? systemDark() : t === "dark";
+}
+function paintTheme(){
+  const t = currentTheme();
+  if (t === "auto") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", t);
+  const btn = document.getElementById("themeBtn");
+  // the control names what pressing it does, not what is currently on
+  btn.textContent = isDark() ? T.toLight : T.toDark;
+}
+function toggleTheme(){
+  const next = isDark() ? "light" : "dark";
+  try { localStorage.setItem(THEME_KEY, next); } catch(e){}
+  paintTheme();
+}
+// follow the system until the reader overrides it
+window.matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => { if (currentTheme() === "auto") paintTheme(); });
 
 /* ---------- identity: an opaque session ref, never anything personal ------ */
 const REF_KEY = "daleel_user_ref";
@@ -302,7 +456,7 @@ async function userRef(){
 function entry(who){
   const d = document.createElement("div");
   d.className = "m " + who + " bidi" + (CALM ? "" : " enter");
-  d.setAttribute("dir","auto");          // per-message direction detection
+  d.setAttribute("dir","auto");          // per-message direction, not the UI's
   log.appendChild(d);
   scrollDown();
   return d;
@@ -315,19 +469,13 @@ function say(text, who){
   return d;
 }
 
-const FLAGS = {
-  emergency:  "طوارئ",
-  refused:    "لا نصائح طبية",
-  unanswered: "لا يوجد مصدر رسمي",
-};
-
 function showAnswer(a){
   const d = entry("b");
 
-  if (FLAGS[a.outcome]){
+  if (T.flags[a.outcome]){
     const f = document.createElement("span");
     f.className = "flag " + a.outcome;
-    f.textContent = FLAGS[a.outcome];
+    f.textContent = T.flags[a.outcome];
     d.appendChild(f);
     d.appendChild(document.createElement("br"));
   }
@@ -350,7 +498,7 @@ function showAnswer(a){
       const row = document.createElement("div");
       row.className = "src bidi";
       row.setAttribute("dir","auto");
-      row.appendChild(document.createTextNode("المصدر: "));
+      row.appendChild(document.createTextNode(T.srcPrefix));
 
       const link = document.createElement("a");
       link.href = s.url;                  // href only; text is set separately
@@ -360,14 +508,10 @@ function showAnswer(a){
       row.appendChild(link);
 
       if (s.checked_on){
-        const when = document.createElement("span");
-        when.className = "when";
-        when.appendChild(document.createTextNode("، روجع في "));
+        row.appendChild(document.createTextNode(T.checked));
         const d2 = document.createElement("bdi");
-        d2.dir = "ltr";
-        d2.textContent = s.checked_on;
-        when.appendChild(d2);
-        row.appendChild(when);
+        d2.dir = "ltr"; d2.textContent = s.checked_on;
+        row.appendChild(d2);
       }
       wrap.appendChild(row);
     }
@@ -399,7 +543,6 @@ function typing(on){
     el.id = "typing";
     el.className = "m b typing";
     el.innerHTML = "<i></i><i></i><i></i>";
-    el.setAttribute("aria-label","يكتب");
     log.appendChild(el);
     scrollDown();
   } else if (!on && el){
@@ -408,8 +551,8 @@ function typing(on){
 }
 
 /* ---------- openers -------------------------------------------------------
-   Four languages on the first screen, because showing that mixing is expected
-   works better than a picker telling the reader to choose one. */
+   The same four languages whichever interface is showing: the point is that
+   mixing is expected, and that does not change when the chrome flips. */
 const EXAMPLES = [
   "كيف أجدّد دفتر الدواء المزمن؟",
   "أقرب صيدلية في عاليه",
@@ -419,6 +562,7 @@ const EXAMPLES = [
 
 function openers(){
   const bar = document.getElementById("examples");
+  if (!bar) return;
   bar.textContent = "";
   for (const text of EXAMPLES){
     const b = document.createElement("button");
@@ -433,8 +577,8 @@ function openers(){
 function followUps(){
   const bar = document.getElementById("more");
   bar.textContent = "";
-  const items = [["اسأل سؤالاً آخر", () => { bar.textContent = ""; input.focus(); }],
-                 ["أرقام الطوارئ", showHotlines]];
+  const items = [[T.another, () => { bar.textContent = ""; input.focus(); }],
+                 [T.hotlinesBtn, showHotlines]];
   for (const [label, fn] of items){
     const b = document.createElement("button");
     b.type = "button"; b.textContent = label;
@@ -447,21 +591,18 @@ function showHotlines(){
   const d = entry("b");
   const head = document.createElement("div");
   head.className = "bidi"; head.setAttribute("dir","auto");
-  head.textContent = "أرقام الطوارئ والخطوط الساخنة";
+  head.textContent = T.hotlinesHead;
   d.appendChild(head);
 
   const list = document.createElement("div");
   list.className = "srcs";
-  const rows = hotlines.length ? hotlines : [
-    { name:"الخط الساخن لوزارة الصحة", number:"1787", purpose:"معلومات صحية عامة" },
-    { name:"الصليب الأحمر اللبناني",    number:"140",  purpose:"طوارئ وإسعاف" },
-  ];
+  const rows = hotlines.length ? hotlines : T.fallbackLines;
   for (const h of rows){
     const row = document.createElement("div");
     row.className = "src bidi"; row.setAttribute("dir","auto");
     const a = document.createElement("a");
     a.href = "tel:" + h.number;
-    const num = document.createElement("bdi");   // numbers stay LTR inside RTL text
+    const num = document.createElement("bdi");   // numbers stay LTR in either script
     num.dir = "ltr"; num.textContent = h.number;
     a.appendChild(num);
     row.appendChild(a);
@@ -488,7 +629,11 @@ async function send(text){
   const q = (text || input.value).trim();
   if (!q) return;
 
-  if (!started){ started = true; opening.remove(); }
+  if (!started){
+    started = true;
+    const op = document.getElementById("open");
+    if (op) op.remove();
+  }
   document.getElementById("more").textContent = "";
 
   say(q, "u");
@@ -509,9 +654,9 @@ async function send(text){
     followUps();
   } catch (err){
     typing(false);
-    const d = say("الخدمة غير متاحة الآن. تحقق من اتصالك ثم أعد المحاولة.", "sys");
+    const d = say(T.offline, "sys");
     const retry = document.createElement("button");
-    retry.type = "button"; retry.textContent = "أعد المحاولة";
+    retry.type = "button"; retry.textContent = T.retry;
     retry.style.cssText = "font:inherit;background:none;border:0;cursor:pointer;"
       + "color:var(--cedar);border-bottom:1px solid var(--rule);margin-top:8px;padding:0 0 2px";
     retry.addEventListener("click", () => { retry.remove(); send(q); });
@@ -524,10 +669,14 @@ async function send(text){
 }
 
 document.getElementById("f").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+document.getElementById("langBtn").addEventListener("click", () => {
+  applyUi(ui === "ar" ? "en" : "ar"); input.focus();
+});
+document.getElementById("themeBtn").addEventListener("click", toggleTheme);
 
 /* ---------- boot ---------------------------------------------------------- */
 (async function boot(){
-  openers();
+  applyUi(detectUi());
   input.focus();
 
   try {

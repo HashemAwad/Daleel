@@ -323,6 +323,7 @@
       <p class="tagline">Anonymised question metadata — no transcripts, no phone numbers, no names.</p>
     </div>
     <div class="grow"></div>
+    <button class="btn" id="theme" type="button"></button>
     <button class="btn" id="refresh" type="button">Refresh</button>
   </header>
 
@@ -694,6 +695,33 @@ async function load(){
 }
 
 document.getElementById("refresh").addEventListener("click", load);
+
+/* Theme: follow the system until the reader overrides it, then remember.
+   Shares the daleel_theme key with the chat service, so a choice made in one
+   carries to the other. */
+const THEME_KEY = "daleel_theme";
+const themeBtn = document.getElementById("theme");
+function storedTheme(){
+  try { return localStorage.getItem(THEME_KEY) || "auto"; } catch(e){ return "auto"; }
+}
+function darkNow(){
+  const t = storedTheme();
+  return t === "auto" ? window.matchMedia("(prefers-color-scheme: dark)").matches : t === "dark";
+}
+function paintTheme(){
+  const t = storedTheme();
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+  // the control names what pressing it does
+  themeBtn.textContent = darkNow() ? "Light" : "Dark";
+}
+themeBtn.addEventListener("click", () => {
+  try { localStorage.setItem(THEME_KEY, darkNow() ? "light" : "dark"); } catch(e){}
+  paintTheme();
+});
+window.matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => { if (storedTheme() === "auto") paintTheme(); });
+paintTheme();
 load();
 </script>
 </body>
