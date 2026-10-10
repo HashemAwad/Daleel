@@ -24,6 +24,25 @@ def _hermetic_llm(monkeypatch):
     monkeypatch.setattr(providers, "llm", stubs.StubLLM(), raising=False)
 
 
+class SilentTranscriber:
+    """What every test gets unless it pins its own: hears nothing, loads nothing."""
+    def transcribe(self, audio, mime=""):
+        return "", None
+
+    def ready(self):
+        return True
+
+
+@pytest.fixture(autouse=True)
+def _hermetic_transcriber(monkeypatch):
+    """Tests must never load or download a Whisper model through the app's wiring.
+    Tests of ai.transcribe build their own TranscriberImpl with a fake model."""
+    from core import providers
+    real = providers.transcriber
+    monkeypatch.setattr(providers, "transcriber", SilentTranscriber(), raising=False)
+    return real                      # what the app is really wired to, for tests that ask
+
+
 @pytest.fixture(scope="session")
 def db_ready():
     import psycopg
