@@ -74,11 +74,18 @@ class TranscriberImpl:
         if not audio:
             return "", None
         segments, info = self._run(audio, None)
-        text, code = " ".join(s.text.strip() for s in segments).strip(), info.language
+        code = info.language
         if code not in _SUPPORTED:
-            segments, info = self._run(audio, "ar")
-            text, code = " ".join(s.text.strip() for s in segments).strip(), info.language
-        return text, code if code in _SUPPORTED else None
+            # decide before decoding anything, so a wrong guess costs one detection, not a full pass
+            probs = dict(getattr(info, "all_language_probs", None) or ())
+            code = max(_SUPPORTED, key=lambda c: probs.get(c, 0.0))
+            segments, info = self._run(audio, code)
+        parts, limit = [], _max_seconds()
+        for s in segments:                                 # lazy: stopping here stops the work
+            if getattr(s, "start", 0.0) >= limit:
+                break
+            parts.append(s.text.strip())
+        return " ".join(parts).strip(), code
 
 
 def _main(argv=None) -> int:
