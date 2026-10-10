@@ -13,6 +13,7 @@ from typing import Optional
 
 _TTL_SECONDS = 300.0
 _pending_town: dict[str, tuple[str, float]] = {}
+_last_directory_kind: dict[str, tuple[str, float]] = {}
 
 
 def remember_pending_town(user_ref: str, original_text: str) -> None:
@@ -26,3 +27,19 @@ def take_pending_town(user_ref: str) -> Optional[str]:
         return None
     text, ts = item
     return text if (time.monotonic() - ts) <= _TTL_SECONDS else None
+
+
+def remember_directory_kind(user_ref: str, kind: str) -> None:
+    """Remember whether the user was looking at hospitals, pharmacies or PHCs."""
+    _last_directory_kind[user_ref] = (kind, time.monotonic())
+
+
+def last_directory_kind(user_ref: str) -> Optional[str]:
+    item = _last_directory_kind.get(user_ref)
+    if not item:
+        return None
+    kind, ts = item
+    if (time.monotonic() - ts) > _TTL_SECONDS:
+        _last_directory_kind.pop(user_ref, None)
+        return None
+    return kind

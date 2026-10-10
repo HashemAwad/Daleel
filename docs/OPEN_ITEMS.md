@@ -59,9 +59,9 @@ Status is as read from `main` at that time — check the code before assuming an
 | H6 | A list of PHCs we can load (name, caza, address, phone) | The PHC network PDF in `data_source/` does not extract; "nearest PHC" returns nothing |
 
 ## Deployment (as of Sat 10 Oct, evening)
-- **The demo runs on a teammate's MacBook** with `qwen2.5:7b` and a tunnel: `bash infra/laptop_setup.sh`, then `bash infra/run_demo.sh`. Steps in `infra/SETUP.md`.
+- **The demo runs on a teammate's MacBook** with the already-downloading `qwen2.5:7b` and a tunnel: `bash infra/laptop_setup.sh`, then `bash infra/run_demo.sh`. Steps in `infra/SETUP.md`.
 - Still to do on that laptop: Twilio values + `PUBLIC_BASE_URL` in `.env`, the Twilio webhook, and B's procedure ingestion.
-- Fallback: `https://13-51-237-14.sslip.io` on one AWS `m7i-flex.large` (Stockholm), built by `infra/vm_setup.sh`, smaller model (`qwen2.5:3b`), no procedures loaded. D keeps it until the demo is over.
+- Fallback: the AWS VM built by `infra/vm_setup.sh`, using the smaller `qwen3:4b` when local inference is needed. Verify its URL and loaded procedures before relying on it.
 - `bash infra/reset_demo.sh` before each rehearsal. It deletes all transcripts and metadata and inserts 320 **made-up** metadata rows marked `subtopic='sample'` so the dashboard is not empty.
 
 ## Whoever runs the app (deploy / demo)

@@ -34,10 +34,11 @@ _NOISE = {"mg", "ml", "mcg", "g", "iu", "ui", "po", "iv", "sc", "im"}   # units 
 _STOP_BRANDS = {"children", "human", "hum"}
 _MIN_BRAND_LEN = 5
 
-# Arabic-script spellings -> brand word, e.g. {normalize("بنادول"): "panadol"}.
-# Deliberately empty: add an entry only after the healthcare teammate has checked it,
-# and only for brands that have a price.
-ALIASES: dict[str, str] = {}
+# Arabic-script spellings -> exact catalog brand word. Keep this deliberately
+# small: aliases only bridge scripts; they never create a medicine or price.
+ALIASES: dict[str, str] = {
+    normalize("بنادول"): "panadol",
+}
 
 
 def _num(text: str) -> float:

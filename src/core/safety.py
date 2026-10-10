@@ -5,12 +5,27 @@ from __future__ import annotations
 from typing import Optional
 from shared.contracts import Inquiry, Answer
 from core import providers
+from core.language import of as reply_lang
+
+_EMERGENCY = {
+    "ar": "قد تكون هذه حالة طارئة. اتصل بالصليب الأحمر الآن على 140.",
+    "arabizi": "Hayde mumkin tkun 7ale tari2a. 2ettsel bel Salib el A7mar halla2 3a 140.",
+    "fr": "Cela peut être une urgence. Appelez immédiatement la Croix-Rouge au 140.",
+    "en": "This may be an emergency. Call the Red Cross now: 140.",
+}
+_REFUSAL = {
+    "ar": "لا أستطيع إعطاء نصيحة طبية أو تحديد جرعة. اسأل صيدلياً أو طبيباً أو اتصل على 1214.",
+    "arabizi": "Ma fine 3tik nasi7a tibbiye aw jar3a. Es2al saydale aw hakim, aw 2ettsel 3a 1214.",
+    "fr": "Je ne peux pas donner de conseil médical ni de posologie. Consultez un pharmacien ou un médecin, ou appelez le 1214.",
+    "en": "I can't give medical or dosing advice. Ask a pharmacist or doctor, or call 1214.",
+}
 
 # Emergency: route straight to the ambulance, model not involved.
 EMERGENCY_TERMS = [
     # EN
     "not breathing", "can't breathe", "cannot breathe", "heart attack", "unconscious",
-    "bleeding badly", "overdose", "choking", "stroke", "suicide", "kill myself",
+    "bleeding badly", "severe chest pain", "crushing chest pain", "overdose", "choking",
+    "stroke", "suicide", "kill myself",
     # FR
     "ne respire plus", "crise cardiaque", "inconscient", "overdose", "suicide",
     # AR / arabizi
@@ -38,12 +53,12 @@ def check(inq: Inquiry) -> Optional[Answer]:
     t = inq.text.lower()
     if _matches(t, EMERGENCY_TERMS):
         rc = next(h for h in providers.HOTLINES if h.number == "140")
+        lang = reply_lang(inq)
         return Answer(
-            text=f"This may be an emergency. Call the Red Cross now: {rc.number}.",
-            tool="hotline", grounded=True, outcome="emergency", lang=inq.lang)
+            text=_EMERGENCY[lang].replace("140", rc.number),
+            tool="hotline", grounded=True, outcome="emergency", lang=lang)
     if _matches(t, ADVICE_TERMS):
+        lang = reply_lang(inq)
         return Answer(
-            text="I can't give medical or dosing advice. Please ask a pharmacist, a doctor, "
-                 "or your nearest primary healthcare centre. You can also call 1214.",
-            tool="hotline", grounded=True, outcome="refused", lang=inq.lang)
+            text=_REFUSAL[lang], tool="hotline", grounded=True, outcome="refused", lang=lang)
     return None

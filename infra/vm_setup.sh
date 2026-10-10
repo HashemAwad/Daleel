@@ -12,7 +12,7 @@ set -euo pipefail
 
 HOST="${1:?usage: vm_setup.sh <public-hostname>}"
 APP=/opt/daleel
-MODEL="${DALEEL_MODEL:-qwen2.5:3b}"
+MODEL="${DALEEL_MODEL:-qwen3:4b}"
 cd "$APP"
 
 echo "== swap (the models are tight in 8 GB)"
@@ -30,7 +30,7 @@ umask 077
 if [ ! -f .env ]; then
   cp .env.example .env
   sed -i "s|^SESSION_HASH_SALT=.*|SESSION_HASH_SALT=$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')|" .env
-  sed -i "s|^DALEEL_MODEL=.*|DALEEL_MODEL=$MODEL|" .env
+  sed -i "s|^DALEEL_LOCAL_MODEL=.*|DALEEL_LOCAL_MODEL=$MODEL|" .env
   sed -i "s|^STORE_TRANSCRIPT_TEXT=.*|STORE_TRANSCRIPT_TEXT=1|; s|^RETENTION_IDLE_MINUTES=.*|RETENTION_IDLE_MINUTES=2|; s|^RETENTION_INTERVAL_SECONDS=.*|RETENTION_INTERVAL_SECONDS=20|" .env
 fi
 chmod 600 .env

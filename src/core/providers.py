@@ -16,14 +16,23 @@ from __future__ import annotations
 from core import stubs
 
 # --- LLM (A) ---
-# selfhost (free, Ollama) > anthropic (needs key) > stub (always works).
+# Preferred order for the demo:
+# selfhost (private) -> hosted failover (if configured) -> plain renderer/stub.
 from shared.config import settings
 llm = stubs.StubLLM()
 try:
     if settings.model_provider == "selfhost":
         from core.llm_ollama import OllamaLLM
-        if OllamaLLM.available():
-            llm = OllamaLLM()
+        from core.llm_hosted import HostedLLM
+        local = OllamaLLM() if OllamaLLM.available() else None
+        hosted = HostedLLM() if HostedLLM.available() else None
+        if local and hosted:
+            from core.llm_failover import FailoverLLM
+            llm = FailoverLLM(local, hosted)
+        elif local:
+            llm = local
+        elif hosted:
+            llm = hosted
     elif settings.model_provider == "hosted":
         from core.llm_hosted import HostedLLM
         if HostedLLM.available():

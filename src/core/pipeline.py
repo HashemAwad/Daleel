@@ -8,9 +8,10 @@ import re
 import urllib.parse
 import httpx
 from shared.contracts import Inquiry, Answer, Source, ToolResult, Facility
-from core import safety, router, providers, memory
+from core import safety, router, providers, memory, stubs
 from core.prompts import SYSTEM_PROMPT, build_context
 from data import transcripts
+from core.language import of as reply_lang
 
 
 def handle(inq: Inquiry) -> Answer:
@@ -32,6 +33,12 @@ def _handle(inq: Inquiry) -> Answer:
     # 0b. Follow-up: if we previously asked this user for a town and they just
     #     replied with a place, stitch it onto the original question.
     inq = _apply_pending_town(inq)
+
+    # 0c. Resolve short directory follow-ups against the previous facility type.
+    followup = _apply_directory_followup(inq)
+    if isinstance(followup, Answer):
+        return followup
+    inq = followup
 
     # 1. Safety rules (may short-circuit) — run on the real text
     early = safety.check(inq)
@@ -59,15 +66,27 @@ def _handle(inq: Inquiry) -> Answer:
             return _ask_town(inq)
         return _fallback(inq)
 
+    if result.tool == "directory":
+        memory.remember_directory_kind(inq.user_ref, router._directory_kind(inq.text))
+
     # 5. Build grounded answer from tool results only.
     #    If the model is unavailable (not pulled yet, down mid-demo), we still have
     #    REAL retrieved facts — render them plainly instead of dumping to 1787.
     #    This keeps the platform useful under all conditions.
     context = build_context(result)
+    lang = reply_lang(inq)
+    # Facility records are already structured. Rendering them directly is both
+    # clearer and safer than asking an LLM to repeat names, types and distances.
+    if result.tool == "directory":
+        return Answer(text=_render_facts(result, lang), sources=[], tool="directory",
+                      grounded=True, outcome="answered", lang=lang)
+    if isinstance(providers.llm, stubs.StubLLM):
+        return Answer(text=_render_facts(result, lang), sources=_sources(result), tool=result.tool,
+                      grounded=True, outcome="answered", lang=lang)
     try:
         text = providers.llm.generate(SYSTEM_PROMPT, inq.text, context)
     except Exception:
-        rendered = _render_facts(result)
+        rendered = _render_facts(result, lang)
         if rendered:
             return Answer(text=rendered, sources=_sources(result), tool=result.tool,
                           grounded=True, outcome="answered", lang=inq.lang)
@@ -86,6 +105,35 @@ def _apply_pending_town(inq: Inquiry) -> Inquiry:
     prev = memory.take_pending_town(inq.user_ref)
     if prev and len(inq.text.split()) <= 4 and router._resolve_caza(inq.text):
         return inq.model_copy(update={"text": f"{prev} {inq.text}"})
+    return inq
+
+
+def _apply_directory_followup(inq: Inquiry) -> Inquiry | Answer:
+    """Make short follow-ups refer to the last directory search.
+
+    The dataset has no ownership field, so a request for private/public entries
+    must be answered honestly instead of being routed to an unrelated procedure.
+    """
+    kind = memory.last_directory_kind(inq.user_ref)
+    if not kind:
+        return inq
+    text = inq.text.strip().lower()
+    ownership = ("private", "public", "government", "خاص", "خاصة", "حكومي",
+                 "privé", "prive", "publique", "publics")
+    if any(term in text for term in ownership):
+        lang = reply_lang(inq)
+        messages = {
+            "ar": "لا تتضمن بيانات المرافق الحالية تصنيفاً موثوقاً للمستشفى كخاص أو حكومي. يمكنني ترتيب المستشفيات حسب المسافة فقط.",
+            "arabizi": "Ma 3enna tasnif mawthou2 iza l mostashfa khas aw 7koume. Fina nrattebon 7asab l masafe bas.",
+            "fr": "Les données actuelles n’indiquent pas de façon fiable si un hôpital est privé ou public. Je peux seulement les classer par distance.",
+            "en": "The current facility data does not reliably identify hospitals as private or public. I can only rank them by distance.",
+        }
+        return Answer(text=messages.get(lang, messages["en"]), tool="directory",
+                      grounded=False, outcome="unanswered", lang=lang)
+    closest = ("closest one", "nearest one", "only one", "the closest",
+               "الأقرب", "اقرب واحد", "أقرب واحد", "le plus proche")
+    if any(term in text for term in closest):
+        return inq.model_copy(update={"text": f"closest {kind} only one"})
     return inq
 
 
@@ -127,12 +175,12 @@ def _maps_block(result: ToolResult) -> str:
         u = _maps_url(f)
         if u:
             dist = f" ({f.distance_km} كم)" if f.distance_km is not None else ""
-            lines.append(f"• {f.name}{dist}: {u}")
-    return ("\n\n🗺️ على الخريطة · On the map:\n" + "\n".join(lines)) if lines else ""
+            lines.append(f"{f.name}{dist}: {u}")
+    return ("\n\nGoogle Maps:\n" + "\n".join(lines)) if lines else ""
 
 
 # ---- model-less rendering (robustness: answer from facts if the LLM is down) ----
-def _render_facts(result: ToolResult) -> str:
+def _render_facts(result: ToolResult, lang: str = "en") -> str:
     """Clean, readable, grounded answer built directly from retrieved facts (no
     model). Each item is a small labelled block, not a dash-chain. Used when the
     LLM is unavailable, so the bot still helps nicely."""
@@ -140,39 +188,43 @@ def _render_facts(result: ToolResult) -> str:
         d = result.docs[0]
         out = d.content[:500].strip()
         if d.source:
-            out += f"\n\n🔗 {d.source.url}"
+            out += f"\n\nSource: {d.source.url}"
         return out
 
     if result.facilities:
+        headings = {"ar": "أقرب الأماكن إليك:", "arabizi": "A2rab amekin elak:",
+                    "fr": "Les établissements les plus proches :", "en": "Nearest to you:"}
         blocks = []
         for i, f in enumerate(result.facilities[:3], 1):
             lines = [f"{i}. {f.name}"]
             where = "، ".join(p for p in (f.address, f.caza) if p)
-            dist = f" · {f.distance_km} كم" if f.distance_km is not None else ""
+            dist = f" · {f.distance_km} km / كم" if f.distance_km is not None else ""
             if where or dist:
-                lines.append(f"   📍 {where}{dist}".rstrip())
+                lines.append(f"   {where}{dist}".rstrip())
             if f.phone:
-                lines.append(f"   📞 {f.phone}")
+                lines.append(f"   Phone: {f.phone}")
             u = _maps_url(f)
             if u:
-                lines.append(f"   🗺️ {u}")
+                lines.append(f"   Google Maps: {u}")
             blocks.append("\n".join(lines))
-        return "أقرب الأماكن إليك · Nearest to you:\n\n" + "\n\n".join(blocks)
+        return headings.get(lang, headings["en"]) + "\n\n" + "\n\n".join(blocks)
 
     if result.drugs:
+        unknown = {"ar": "السعر غير متوفر", "arabizi": "El se3er mesh mawjoud",
+                   "fr": "Prix non indiqué", "en": "Price not listed"}
         blocks = []
         for dr in result.drugs[:3]:
-            price = (f"{dr.price:,.0f} {dr.currency}" if dr.price is not None
-                     else "السعر غير متوفر · price not listed")
-            lines = [f"💊 {dr.name}", f"   {price}"]
+            price = (f"{dr.price:.0f} {dr.currency}" if dr.price is not None
+                     else unknown.get(lang, unknown["en"]))
+            lines = [dr.name, f"   {price}"]
             if dr.is_free:
-                lines.append("   ✅ مجاني للمرضى المزمنين · free for chronic patients")
+                lines.append("   مجاني للمرضى المزمنين · free for chronic patients")
             blocks.append("\n".join(lines))
         return "\n\n".join(blocks)
 
     if result.hotlines:
         return "الخطوط الساخنة · Hotlines:\n\n" + "\n".join(
-            f"📞 {h.number} — {h.name} ({h.purpose})" for h in result.hotlines)
+            f"{h.number} — {h.name} ({h.purpose})" for h in result.hotlines)
     return ""
 
 

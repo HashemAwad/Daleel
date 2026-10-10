@@ -204,9 +204,13 @@
   html[dir="rtl"] #send svg{transform:scaleX(-1)}
   .standing{
     font-size:15px; color:var(--quiet); line-height:1.6; margin:14px 0 0; text-align:center;
-    padding-bottom:calc(16px + env(safe-area-inset-bottom));
+    padding-bottom:6px;
   }
   .standing b{color:var(--bad); font-weight:700}
+  /* ODbL attribution for the facility data: always visible, quiet, and still a real link */
+  .data-credit{font-size:13px; color:var(--quiet); text-align:center; margin:0;
+               padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  .data-credit a{color:inherit; text-underline-offset:3px}
 
   :is(button,a,textarea):focus-visible{outline:3px solid var(--focus); outline-offset:3px}
   #t:focus-visible{outline:0}
@@ -268,6 +272,7 @@
         </div>
       </form>
       <p class="standing" id="standing"></p>
+      <p class="data-credit"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">Facility map data: OpenStreetMap contributors</a></p>
     </div>
   </footer>
 </div>
@@ -441,7 +446,7 @@ function entry(who){
 }
 
 /* Render text, turning any http(s) URL into a clickable link. Builds DOM nodes
-   (never innerHTML) so it stays injection-safe. Maps links show as "🗺️ map". */
+   (never innerHTML) so it stays injection-safe. */
 function linkify(el, text){
   el.textContent = "";
   const re = /(https?:\/\/[^\s]+)/g;
@@ -451,7 +456,7 @@ function linkify(el, text){
     const url = m[0].replace(/[.,،]+$/, "");
     const a = document.createElement("a");
     a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
-    a.textContent = url.includes("google.com/maps") ? "🗺️ خريطة · map" : url;
+    a.textContent = url.includes("google.com/maps") ? "Open in Google Maps" : url;
     el.appendChild(a);
     last = m.index + m[0].length;
   }
@@ -483,8 +488,7 @@ function showAnswer(a){
   d.appendChild(body);
 
   const srcs = (a.sources || []).filter(s => s && s.url);
-  const isDir = a.tool === "directory";
-  if (srcs.length || isDir){
+  if (srcs.length){
     const wrap = document.createElement("div");
     wrap.className = "srcs";
     const seen = new Set();
@@ -512,20 +516,6 @@ function showAnswer(a){
       wrap.appendChild(row);
     }
 
-    // Facility data is OpenStreetMap, licensed ODbL — attribution is a licence
-    // condition, so it ships with every directory answer, sources or not.
-    if (isDir){
-      const credit = document.createElement("div");
-      credit.className = "src";
-      credit.setAttribute("dir", "ltr");
-      const cl = document.createElement("a");
-      cl.href = "https://www.openstreetmap.org/copyright";
-      cl.target = "_blank";
-      cl.rel = "noopener noreferrer";
-      cl.textContent = "© OpenStreetMap contributors";
-      credit.appendChild(cl);
-      wrap.appendChild(credit);
-    }
     d.appendChild(wrap);
   }
 
