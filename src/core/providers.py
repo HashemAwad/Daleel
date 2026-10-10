@@ -16,10 +16,17 @@ from __future__ import annotations
 from core import stubs
 
 # --- LLM (A) ---
+# selfhost (free, Ollama) > anthropic (needs key) > stub (always works).
+from shared.config import settings
+llm = stubs.StubLLM()
 try:
-    from core.llm import AnthropicLLM
-    from shared.config import settings
-    llm = AnthropicLLM() if settings.anthropic_api_key else stubs.StubLLM()
+    if settings.model_provider == "selfhost":
+        from core.llm_ollama import OllamaLLM
+        if OllamaLLM.available():
+            llm = OllamaLLM()
+    elif settings.anthropic_api_key:
+        from core.llm import AnthropicLLM
+        llm = AnthropicLLM()
 except Exception:
     llm = stubs.StubLLM()
 

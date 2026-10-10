@@ -9,7 +9,8 @@ load_dotenv()
 class Settings:
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
     model = os.getenv("DALEEL_MODEL", "claude-sonnet-4-6")
-    model_provider = os.getenv("DALEEL_MODEL_PROVIDER", "anthropic")
+    model_provider = os.getenv("DALEEL_MODEL_PROVIDER", "anthropic")  # anthropic | selfhost
+    ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
     database_url = os.getenv("DATABASE_URL", "postgresql://daleel:daleel@localhost:5432/daleel")
     twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN", "")
     twilio_whatsapp_from = os.getenv("TWILIO_WHATSAPP_FROM", "")
