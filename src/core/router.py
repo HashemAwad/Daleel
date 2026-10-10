@@ -20,6 +20,16 @@ MEDICINE_TERMS = ["price", "cost", "how much", "سعر", "كم سعر", "combien
                   "coûte", "prix", "free", "مجاني", "مجانا"]
 
 
+def _resolve_caza(text: str):
+    """Extract a canonical caza (town) from the question using D's helper, if
+    available. Guarded so the stub path still works when data isn't present."""
+    try:
+        from data.directory import resolve_caza
+        return resolve_caza(text)
+    except Exception:
+        return None
+
+
 def _directory_kind(text: str) -> str:
     t = text.lower()
     if "hospital" in t or "مستشفى" in t:
@@ -45,20 +55,25 @@ def route_model(inq: Inquiry) -> str:
 
 
 def choose_tool(inq: Inquiry) -> str:
-    # No real model configured -> deterministic keyword routing (keeps tests + the
-    # stub path predictable). Real model -> model routing with keyword fallback.
+    # Keyword-first: a strong signal (directory/medicine terms) is reliable even
+    # with a tiny local model, which tends to misroute. Only defer to the model
+    # for the ambiguous default (procedure), and only if a real model is wired.
+    kw = route_keywords(inq)
+    if kw in ("directory", "medicine"):
+        return kw
     if isinstance(providers.llm, StubLLM):
-        return route_keywords(inq)
+        return kw
     try:
         return route_model(inq)
     except Exception:
-        return route_keywords(inq)
+        return kw
 
 
 def run_tool(tool: str, inq: Inquiry) -> ToolResult:
     if tool == "directory":
         return ToolResult(tool="directory",
-                          facilities=providers.directory.nearest(_directory_kind(inq.text)))
+                          facilities=providers.directory.nearest(_directory_kind(inq.text),
+                                                                  caza=_resolve_caza(inq.text)))
     if tool == "medicine":
         return ToolResult(tool="medicine", drugs=providers.medicine.find(inq.text))
     if tool == "hotline":
