@@ -25,8 +25,13 @@ def handle(inq: Inquiry) -> Answer:
     safe_text = providers.redact(inq.text)
     inq = inq.model_copy(update={"text": safe_text})
 
-    # 3. Route to exactly one tool
-    result: ToolResult = router.route(inq)
+    # 3. Route to exactly one tool. A tool may raise (missing dependency, DB
+    #    down, bug in another module) — never let that 500 the request; degrade
+    #    to the hotline fallback so the user always gets a reply.
+    try:
+        result: ToolResult = router.route(inq)
+    except Exception:
+        return _fallback(inq)
 
     # 4. Grounding gate — no tool support => fallback to a hotline, never guess
     if result.is_empty():
