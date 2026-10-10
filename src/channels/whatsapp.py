@@ -13,10 +13,20 @@ Privacy rules this module must never break:
 
 Replies are TwiML, so the sandbox needs no outbound credentials: Twilio posts
 to us and sends whatever we return.
+
+Twilio drops a webhook that has not answered in about 15 seconds, and the user
+then gets nothing. A voice note (download + Whisper + the model) can take longer,
+so the turn runs in a worker thread with a budget (WEBHOOK_BUDGET_SECONDS,
+default 12). Past it we answer "still working" at once and send the real reply
+through Twilio's REST API when it is ready; without REST credentials we say so
+and ask for a shorter note or a typed question.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
+import threading
 from typing import Optional
 from urllib.parse import parse_qsl
 
@@ -40,6 +50,14 @@ WEBHOOK_PATH = "/webhook/whatsapp"
 # WhatsApp voice notes are OGG/Opus and small; cap the download so a bad or
 # hostile media URL can't exhaust memory.
 MAX_AUDIO_BYTES = 16 * 1024 * 1024
+
+REPLY_BUDGET_SECONDS = float(os.getenv("WEBHOOK_BUDGET_SECONDS", "12"))
+STILL_WORKING = ("⏳ لحظة، عم نحضّر الجواب وبيوصلك بعد شوي.\n"
+                 "One moment, your answer is on its way.")
+TOO_SLOW = ("عذراً، أخذ الجواب وقتاً أطول من اللازم. جرّب رسالة صوتية أقصر أو اكتب سؤالك، أو اتصل على 1787.\n"
+            "Sorry, that took too long. Please send a shorter voice note or type your question, or call 1787.")
+BROKEN = ("عذراً، صار في خطأ. جرّب مرة تانية أو اتصل على 1787.\n"
+          "Sorry, something went wrong. Please try again or call 1787.")
 
 try:  # twilio is in requirements, but a broken import must not take the app down
     from twilio.request_validator import RequestValidator
@@ -226,6 +244,38 @@ async def parse_form(request: Request) -> dict[str, str]:
         return {}
 
 
+def _turn(form: dict[str, str]) -> list[str]:
+    """One whole turn (download, transcribe, pipeline) -> reply parts. Never raises."""
+    try:
+        answer: Answer = pipeline.handle(build_inquiry(form))
+    except Exception as exc:
+        log.error("whatsapp turn failed: %s", type(exc).__name__)
+        return [BROKEN]
+    # metadata only: no text, no number, no transcript
+    log.info(
+        "whatsapp turn: tool=%s outcome=%s grounded=%s chars=%d",
+        answer.tool, answer.outcome, answer.grounded, len(answer.text or ""),
+    )
+    return render.for_whatsapp(answer)
+
+
+def _can_send_later(form: dict[str, str]) -> bool:
+    return bool(TWILIO_AVAILABLE and _media_auth(form) and form.get("From") and form.get("To"))
+
+
+def _send_later(form: dict[str, str], parts: list[str]) -> None:
+    """Send a reply that missed the webhook budget, through Twilio's REST API."""
+    try:
+        from twilio.rest import Client
+
+        client = Client(*_media_auth(form))
+        for part in parts:
+            client.messages.create(from_=form["To"], to=form["From"], body=part)
+        log.info("late reply sent: parts=%d", len(parts))
+    except Exception as exc:  # the message can echo the number: log the type only
+        log.error("late reply NOT sent: %s", type(exc).__name__)
+
+
 @router.post(WEBHOOK_PATH)
 async def whatsapp_webhook(request: Request) -> Response:
     form = await parse_form(request)
@@ -234,12 +284,25 @@ async def whatsapp_webhook(request: Request) -> Response:
         log.warning("rejected webhook with bad/missing Twilio signature")
         return Response(status_code=403, content="invalid signature")
 
-    inq = build_inquiry(form)
-    answer: Answer = pipeline.handle(inq)
+    lock, state = threading.Lock(), {"late": False, "parts": None}
 
-    # metadata only: no text, no number, no transcript
-    log.info(
-        "whatsapp turn: tool=%s outcome=%s grounded=%s chars=%d",
-        answer.tool, answer.outcome, answer.grounded, len(answer.text or ""),
-    )
-    return twiml(render.for_whatsapp(answer))
+    def work() -> None:
+        parts = _turn(form)
+        with lock:
+            state["parts"], late = parts, state["late"]
+        if late:
+            _send_later(form, parts)
+
+    # in a thread: Whisper and the model block, and the event loop must keep serving
+    task = asyncio.get_running_loop().run_in_executor(None, work)
+    try:
+        await asyncio.wait_for(asyncio.shield(task), REPLY_BUDGET_SECONDS)
+    except asyncio.TimeoutError:
+        with lock:  # either the worker sees `late` and sends, or we already have its parts
+            can_follow_up = _can_send_later(form)
+            state["late"] = can_follow_up
+            done = state["parts"]
+        if done is None:
+            log.warning("webhook budget exceeded: follow_up=%s", can_follow_up)
+            return twiml([STILL_WORKING if can_follow_up else TOO_SLOW])
+    return twiml(state["parts"] or [BROKEN])
