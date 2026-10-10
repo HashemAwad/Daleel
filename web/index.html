@@ -18,8 +18,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<meta name="theme-color" content="#FCFCFA" media="(prefers-color-scheme: light)"/>
-<meta name="theme-color" content="#14130F" media="(prefers-color-scheme: dark)"/>
+<meta name="theme-color" content="#F7F8F3" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#151813" media="(prefers-color-scheme: dark)"/>
 <title>دليل — وزارة الصحة العامة</title>
 <style>
   /* Light is the base. Dark is declared twice on purpose: the media query
@@ -30,16 +30,20 @@
     --cedar:#15693A;
     --cedar-deep:#0D4426;
     --seal:#C62127;        /* emergencies and the identity rule. Nowhere else. */
-    --ink:#221F1A;
-    --ink-2:#4A453D;
-    --quiet:#6B655C;
-    --paper:#FCFCFA;
-    --paper-2:#F4F3EE;
-    --rule:#DFDCD3;
-    --rule-soft:#EBE9E2;
-    --amber:#7A5200; --amber-wash:#F7F0DE;
-    --seal-wash:#F9EAE9;
-    --emboss:.032;
+    /* A sheet of paper on a desk, not a white screen. The ground carries a
+       faint green cast pulled from the cedar, which keeps it out of both the
+       clinical-white and the warm-cream default. */
+    --ink:#1E211C;
+    --ink-2:#454941;
+    --quiet:#686C62;
+    --ground:#E9EBE3;      /* the desk */
+    --paper:#F7F8F3;       /* the sheet the record sits on */
+    --paper-2:#E8EAE1;     /* the reader's margin note */
+    --rule:#D2D6C9;
+    --rule-soft:#E1E4DA;
+    --amber:#73510A; --amber-wash:#F2EBD6;
+    --seal-wash:#F6E6E4;
+    --emboss:.045;
 
     --measure:40rem;
     --swift:cubic-bezier(.2,.65,.3,1);
@@ -48,27 +52,27 @@
     :root:not([data-theme="light"]){
       color-scheme: dark;
       --cedar:#5FB98A; --cedar-deep:#93D8B2; --seal:#FF8F8A;
-      --ink:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
-      --paper:#14130F; --paper-2:#1D1B16;
-      --rule:#302D26; --rule-soft:#23211B;
+      --ink:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
+      --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
+      --rule:#2C3128; --rule-soft:#212520;
       --amber:#E2BC72; --amber-wash:#2A2109; --seal-wash:#2E1512;
-      --emboss:.055;      /* an emboss needs more presence on dark paper */
+      --emboss:.07;       /* an emboss needs more presence on dark paper */
     }
   }
   :root[data-theme="dark"]{
     color-scheme: dark;
     --cedar:#5FB98A; --cedar-deep:#93D8B2; --seal:#FF8F8A;
-    --ink:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
-    --paper:#14130F; --paper-2:#1D1B16;
-    --rule:#302D26; --rule-soft:#23211B;
+    --ink:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
+    --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
+    --rule:#2C3128; --rule-soft:#212520;
     --amber:#E2BC72; --amber-wash:#2A2109; --seal-wash:#2E1512;
-    --emboss:.055;
+    --emboss:.07;
   }
 
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; background:var(--paper); color:var(--ink);
+    margin:0; background:var(--ground); color:var(--ink);
     font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
                 "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
     font-size:17px; line-height:1.85;
@@ -81,7 +85,14 @@
   bdi{unicode-bidi:isolate}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 
-  #app{height:100%; display:flex; flex-direction:column}
+  /* The sheet: a bounded page on the desk, with visible edges. This is what
+     gives light mode depth without resorting to cards or drop shadows. */
+  #app{
+    height:100%; display:flex; flex-direction:column;
+    max-width:54rem; margin-inline:auto; background:var(--paper);
+    border-inline:1px solid var(--rule);
+  }
+  @media (max-width:880px){ #app{border-inline:0; max-width:none} }
   .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:22px}
 
   /* ---- letterhead ------------------------------------------------------- */

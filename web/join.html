@@ -11,26 +11,27 @@
 <title>Daleel · WhatsApp</title>
 <style>
   :root{
-    --brand:#15693A; --brand-deep:#0E4A29; --red:#C62127;
-    --brand-soft:#F6F7F5; --surface:#fff; --ink:#161817;
-    --muted:#6E7471; --line:#E4E6E3; --warn:#8A5B00; --warn-soft:#FBF2DF;
+    --brand:#15693A; --brand-deep:#0D4426; --red:#C62127;
+    --ground:#E9EBE3; --brand-soft:#E8EAE1; --surface:#F7F8F3; --ink:#1E211C;
+    --muted:#686C62; --line:#D2D6C9; --warn:#73510A; --warn-soft:#F2EBD6;
   }
   @media (prefers-color-scheme: dark){
     :root{
-      --brand:#4FAE77; --brand-deep:#8FD3AC; --red:#FF8F8A;
-      --brand-soft:#1B1E1C; --surface:#121413; --ink:#ECEFED;
-      --muted:#8E9793; --line:#272B29; --warn:#E8BE78; --warn-soft:#2A2109;
+      --brand:#5FB98A; --brand-deep:#93D8B2; --red:#FF8F8A;
+      --ground:#0C0E0B; --brand-soft:#1E221B; --surface:#151813; --ink:#ECEFE8;
+      --muted:#8D9288; --line:#2C3128; --warn:#E2BC72; --warn-soft:#2A2109;
     }
   }
   *{box-sizing:border-box}
   body{
-    margin:0; background:var(--surface); color:var(--ink);
+    margin:0; background:var(--ground); color:var(--ink);
     font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
                 "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
     font-size:16.5px; line-height:1.8; font-variant-numeric:tabular-nums;
   }
   .bidi{unicode-bidi:plaintext; text-align:start}
-  .wrap{max-width:560px; margin:0 auto; min-height:100%; background:var(--surface)}
+  .wrap{max-width:560px; margin:0 auto; min-height:100%; background:var(--surface);
+        border-inline:1px solid var(--line)}
   header{
     border-bottom:1px solid var(--line); background:var(--surface);
     padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));

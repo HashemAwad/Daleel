@@ -22,7 +22,7 @@ Turns inbound messages (WhatsApp + web) into an `Inquiry`, calls
 Until A adds the one-line include (below), run the composed app:
 
 ```bash
-PYTHONPATH=src uvicorn channels.asgi:app --reload    # core + channels
+PYTHONPATH=src uvicorn core.app:app --reload         # core + channels
 PYTHONPATH=src pytest -q
 ```
 

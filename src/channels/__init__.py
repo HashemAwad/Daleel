@@ -1,14 +1,14 @@
 """Channels package. Owner: C.
 
-`register(app)` mounts every channel router onto A's FastAPI app. It is
-idempotent, so it is safe whether or not `core/app.py` already calls it — which
-means the one shared line A has to add is exactly:
+`register(app)` mounts every channel router onto A's FastAPI app. `core/app.py`
+calls it, so the whole service — core, web widget, dashboard, both WhatsApp
+webhooks — is served by:
 
-    from channels import register; register(app)
+    PYTHONPATH=src uvicorn core.app:app --reload
 
-Until that line lands, run the composed app with:
-
-    PYTHONPATH=src uvicorn channels.asgi:app --reload
+register() stays idempotent, and `channels/asgi.py` still composes the same app
+independently. Both exist as a fallback for the case where core's registration
+is reverted or an owner wants to run the channel surface alone.
 """
 from __future__ import annotations
 

@@ -203,30 +203,37 @@
      it with ruled bands and figures carrying the hierarchy. The chart palette
      further up is CVD-validated and still untouched. */
   :root{
-    --paper:#FCFCFA; --paper-2:#F4F3EE; --rule-2:#DFDCD3; --rule-soft:#EBE9E2;
-    --ink-1:#221F1A; --ink-2:#4A453D; --quiet:#6B655C;
+    --ground:#E9EBE3; --paper:#F7F8F3; --paper-2:#E8EAE1;
+    --rule-2:#D2D6C9; --rule-soft:#E1E4DA;
+    --ink-1:#1E211C; --ink-2:#454941; --quiet:#686C62;
     --swift:cubic-bezier(.2,.65,.3,1);
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --paper:#14130F; --paper-2:#1D1B16; --rule-2:#302D26; --rule-soft:#23211B;
-      --ink-1:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
+      --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
+      --rule-2:#2C3128; --rule-soft:#212520;
+      --ink-1:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
     }
   }
   :root[data-theme="dark"]{
-    --paper:#14130F; --paper-2:#1D1B16; --rule-2:#302D26; --rule-soft:#23211B;
-    --ink-1:#F0EDE6; --ink-2:#CFCABF; --quiet:#948E83;
+    --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
+    --rule-2:#2C3128; --rule-soft:#212520;
+    --ink-1:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
   }
 
   body{
-    background:var(--paper); color:var(--ink-1);
+    background:var(--ground); color:var(--ink-1);
     font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
                 "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
     font-size:16px; line-height:1.75; font-variant-numeric:tabular-nums;
   }
-  .wrap{max-width:62rem}
+  .wrap{
+    max-width:62rem; background:var(--paper); min-height:100vh;
+    border-inline:1px solid var(--rule-2); padding-inline:22px;
+  }
+  @media (max-width:1000px){ .wrap{border-inline:0} }
 
-  .masthead{border-bottom:0; padding-bottom:12px}
+  .masthead{border-bottom:0; padding-bottom:12px; background:var(--paper)}
   .cedar{fill:var(--moph-green)}
   .titles span{font-family:"Iowan Old Style",Palatino,Georgia,serif; font-size:10px; letter-spacing:.11em}
   .band{height:2px; background:var(--moph-green); position:relative;
