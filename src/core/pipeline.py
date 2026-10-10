@@ -42,8 +42,12 @@ def _handle(inq: Inquiry) -> Answer:
     except Exception:
         return _fallback(inq)
 
-    # 4. Grounding gate — no tool support => fallback to a hotline, never guess
+    # 4. Grounding gate — no tool support => fallback to a hotline, never guess.
+    #    Special case: a directory question with no results is usually a missing
+    #    town — ask for it instead of a dead-end hotline message.
     if result.is_empty():
+        if result.tool == "directory":
+            return _ask_town(inq)
         return _fallback(inq)
 
     # 5. Build grounded answer from tool results only.
@@ -92,6 +96,13 @@ def _fallback(inq: Inquiry) -> Answer:
     return Answer(
         text=f"I don't have an official answer for that yet. Please call {h.name} on {h.number}.",
         tool="hotline", grounded=False, outcome="unanswered", lang=inq.lang)
+
+
+def _ask_town(inq: Inquiry) -> Answer:
+    return Answer(
+        text="أي منطقة أو قضاء؟ مثلاً: بيروت، عاليه، طرابلس.\n"
+             "Which town or area? e.g. Beirut, Aley, Tripoli.",
+        tool="directory", grounded=False, outcome="unanswered", lang=inq.lang)
 
 
 def _cannot_read(inq: Inquiry) -> Answer:

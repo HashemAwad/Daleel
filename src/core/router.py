@@ -12,8 +12,10 @@ from core.stubs import StubLLM
 
 TOOLS = ["procedure", "directory", "medicine", "hotline"]
 
-DIRECTORY_TERMS = ["pharmacy", "saydaliyye", "صيدلية", "hospital", "مستشفى", "phc",
-                   "clinic", "مركز", "nearest", "2arib", "قريب"]
+DIRECTORY_TERMS = ["pharmacy", "saydaliyye", "saydaliye", "saydaliyeh", "farmashia", "صيدلية",
+                   "hospital", "mostashfa", "mosta2fa", "mustashfa", "mستشفى", "مستشفى",
+                   "phc", "mustawsaf", "clinic", "3yede", "عيادة", "مركز",
+                   "nearest", "2arib", "2areeb", "arib", "قريب", "2a2rab", "a2rab", "أقرب", "اقرب"]
 # Medicine = PRICE/COST/FREE intent only (not the bare word "medicine", which
 # also appears in procedure questions). A4 lets the model override this.
 MEDICINE_TERMS = ["price", "cost", "how much", "سعر", "كم سعر", "combien",
@@ -32,9 +34,9 @@ def _resolve_caza(text: str):
 
 def _directory_kind(text: str) -> str:
     t = text.lower()
-    if "hospital" in t or "مستشفى" in t:
+    if any(w in t for w in ("hospital", "مستشفى", "mostashfa", "mosta2fa", "mustashfa")):
         return "hospital"
-    if "phc" in t or "مركز" in t or "clinic" in t:
+    if any(w in t for w in ("phc", "مركز", "clinic", "عيادة", "3yede", "mustawsaf")):
         return "phc"
     return "pharmacy"
 
