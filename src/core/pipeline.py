@@ -126,41 +126,54 @@ def _maps_block(result: ToolResult) -> str:
     for f in result.facilities[:3]:
         u = _maps_url(f)
         if u:
-            dist = f" ({f.distance_km} km)" if f.distance_km is not None else ""
-            lines.append(f"📍 {f.name}{dist}: {u}")
-    return ("\n\n" + "\n".join(lines)) if lines else ""
+            dist = f" ({f.distance_km} كم)" if f.distance_km is not None else ""
+            lines.append(f"• {f.name}{dist}: {u}")
+    return ("\n\n🗺️ على الخريطة · On the map:\n" + "\n".join(lines)) if lines else ""
 
 
 # ---- model-less rendering (robustness: answer from facts if the LLM is down) ----
 def _render_facts(result: ToolResult) -> str:
-    """Plain, grounded answer built directly from retrieved facts, no model.
-    Used only when the LLM call fails, so the bot still helps instead of
-    redirecting to a hotline."""
-    lines: list[str] = []
+    """Clean, readable, grounded answer built directly from retrieved facts (no
+    model). Each item is a small labelled block, not a dash-chain. Used when the
+    LLM is unavailable, so the bot still helps nicely."""
     if result.docs:
         d = result.docs[0]
-        lines.append(d.content[:500].strip())
+        out = d.content[:500].strip()
         if d.source:
-            lines.append(f"المصدر · source: {d.source.url}")
-    elif result.facilities:
-        lines.append("أقرب المرافق · Nearest facilities:")
-        for f in result.facilities[:3]:
-            parts = [f.name] + [p for p in (f.caza, f.address, f.phone) if p]
-            if f.distance_km is not None:
-                parts.append(f"{f.distance_km} km")
+            out += f"\n\n🔗 {d.source.url}"
+        return out
+
+    if result.facilities:
+        blocks = []
+        for i, f in enumerate(result.facilities[:3], 1):
+            lines = [f"{i}. {f.name}"]
+            where = "، ".join(p for p in (f.address, f.caza) if p)
+            dist = f" · {f.distance_km} كم" if f.distance_km is not None else ""
+            if where or dist:
+                lines.append(f"   📍 {where}{dist}".rstrip())
+            if f.phone:
+                lines.append(f"   📞 {f.phone}")
             u = _maps_url(f)
             if u:
-                parts.append(u)
-            lines.append("• " + " — ".join(parts))
-    elif result.drugs:
+                lines.append(f"   🗺️ {u}")
+            blocks.append("\n".join(lines))
+        return "أقرب الأماكن إليك · Nearest to you:\n\n" + "\n\n".join(blocks)
+
+    if result.drugs:
+        blocks = []
         for dr in result.drugs[:3]:
-            price = f"{dr.price} {dr.currency}" if dr.price is not None else "السعر غير متوفر · price not listed"
-            free = " — مجاني · free list" if dr.is_free else ""
-            lines.append(f"• {dr.name}: {price}{free}")
-    elif result.hotlines:
-        for h in result.hotlines:
-            lines.append(f"• {h.name}: {h.number} — {h.purpose}")
-    return "\n".join(lines)
+            price = (f"{dr.price:,.0f} {dr.currency}" if dr.price is not None
+                     else "السعر غير متوفر · price not listed")
+            lines = [f"💊 {dr.name}", f"   {price}"]
+            if dr.is_free:
+                lines.append("   ✅ مجاني للمرضى المزمنين · free for chronic patients")
+            blocks.append("\n".join(lines))
+        return "\n\n".join(blocks)
+
+    if result.hotlines:
+        return "الخطوط الساخنة · Hotlines:\n\n" + "\n".join(
+            f"📞 {h.number} — {h.name} ({h.purpose})" for h in result.hotlines)
+    return ""
 
 
 # ---- voice ----------------------------------------------------------------
