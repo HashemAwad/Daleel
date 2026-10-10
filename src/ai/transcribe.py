@@ -2,50 +2,82 @@
 
 `TranscriberImpl.transcribe(audio, mime) -> (text, lang)` using local faster-whisper
 (no network call at inference, so audio never leaves the machine). WhatsApp voice notes
-are ogg/opus; PyAV (bundled with faster-whisper) decodes them, no ffmpeg needed.
+are ogg/opus; PyAV (bundled with faster-whisper) decodes them in memory, no ffmpeg and
+no temp file.
 
 Config (env): WHISPER_MODEL (default "small"; use "medium"/"large-v3" for better Arabic),
-WHISPER_DEVICE (default "auto"), WHISPER_COMPUTE (default "int8").
+WHISPER_DEVICE (default "auto"), WHISPER_COMPUTE (default "int8"),
+WHISPER_MAX_SECONDS (default 60: only the first minute of a long note is transcribed).
 Never log audio, transcripts, or exception messages from here.
+
+Try a file by hand:  PYTHONPATH=src python -m ai.transcribe clip.ogg [--answer]
 """
 from __future__ import annotations
 
 import io
+import logging
 import os
+import threading
 from typing import Any, Optional
 
 from shared.contracts import Lang
 
-_SUPPORTED = {"ar", "fr", "en"}          # Whisper codes we map straight onto Lang
-_FALLBACK = "ar"                          # Lebanese audio mis-detected as fa/ur/etc. -> retry as Arabic
+log = logging.getLogger("daleel.ai.transcribe")
+
+# Whisper codes we map straight onto Lang. Arabic first: Lebanese audio mis-detected as
+# fa/ur/he falls back to the likeliest of these three, and to Arabic on a tie.
+_SUPPORTED = ("ar", "fr", "en")
+
+
+def _max_seconds() -> float:
+    return float(os.getenv("WHISPER_MAX_SECONDS", "60"))
 
 
 class TranscriberImpl:
     def __init__(self, model: Any = None):
         self._model = model               # injectable for tests; loaded lazily otherwise
+        self._lock = threading.Lock()
 
-    def _load(self):
-        if self._model is None:
-            from faster_whisper import WhisperModel
-            self._model = WhisperModel(
-                os.getenv("WHISPER_MODEL", "small"),
-                device=os.getenv("WHISPER_DEVICE", "auto"),
-                compute_type=os.getenv("WHISPER_COMPUTE", "int8"))
+    def _load(self, local_only: bool = False):
+        """`local_only` is what the running app uses: a model that was never downloaded must
+        fail at once, not start a 500 MB+ download in the middle of a webhook."""
+        with self._lock:
+            if self._model is None:
+                from faster_whisper import WhisperModel
+                self._model = WhisperModel(
+                    os.getenv("WHISPER_MODEL", "small"),
+                    device=os.getenv("WHISPER_DEVICE", "auto"),
+                    compute_type=os.getenv("WHISPER_COMPUTE", "int8"),
+                    local_files_only=local_only)
         return self._model
 
+    def ready(self) -> bool:
+        """Load the model now. False plus one ERROR line when it cannot load, so a missing
+        model is seen at startup and in /health/channels, not as "couldn't read" replies."""
+        try:
+            self._load(local_only=True)
+            return True
+        except Exception as exc:
+            log.error("Whisper model %r did not load (%s): voice notes will NOT work. Run "
+                      "infra/laptop_setup.sh on a good connection.",
+                      os.getenv("WHISPER_MODEL", "small"), type(exc).__name__)
+            return False
+
     def _run(self, audio: bytes, language: Optional[str]):
-        segments, info = self._load().transcribe(
+        """Returns (lazy segments, info): language detection has run, decoding has not."""
+        return self._load(local_only=True).transcribe(
             io.BytesIO(audio), language=language, vad_filter=True, beam_size=5)
-        text = " ".join(s.text.strip() for s in segments).strip()   # generator: consume it
-        return text, info.language
 
     def transcribe(self, audio: bytes, mime: str = "") -> tuple[str, Optional[Lang]]:
-        """`mime` is accepted for the contract; PyAV sniffs the container itself."""
+        """`mime` is accepted for the contract; PyAV sniffs the container itself.
+        Raises on undecodable audio or a model that cannot load; callers reply "couldn't read"."""
         if not audio:
             return "", None
-        text, code = self._run(audio, None)
+        segments, info = self._run(audio, None)
+        text, code = " ".join(s.text.strip() for s in segments).strip(), info.language
         if code not in _SUPPORTED:
-            text, code = self._run(audio, _FALLBACK)
+            segments, info = self._run(audio, "ar")
+            text, code = " ".join(s.text.strip() for s in segments).strip(), info.language
         return text, code if code in _SUPPORTED else None
 
 
