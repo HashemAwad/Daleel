@@ -1,0 +1,404 @@
+name,strength,form,atc,ingredients,brand_generic,price,currency,list_date,source,source_url,checked_on,is_synthetic
+CONCOR,5mg,"Tablet, film coated",C07AB07,Bisoprolol fumarate - 5mg,B,870164,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1501,2026-10-10,false
+CONCOR,10mg,"Tablet, film coated",C07AB07,Bisoprolol fumarate - 10mg,B,1176665,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1512,2026-10-10,false
+CONCOR AM 2.5,,"Tablet, film coated",C07FB07,"Bisoprolol fumarate - 2.5mg, Amlodipine besylate - 5mg",B,1377012,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1554,2026-10-10,false
+CONCOR AM 5,,"Tablet, film coated",C07FB07,"Bisoprolol fumarate - 5mg, Amlodipine besylate - 5mg",B,1377012,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1555,2026-10-10,false
+CONCOR COR,2.5mg,"Tablet, film coated",C07AB07,Bisoprolol fumarate - 2.5mg,B,488906,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1520,2026-10-10,false
+CONCOR PLUS,,"Tablet, film coated",C07BB07,"Bisoprolol fumarate - 5mg, Hydrochlorothiazide - 12.5mg",B,,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1546,2026-10-10,false
+CONCOR T 2.5,,Tablet,C07AB07/C09CA,"Bisoprolol fumarate - 2.5mg, Telmisartan - 40mg",B,,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1528,2026-10-10,false
+CONCOR T 5,,Tablet,C07AB07/C09CA,"Bisoprolol fumarate - 5mg, Telmisartan - 40mg",B,1457748,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1530,2026-10-10,false
+CHILDREN'S PANADOL 5-12 YEARS,240mg/5ml,Elixir,N02BE01,Paracetamol - 240mg/5ml,B,356118,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4540,2026-10-10,false
+PANADOL ACTIFAST,500mg,"Tablet, film coated",N02BE01,Paracetamol - 500mg,B,159917,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4490,2026-10-10,false
+PANADOL ADVANCE,500mg,"Tablet, film coated",N02BE01,Paracetamol - 500mg,B,,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4493,2026-10-10,false
+PANADOL B&I,120mg/5ml,"Suspension, sugar free, alcohol free",N02BE01,Paracetamol - 120mg/5ml,B,210983,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4532,2026-10-10,false
+PANADOL COLD & FLU ALL IN ONE,,"Tablet, film coated",N02BE51,"Paracetamol - 250mg, Guaifenesin - 100mg, Phenylephrine HCl - 5mg",B,342680,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4571,2026-10-10,false
+PANADOL COLD & FLU DAY,,Caplet,N02BE51,"Paracetamol - 500mg, Caffeine - 25mg, Phenylephrine HCl - 5mg",B,284895,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4570,2026-10-10,false
+PANADOL COLD & FLU VAPOUR RELEASE + DECONGESTANT,,Powder for solution,N02BE51,"Paracetamol - 600mg, Phenylephrine HCl - 10mg",B,460938,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4575,2026-10-10,false
+PANADOL COLD AND FLU,,Tablet,N02BE51,"Paracetamol - 500mg, Pseudoephedrine HCl - 30mg, Chlorpheniramine maleate - 2mg",B,278175,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4593,2026-10-10,false
+PANADOL EXTRA WITH OPTIZORB,,"Tablet, film coated",N02BE51,"Paracetamol - 500mg, Caffeine - 65mg",B,,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4578,2026-10-10,false
+PANADOL JOINT,665mg,"Tablet, film coated, prolonged release",N02BE01,Paracetamol - 665mg,B,291614,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4508,2026-10-10,false
+PANADOL MIGRAINE,,Caplet,N02BE51,"Paracetamol - 250mg, Acetylsalicylic acid - 250mg, Caffeine - 65mg",B,604729,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4587,2026-10-10,false
+PANADOL NIGHT,,Caplet,N02BE51,"Paracetamol - 500mg, Diphenhydramine HCl - 25mg",B,315803,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4566,2026-10-10,false
+PANADOL NIGHT,,"Tablet, film coated",N02BE51,"Paracetamol - 500mg, Diphenhydramine HCl - 25mg",B,315803,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4567,2026-10-10,false
+PANADOL SINUS,,Caplet,N02BE51,"Paracetamol - 500mg, Pseudoephedrine HCl - 30mg",B,228453,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4569,2026-10-10,false
+PANADOL WOMAN,,"Tablet, coated",A03DB04,"Paracetamol - 500mg, Hyoscine butylbromide - 10mg",B,436749,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/185,2026-10-10,false
+AUGMENTIN,312.5mg/5ml,Powder for suspension,J01CR02,"Amoxicillin (trihydrate) - 250mg/5ml, Clavulanic Acid (potassium) - 62.5mg/5ml",B,542912,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2701,2026-10-10,false
+AUGMENTIN,625mg,Tablet,J01CR02,"Amoxicillin (trihydrate) - 500mg, Clavulanic Acid (potassium) - 125mg",B,639958,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2721,2026-10-10,false
+AUGMENTIN,1g,Tablet,J01CR02,"Amoxicillin (trihydrate) - 875mg, Clavulanic Acid (potassium) - 125mg",B,739202,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2726,2026-10-10,false
+AUGMENTIN DUO,457mg/5ml,Powder for suspension,J01CR02,"Amoxicillin (trihydrate) - 400mg/5ml, Clavulanic Acid (potassium) - 57mg/5ml",B,524099,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2705,2026-10-10,false
+AUGMENTIN ES,642.9mg/5ml,Powder for suspension,J01CR02,"Amoxicillin (trihydrate) - 600mg/5ml, Clavulanic Acid (potassium) - 42.9mg/5ml",B,846621,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2713,2026-10-10,false
+GLUCOPHAGE,850mg,"Tablet, film coated",A10BA02,Metformin HCl - 850mg,B,572634,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/409,2026-10-10,false
+GLUCOPHAGE,"1,000mg","Tablet, film coated",A10BA02,"Metformin HCl - 1,000mg",B,624963,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/425,2026-10-10,false
+GLUCOPHAGE XR,750mg,"Tablet, prolonged release",A10BA02,Metformin HCl - 750mg,B,692244,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/433,2026-10-10,false
+GLUCOPHAGE XR,1000mg,"Tablet, prolonged release",A10BA02,Metformin HCl - 1000mg,B,755039,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/437,2026-10-10,false
+GLUCOPHAGE XR,500mg,"Tablet, prolonged release",A10BA02,Metformin HCl - 500mg,B,484421,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/442,2026-10-10,false
+NEXIUM,20mg,"Tablet, gastroresistant",A02BC05,Esomeprazole (magnesium trihydrate) - 20mg,B,1005194,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/92,2026-10-10,false
+NEXIUM,40mg,"Tablet, enteric coated",A02BC05,Esomeprazole (magnesium trihydrate) - 40mg,B,1138235,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/103,2026-10-10,false
+NEXIUM,40mg,Injectable powder for solution,A02BC05,Esomeprazole sodium - 40mg,B,5254424,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/119,2026-10-10,false
+NEXIUM,10mg,"Granules, gastroresistant, for suspension",A02BC05,Esomeprazole (magnesium trihydrate) - 10mg,B,1721462,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/125,2026-10-10,false
+NEXIUM IV,40mg,Injectable powder for solution,A02BC05,Esomeprazole sodium - 40mg,B,5254424,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/120,2026-10-10,false
+ASPIRIN PROTECT,100mg,"Tablet, enteric coated",B01AC06,Acetylsalicylic acid - 100mg,B,146479,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/794,2026-10-10,false
+ASPIRINE,0.3g,Tablet,N02BA01,Acetylsalicylic acid - 300mg,B,80631,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4486,2026-10-10,false
+ASPIRINE C EFFERVESCENT,,"Tablet, effervescent",N02BA51,"Acetylsalicylic acid - 400mg, Vitamin C - 240mg",B,162605,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4487,2026-10-10,false
+AMLOR,5mg,Capsule,C08CA01,Amlodipine besylate - 5mg,B,560382,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1556,2026-10-10,false
+AMLORINE 10,10mg,Tablet,C08CA01,Amlodipine (besylate) - 10mg,G,959504,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1585,2026-10-10,false
+AMLORINE 5,5mg,Tablet,C08CA01,Amlodipine (besylate) - 5mg,G,388370,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1570,2026-10-10,false
+CRESTOR,10mg,"Tablet, film coated",C10AA07,Rosuvastatin (calcium) - 10mg,B,804962,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1948,2026-10-10,false
+CRESTOR,20mg,"Tablet, film coated",C10AA07,Rosuvastatin (calcium) - 20mg,B,804962,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1965,2026-10-10,false
+CRESTOR,40mg,"Tablet, film coated",C10AA07,Rosuvastatin (calcium) - 40mg,B,804962,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1982,2026-10-10,false
+CRESTOR,5mg,Tablet,C10AA07,Rosuvastatin (calcium) - 5mg,B,589947,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1987,2026-10-10,false
+PLAVIX,75mg,"Tablet, film coated",B01AC04,Clopidogrel (hydrogenosulfate) - 75mg,B,1350562,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/768,2026-10-10,false
+VENTOLIN,5mg/ml,Solution,R03AC02,Salbutamol (sulfate) - 5mg/ml,B,403153,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/5289,2026-10-10,false
+VENTOLIN EVOHALER,100mcg/dose,Inhalation aerosol metered dose,R03AC02,Salbutamol (sulfate) - 100mcg/dose,B,260705,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/5286,2026-10-10,false
+EUTHYROX,25mcg,"Tablet, scored",H03AA01,Levothyroxine sodium - 25mcg,B,256674,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2629,2026-10-10,false
+EUTHYROX,50mcg,"Tablet, scored",H03AA01,Levothyroxine sodium - 50mcg,B,391058,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2630,2026-10-10,false
+EUTHYROX,100mcg,"Tablet, scored",H03AA01,Levothyroxine sodium - 100mcg,B,452875,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2632,2026-10-10,false
+EUTHYROX,150mcg,"Tablet, scored",H03AA01,Levothyroxine sodium - 150mcg,B,615480,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2633,2026-10-10,false
+LASIX,40mg,Tablet,C03CA01,Furosemide - 40mg,B,120946,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1403,2026-10-10,false
+LASIX,500mg,Tablet,C03CA01,Furosemide - 500mg,B,1454038,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1418,2026-10-10,false
+COVERSYL ARGININE,10mg,"Tablet, film coated",C09AA04,Perindopril arginine - 10mg,B,452875,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1621,2026-10-10,false
+COVERSYL ARGININE,5mg,"Tablet, film coated",C09AA04,Perindopril arginine - 5mg,B,452875,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1623,2026-10-10,false
+ZYRTEC,10mg,"Tablet, film coated",R06AE07,Cetirizine (dihydrochloride) - 10mg,B,593978,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/5512,2026-10-10,false
+ZYRTEC,1%,Drops,R06AE07,Cetirizine (dihydrochloride) - 1%,B,170668,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/5518,2026-10-10,false
+ZYRTEC,,Solution,R06AE07,Cetirizine (dihydrochloride) - 5mg/5ml,B,278175,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/5520,2026-10-10,false
+BRUFEN,400mg,"Tablet, film coated",M01AE01,Ibuprofen - 400mg,B,454518,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4168,2026-10-10,false
+BRUFEN,100mg/5ml,Syrup,M01AE01,Ibuprofen - 100mg/5ml,B,364181,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4175,2026-10-10,false
+BRUFEN,600mg,"Tablet, film coated",M01AE01,Ibuprofen - 600mg,B,544226,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4184,2026-10-10,false
+VOLTAREN EMULGEL 12HRS,23.2mg/g,Gel,M02AA15,Diclofenac Diethylamine - 23.2mg/g,B,,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4281,2026-10-10,false
+XARELTO,2.5mg,"Tablet, film coated",B01AF01,Rivaroxaban - 2.5mg,B,4045168,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/827,2026-10-10,false
+XARELTO,15mg,"Tablet, film coated",B01AF01,Rivaroxaban - 15mg,B,4440862,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/830,2026-10-10,false
+XARELTO,20mg,"Tablet, film coated",B01AF01,Rivaroxaban - 20mg,B,4440862,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/837,2026-10-10,false
+XARELTO,10mg,"Tablet, film coated",B01AF01,Rivaroxaban - 10mg,B,2444450,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/843,2026-10-10,false
+JANUVIA,100mg,"Tablet, film coated",A10BH01,Sitagliptin - 100mg,B,1884067,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/559,2026-10-10,false
+DIAMICRON MR,60mg,"Tablet, modified release",A10BB09,Gliclazide - 60mg,B,382995,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/449,2026-10-10,false
+LANTUS,100IU/ml,Injectable solution,A10AE04,Insulin glargine - 100IU/ml,BioTech,3327354,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/398,2026-10-10,false
+LANTUS SOLOSTAR,100IU/ml,Injectable solution,A10AE04,Insulin glargine - 100IU/ml,BioTech,4992375,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/397,2026-10-10,false
+ATACAND,8mg,Tablet,C09CA06,Candesartan cilexetil - 8mg,B,526786,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1709,2026-10-10,false
+ATACAND,16mg,Tablet,C09CA06,Candesartan cilexetil - 16mg,B,705517,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1714,2026-10-10,false
+ATACAND PLUS,,Tablet,C09DA06,"Candesartan cilexetil - 16mg, Hydrochlorothiazide - 12.5mg",B,705517,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1780,2026-10-10,false
+TENORMIN,50mg,"Tablet, film coated",C07AB03,Atenolol - 50mg,B,393746,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1490,2026-10-10,false
+TENORMIN,100mg,"Tablet, film coated",C07AB03,Atenolol - 100mg,B,279519,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1495,2026-10-10,false
+PROFINAL,400mg,"Tablet, film coated",M01AE01,Ibuprofen - 400mg,G,182763,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4170,2026-10-10,false
+PROFINAL,100mg/5ml,Suspension,M01AE01,Ibuprofen - 100mg/5ml,G,208296,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4183,2026-10-10,false
+PROFINAL,600mg,Tablet,M01AE01,Ibuprofen - 600mg,G,302365,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4185,2026-10-10,false
+PROFINAL XP,,"Caplet, film coated",M01AE51,"Ibuprofen - 400mg, Caffeine - 65mg",G,286238,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/4223,2026-10-10,false
+TRITACE,2.5mg,Tablet,C09AA05,Ramipril - 2.5mg,B,263393,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1626,2026-10-10,false
+TRITACE,5mg,Tablet,C09AA05,Ramipril - 5mg,B,509316,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1631,2026-10-10,false
+TRITACE,10mg,Tablet,C09AA05,Ramipril - 10mg,B,689391,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/1637,2026-10-10,false
+ELTROXIN,100mcg,"Tablet, scored",H03AA01,Levothyroxine sodium - 100mcg,B,579196,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/2631,2026-10-10,false
+GLUCOVANCE,,"Tablet, film coated",A10BD02,"Metformin HCl - 500mg, Glibenclamide - 2.5mg",B,,LBP,,MoPH Lebanon National Drugs Database,https://www.moph.gov.lb/en/Drugs/view/482,2026-10-10,false
+CLAIRYG,10g/200ml,Injectable solution,,,,78986060.74,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ADVAGRAF,1mg,"Capsule, prolonged release",,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+PROGRAF 0.5 MG,0.5mg,Capsule,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+PROGRAF 1MG,1mg,Capsule,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+PROGRAF 5MG,5mg,Capsule,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+HALAVEN,0.88mg/2ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+STELARA,90mg,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ADCETRIS,50mg,Injectable powder for concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ENTECAVIR ARROW,0.5mg,"Tablet, coated",,,,18701506.15,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ENTECAVIR ARROW,1mg,"Tablet, coated",,,,18701506.15,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+EVEROLIMUS ARROW,5mg,Tablet,,,,68310600.96,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+EVEROLIMUS ARROW,10mg,Tablet,,,,85670619.76,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+EVEROLIMUS ARROW,2.5mg,Tablet,,,,53970434.81,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+BOSENTAN ARROW,62.5mg,"Tablet, film coated",,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+BOSENTAN ARROW,125mg,"Tablet, film coated",,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+GAZYVA,1000mg/40ml,Injectable concentrate for solution,,,,314437415.70,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+GEFITINIB ARROW,250mg,"Tablet, coated",,,,79673676.38,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+CELEZON,5mg,Tablet,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+CELEZON,15mg,Tablet,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+CELEZON,20mg,Tablet,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+KEYTRUDA,100mg/4ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+VIDAZA,100mg,Injectable lyophilised powder,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ABREMIA,250mg,Tablet,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+HEMLIBRA,30mg/ml,Injectable solution,,,,224585720.83,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+SUTENT,12.5mg,Capsule,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+SUTENT,50mg,Capsule,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+BOSULIF,500mg,"Tablet, film coated",,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+KIOVIG,5g/50ml,Injectable solution,,,,28561957.07,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ERBITUX,100mg/20ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+BAVENCIO,200mg/10ml,Injectable concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+IXIFI,100mg,Injectable powder for concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+NOVOSEVEN RT,1mg (50KIU),Injectable powder for solution+diluent,,,,56263954.98,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+CERTICAN,0.5mg,Tablet,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+CERTICAN,0.75mg,Tablet,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ONCASPAR,750U/ml,Injectable powder for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+BEVACIREL,400mg/16ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+BEVACIREL,100mg/4ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+PEMETREXED NEAPOLIS,,Injectable powder,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+BORTEZOMIB NEAPOLIS,3.5mg,Injectable lyophilised powder for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+IMBRUVICA,420mg,"Tablet, film coated",,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+NPLATE,250mcg,Injectable powder for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+OPSUMIT,10mg,"Tablet, film coated",,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+DARZALEX,400mg/20ml,Injectable concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+KYPROLIS,60mg,Injectable powder for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+MYOZYME,50mg,Injectable powder for concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+VECTIBIX,400mg/20ml,Injectable concentrated solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+VECTIBIX,100mg/5ml,Injectable concentrated solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+REBIF,12MIU,Injectable solution,,,,77012070.37,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+PULMOZYME,2.5mg/2.5ml,Inhalation solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+PEGASYS,180mcg/0.5ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+FASLODEX,250mg/5ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+IMFINZI,500mg/10ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+PERJETA 420MG,420mg/14ml,Injectable concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+KADCYLA,100mg,Injectable powder for concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+KADCYLA,160mg,Injectable powder for concentrate for solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+STIVARGA,40mg,"Tablet, film coated",,,,254696437.13,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+XALKORI,250mg,Capsule,,,,347644061.00,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+OPDIVO,100mg/10ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+YERVOY,50mg/10ml,Injectable solution,,,,,LBP,,MoPH list: Allocation Meds website-.xlsx,,2026-10-10,false
+ARYOSEVEN RT,1mg,Injectable powder for solution+diluent,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+RECIGEN 44,44mcg/0.5ml,Injectable solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+GEFITINIB BIOGARAN,250mg,"Tablet, coated",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+FABRAZYME,35mg,Injectable powder for concentrate for solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+LENOMA,10mg,"Capsule, hard",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+LENOMA,25mg,"Capsule, hard",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+LENOMA,15mg,"Capsule, hard",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+BENEFIX,500IU,Injectable powder for solution+diluent,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+ALTEBREL,50mg/1ml,Injectable solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+TECENTRIQ,1200mg,Injectable concentrate for solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+CABAZITAXEL EVER PHARMA,10mg/ml,Injectable concentrate for solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+DASATINIB NEAPOLIS,70mg,"Tablet, film coated",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+DASATINIB NEAPOLIS,50mg,"Tablet, film coated",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+CAELYX,20mg/10ml,Injectable concentrated solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+EVEROLIMUS BIOGARAN,5mg,Tablet,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+EVEROLIMUS BIOGARAN,10mg,Tablet,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+PAPILLIO,125mg,"Capsule, hard",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+SCLEMOD,0.5mg,Capsule,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+IMNOVID,4mg,"Capsule, hard",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+TRASTUREL,,,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+ETANERREL,25mg/0.5ml,Injectable solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+RITUXIREL,100mg/10ml,Injectable concentrated solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+RITUXIREL,500mg/10ml,Injectable concentrated solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+DULLARMA,140mg,"Capsule, hard",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+RAPAMUNE,1mg,Tablet,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+NEXAVAR,200mg,"Tablet, film coated",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+ZOLADEX LA,10.8mg,Injectable suspension,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+SANDOSTATIN LAR,20mg,Injectable powder for suspension+diluent,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+SANDOSTATIN LAR,30mg,Injectable powder for suspension+diluent,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+ADVAGRAF,3mg,"Capsule, prolonged release",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+OPDIVO,40mg/4ml,Injectable solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+CYRAMZA,500mg/50ml,Injectable solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+OFEV,150mg,"Capsule, soft",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+XYNTHA,500IU,Injectable lyophilised powder for solution+diluent,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+HAEMATE P,,Injectable lyophilised powder for solution+diluent,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+ALECENSA,150mg,"Capsule, hard",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+HUMIRA,40mg/0.4ml,Injectable solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+CEREZYME,400IU,Injectable lyophilised powder for solution,,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+BOSULIF,400mg,"Tablet, film coated",,,,,LBP,,MoPH list: Tender388-2024.xlsx,,2026-10-10,false
+Abremia 250 mg PO,250 mg,,,Abiraterone 250 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Alecensa 150 mg,150 mg,,,Alectinib 150 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Anastrazole 1 mg PO,1 mg,,,Anastrazole 1 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Tecentric 1200 mg,1200 mg,,,Atezolizumab 1200 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bavencio 20 mg/10 ml,20 mg/10 ml,,,Avelumab 200 mg/10ml IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Vidaza 100 mg,100 mg,,,Azacitidine 100 mg SC/IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Vesiculture 30mg/vial,30mg/vial,,,BCG - oncotype 120mg intravesical,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bendamustine 100 mg IV,100 mg,,,Bendamustine 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bendamustine 25 mg IV,25 mg,,,Bendamustine 25 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bevacirel 100 mg,100 mg,,,Bevacizumab 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bevacirel 400 mg,400 mg,,,Bevacizumab 400 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bleomycine 15 mg IV/IM/SC,15 mg,,,Bleomycine 15 mg IV/IM/SC,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bortezomib Neapolis 3.5 mg,3.5 mg,,,Bortezomib 3.5 mg SC/IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bosulif 400 mg,400 mg,,,Bosutinib 400 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bosulif 500 mg,500 mg,,,Bosutinib 500 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Adcetris 50 mg,50 mg,,,Brentuximab 50 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Cabazitax El Ever Pharma 60 mg/6 ml,60 mg/6 ml,,,Cabazitaxel 60 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Capeda 500 mg,500 mg,,,Capecitabine 500 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Karboteen 150 mg/15 ml,150 mg/15 ml,,,Carboplatin 150 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Kyprolis 60 mg,60 mg,,,Carfilzomib 60 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Erbitux 100 mg/20 ml,100 mg/20 ml,,,Cetuximab 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Cisplatine 50 mg IV,50 mg,,,Cisplatine 50 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Cladribine 10 mg IV,10 mg,,,Cladribine 10 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Endoxan 500 mg,500 mg,,,Cyclophosphamide 500 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Alexan 1000 mg/20 ml,1000 mg/20 ml,,,Cytarabine 1000 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dacarbazine 200 mg IV,200 mg,,,Dacarbazine 200 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Darzalex 400 mg/20 ml,400 mg/20 ml,,,Daratumumab 400 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dasatinib Neapolis 50 mg,50 mg,,,Dasatinib 50 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dasatinib Neapolis 70 mg,70 mg,,,Dasatinib 70 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Zedaunor 20 mg,20 mg,,,Daunorubicine 20 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Docetaxel GP Pharam 20 mg/0.5 ml,20 mg/0.5 ml,,,Docetaxel 20 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Docetaxel Ebewe 80 mg/8 ml,80 mg/8 ml,,,Docetaxel 80 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Caelyx 20mg/10 ml,20mg/10 ml,,,Doxorubicin 20 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Doxorubicin Ebewe 50mg/250 ml,50mg/250 ml,,,Doxorubicin 50 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Imfinzi 500 mg/10 ml,500 mg/10 ml,,,Durvalumab 500 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Zepirubin 50 mg,50 mg,,,Epirubicine 50 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Halaven 0.88 mg/2 ml,0.88 mg/2 ml,,,Eribulin 0.88 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Etoposide 100 mg/5 ml,100 mg/5 ml,,,Etoposide 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Everolimus Biogaran 5 mg,5 mg,,,Everolimus 5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Exemestane 25 mg PO,25 mg,,,Exemestane 25 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Fludrabine Phosphate Neopolis,50 mg,,,Fludarabine 50 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Fluorouracil 500 mg IV,500 mg,,,Fluorouracil 500 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Faslodex 250 mg/5 ml,250 mg/5 ml,,,Fulvestrant 250 mg IM,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Gefitinib Biogaran 250 mg,250 mg,,,Gefitinib 250 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Gemcitabine 1000mg,1000mg,,,Gemcitabine 1000 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Gemcitabine Thymoorgan 200mg,200mg,,,Gemcitabine 200 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Zoladex LA 10.8 mg,10.8 mg,,,Gosereline 10.8 mg SC,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dullarma 140 mg,140 mg,,,Ibrutinib 140 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Imbruvica 420 mg,420 mg,,,Ibrutinib 420 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Holoxan 1 g,1 g,,,Ifosfamide 1 g IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Glimatinib 400 mg,400 mg,,,Imatinib 400 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Yervoy 50 mg/10 ml,50 mg/10 ml,,,Ipilimumab 50 mg/10 ml,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Irinotecan GP Pharm 100 mg/5 ml,100 mg/5 ml,,,Irinotecan 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Irinotecan Thymoorgan 40 mg/2 ml,40 mg/2 ml,,,Irinotecan 40 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lenoma 10 mg,10 mg,,,Lenalidomide 10 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lenoma 15 mg,15 mg,,,Lenalidomide 15 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lenoma 25 mg,25 mg,,,Lenalidomide 25 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Letrozole 2.5 mg,2.5 mg,,,Letrozole 2.5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Leucovorin Calcium 100 mg IM/IV,100 mg,,,Leucovorin Calcium 100 mg IM/IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Leucovorin Calcium 50 mg IM/IV,50 mg,,,Leucovorin Calcium 50 mg IM/IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Methotrexate 500 mg IM/IV,500 mg,,,Methotrexate 500 mg IM/IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Zitomycin 20 mg IV,20 mg,,,Mitomycin 20 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Nilotinib 150 mg PO,150 mg,,,Nilotinib 150 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Nilotinib 200 mg PO,200 mg,,,Nilotinib 200 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Obdivo 40 mg/40 ml,40 mg/40 ml,,,Nivolumab 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Obdivo 100 mg/10 ml,100 mg/10 ml,,,Nivolumab 40 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Sandostatin LAR 20 mg,20 mg,,,Octreotide 20 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Sandostatin LAR 30 mg,30 mg,,,Octreotide 30 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Oxaliplatin GP Pharm 100 mg,100 mg,,,Oxaliplatin 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Oxaliplatin GP Pharm 50 mg,50 mg,,,Oxaliplatine 50 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Panataxel 100 mg/16.7 ml,100 mg/16.7 ml,,,Paclitaxel 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Paclitaxel 150,150 mg,,,Paclitaxel 150 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Panataxel 30 mg/5 ml,30 mg/5 ml,,,Paclitaxel 30 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Paclitaxel 300 mg IV,300 mg,,,Paclitaxel 300 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Papillio 125 mg,125 mg,,,Palbociclib 125 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Vectbix 100 mg/5 ml,100 mg/5 ml,,,Panitunumab 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Vectbix 400 mg/20 ml,400 mg/20 ml,,,Panitunumab 400 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Oncaspar 3750 U,,,,Pegaspargase 3750 U,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Pegasys 150 mg/5 ml,150 mg/5 ml,,,Peginterferon alpha 2a 180 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Keytruda 100 mg,100 mg,,,Pembrolizumab 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Pemetrexed Neapolis 500 mg/10 ml,500 mg/10 ml,,,Pemetrexed 500 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Perjeta 420 mg/14 ml,420 mg/14 ml,,,Pertuzumab 420 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Imnovid 4 mg,4 mg,,,Pomalidomide 4 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Procarbazine 50 mg PO,50 mg,,,Procarbazine 50 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Cyramza 500 mg,500 mg,,,Ramucirumab 500 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+exception for old patients,40 mg,,,Regorafenib 40 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Rituxirel 100 mg,100 mg,,,Rituximab 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Rituxirel 500 mg,500 mg,,,Rituximab 500 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Nexavar 200 mg,200 mg,,,Sorafenib 200 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Sutent 12.5 mg,12.5 mg,,,Sunitinib 12.5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Sutent 50 mg,50 mg,,,Sunitinib 50 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Tamoxifen GT 20 mg,20 mg,,,Tamoxifen 20 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Tegozol 100 mg,100 mg,,,Temozolomide 100 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Temozolomide Accord 20 mg,20 mg,,,Temozolomide 20 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Tegozol 250 mg,250 mg,,,Temozolomide 250 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Myrin 100 mg,100 mg,,,Thalidomide 100 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Topotecan 4 mg IV,4 mg,,,Topotecan 4 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Trasturel 440 mg,440 mg,,,Trastuzumab 440 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Kadcyla 100 mg,100 mg,,,Trastuzumab-Emtansine 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Kadcyla 160 mg,160 mg,,,Trastuzumab-Emtansine 160 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Valganciclovir 450 mg,450 mg,,,Valganciclovir 450 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Vinblastine 10 mg IV,10 mg,,,Vinblastine 10 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Vincristine 1mg IV,1mg,,,Vincristine 1mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Eberelbin 50 mg/5 ml,50 mg/5 ml,,,Vinorelbine 50 mg/5 ml,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Zoledronic acid 4 mg IV,4 mg,,,Zoledronic acid 4 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Certican 0.5 mg,0.5 mg,,,Everolimus 0.5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Certican 0.75 mg,0.75 mg,,,Everolimus 0.75 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Everolimus Biogaran 10 mg,10 mg,,,Everolimus 10 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Myfortic 360 mg,360 mg,,,Mycophenolic acid 360 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Rapamune 1 mg,1 mg,,,Sirolimus 1 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Prograf 0.5 mg,0.5 mg,,,Tacrolimus 0.5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Prograf 1 mg,1 mg,,,Tacrolimus 1 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Prograf 5 mg,5 mg,,,Tacrolimus 5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Advagraf 1 mg,1 mg,,,Tacrolimus prolonged release 1 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Advagraf 3 mg,3 mg,,,Tacrolimus prolonged release 3 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Cassette,,,,Cassette,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Extraneal,,,,Extraneal,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Minicap,,,,Minicap,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dianeal 1.36% 2L,1.36%,,,"Sodium lactate -4.48g/l, Magnesium chloride - 0.051g/l,Calcuim chloride - 0.184g/l, Sodium chloride - 5.38g/l,Anhydrous glucose - 13.6g/l(2000ML)",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dianeal 1.36% 5L,1.36%,,,"Sodium lactate -4.48g/l, Magnesium chloride - 0.051g/l,Calcuim chloride - 0.184g/l, Sodium chloride - 5.38g/l,Anhydrous glucose - 13.6g/l(5000ML)",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dianeal 2.27%  5L,2.27%,,,"Sodium lactate -4.48g/l, Magnesium chloride - 0.051g/l,Calcuim chloride - 0.184g/l, Sodium chloride - 5.38g/l,Anhydrous glucose - 22.7g/l(2000ML)",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dianeal 2.27% 2L,2.27%,,,"Sodium lactate -4.48g/l, Magnesium chloride - 0.051g/l,Calcuim chloride - 0.184g/l, Sodium chloride - 5.38g/l,Anhydrous glucose - 22.7g/l(5000ML)",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dianeal 3.86% 2L,3.86%,,,"Sodium lactate -4.48g/l, Magnesium chloride - 0.051g/l,Calcuim chloride - 0.184g/l, Sodium chloride - 5.38g/l,Anhydrous glucose - 38.6g/l(2000ML)",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dianeal 3.86% 5L,3.86%,,,"Sodium lactate -4.48g/l, Magnesium chloride - 0.051g/l,Calcuim chloride - 0.184g/l, Sodium chloride - 5.38g/l,Anhydrous glucose - 38.6g/l(5000ML)",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Hemax 10000 IU,10000 IU,,,Erythropoetin 10000 UI injection,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Epomax 4000 IU,4000 IU,,,Erythropoetin 4000 UI injection,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Hemax 40000 IU,40000 IU,,,Erythropoetin 40000 UI injection,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Mimpara 30 mg only for old,30 mg,,,Mimpara 30 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Mimpara 60 mg only for old,60 mg,,,Mimpara 60 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Mimpara 90 only for old,90 mg,,,Mimpara 90 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Renagel 800 mg,800 mg,,,Sevelamer 800 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Sclemod 0.5 mg,0.5 mg,,,Fingolimod 0.5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Recigen 44 mcg/0.5 ml,44 mcg/0.5 ml,,,Interferon beta-1a 44 mcg SC,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+AryosevenRT 1 mg,1 mg,,,Eptscog alfa 1 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Xyntha 500 IU,500 IU,,,Moroctocog alfa 500 IU,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Octanate,,,,Octanate,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Haemate 1200 IU WVF + 500 IU Factor VIII,1200 IU,,,Von Willbrand Factor 1200 IU + Factor VIII 500 IU,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+WILATE 450 450IU Fact VIII/ 400IU VWF,450IU,,,WILATE 450 450IU Fact VIII/ 400IU VWF,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Fabrazyme 35 mg,35 mg,,,Agalsidase beta - 35mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Myozyme 50 mg,50 mg,,,Alglucosidase alfa 50mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Cerezyme 400 IU,400 IU,,,Imiglucerase 400 IU,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Defirox 360 mg,360 mg,,,Deferasirox 360mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Cureaml 500 mg,500 mg,,,Hydroxyurea 500 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Celezon 15 mg,15 mg,,,Ruxotin 15 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Celezon 20 mg,20 mg,,,Ruxotin 20 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Celezon 5 mg,5 mg,,,Ruxotin 5 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Caelyx 20 mg/10 ml,20 mg/10 ml,,,Doxorubicin 20 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Oncaspar 750 IU,750 IU,,,Pegaspargase 750 IU,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Octanine 500 IU,500 IU,,,Octanine 500 IU,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Revolade 25 mg,25 mg,,,Eltrombopag 25 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Hemlibra 30 mg,30 mg,,,Emicizumab 30 mg SC,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Hum coag factor VIII 1000/hum VWF 1200,,,,Hum coag factor VIII 1000/hum VWF 1200,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Hum coag factor VIII 500/hum WBF 1200IU,1200IU,,,Hum coag factor VIII 500/hum WBF 1200IU,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Hum prothrombin complex concent. 500 UI,500 UI,,,Hum prothrombin complex concent. 500 UI,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Benefix 500 IU,500 IU,,,Human coagulation factor IX 500 UI (Nonacog alfa),,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Human coagulation factor VIII IV,,,,Human coagulation factor VIII IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Human fibrinogen P 1 G IV,1 G,,,Human fibrinogen P 1 G IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Human VWF 450/Coag Fact VIII 400 UI IV,400 UI,,,Human VWF 450/Coag Fact VIII 400 UI IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Recombinant Coagulation Factor IX 500 UI IV,500 UI,,,Recombinant Coagulation Factor IX 500 UI IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Recombinant factor VIIa 1 mg IV,1 mg,,,Recombinant factor VIIa 1 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Recombinant factor VIIa 1.2 mg IV,1.2 mg,,,Recombinant factor VIIa 1.2 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Recombinant factor VIII 500 UI IV,500 UI,,,Recombinant factor VIII 500 UI IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Nplate 250 mcg,250 mcg,,,Romiplostim 250 mcg SC,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Entecavir 0.5 mg,0.5 mg,,,Entecavir 0.5 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Entecavir 1 mg,1 mg,,,Entecavir 1 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Tenofovir 25 mg,25 mg,,,Tenofovir 25mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Humira 40 mg,40 mg,,,Adalimumab 40 mg SC,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Ixifi 100 mg,100 mg,,,Infliximab 100 mg IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Etanerel 25mg,25mg,,,Etanercept 25mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Altebrel 50 mg,50 mg,,,Etanercept 50mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bosentan Arrow 125 mg,125 mg,,,Bosentan 125 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Bosentan Arrow 62.5 mg,62.5 mg,,,Bosentan 62.5 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Opsumit 10 mg,10 mg,,,Macitentan 10 mg PO,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Clariyg 5 mg/100 ml,5 mg/100 ml,,,Human normal immunoglobulin 5 mg/100 ml,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Neulastin 300 mg,300 mg,,,Filgrastim 300 mcg SC/IV,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Ofev 150 mg,150 mg,,,Nintedanib 150 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Stelara 90 mg,90 mg,,,Ustekinumab 90 mg SC,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Pulmozyme 2.5 mg/2.5 ml,2.5 mg/2.5 ml,,,Dornase alfa 2.5mg/2.5ml,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Abacavir 300 mg,300 mg,,,Abacavir 300 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Abacavir 600 mg - Dolutegravir 50 mg - Lamivudine 300 mg,600 mg,,,Abacavir 600 mg - Dolutegravir 50 mg - Lamivudine 300 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Myltega DT 10 mg,10 mg,,,Dolutegravir 10 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dolutegravir 50 mg,50 mg,,,Dolutegravir 50 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dolutegravir 50 mg - Lamivudine 300 mg - Tenofovir 300 mg,50 mg,,,Dolutegravir 50 mg - Lamivudine 300 mg - Tenofovir 300 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Efavirenz 600 mg,600 mg,,,Efavirenz 600 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Emtricitabine and Tenofovir Disproxil Fumarate 200 mg/300 mg,200 mg/300 mg,,,Emtricitabine and Tenofovir Disproxil Fumarate 200 mg/300 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lamivudine 10 mg/ml  240 ml,10 mg/ml,,,Lamivudine 10 mg/ml  240 ml,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lamivudine 150 mg,150 mg,,,Lamivudine 150 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lamivudine 150 mg - Zidovudine 300 mg,150 mg,,,Lamivudine 150 mg - Zidovudine 300 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lamivudine 300 mg - Tenofovir 300 mg,300 mg,,,Lamivudine 300 mg - Tenofovir 300 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lopinavir 200 mg/Ritonavir 50 mg,200 mg,,,Lopinavir 200 mg/Ritonavir 50 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Nevirapine 50 mg/5 ml  oral suspension 100 ml,50 mg/5 ml,,,Nevirapine 50 mg/5 ml  oral suspension 100 ml,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Tenofovir 300 mg,300 mg,,,Tenofovir 300 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Avonza,300 mg,,,Tenofovir 300 mg - Lamivudine 300 mg - Efavirenz 400 mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Zidovudine 50 mg/5 ml,50 mg/5 ml,,,Zidovudine 50 mg/5 ml,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Sirturo 100 mg,100 mg,,,Bedaquiline 100mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Lamprene 100 mg,100 mg,,,Clofazimine 100mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Closerine 250 mg,250 mg,,,Cycloserin 250mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Ethambutol 400 mg,400 mg,,,Ethambutol 100mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Ethambutol 100 mg,100 mg,,,Ethambutol 400mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Ethionamide 250mg,250mg,,,Ethionamide 250mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Isoniazid 100 mg,100 mg,,,Isoniazid 100mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Isoniazid 300 mg,300 mg,,,Isoniazid 300mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+"Isoniazid 300mg, Rifampentine 300mg",300mg,,,"Isoniazid 300mg, Rifampentine 300mg",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Levofloxacin 250mg,250mg,,,Levofloxacin 250mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Amesol 500mg,500mg,,,Levofloxacin 500mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Linezolide 600mg,600mg,,,Linezolide 600mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Staxom 400 mg,400 mg,,,Moxifloxacin (HCl) 400mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Floxsafe 400 mg,400 mg,,,Moxifloxacin (HCl) 400mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Dovprela 200 mg,200 mg,,,Pretomanid 200mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Pyrazinamide - 400mg,400mg,,,Pyrazinamide 400mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Pyridoxine 50 mg Generic Plus,50 mg,,,Pyridoxine 50mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+"Rifampicin 150mg, Isoniazid 75mg",150mg,,,"Rifampicin 150mg, Isoniazid 75mg",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+"Rifampicin 150mg, Pyrazinamide 400mg, Isoniazid 75mg, Ethambutol 275mg",150mg,,,"Rifampicin 150mg, Pyrazinamide 400mg, Isoniazid 75mg, Ethambutol 275mg",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Rifampicin 300mg,300mg,,,Rifampicin 300mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+"Rifampicin 75mg, Isoniazid 50mg",75mg,,,"Rifampicin 75mg, Isoniazid 50mg",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+"Rifampicin 75mg, Pyrazinamide 150mg, Isoniazid 50mg",75mg,,,"Rifampicin 75mg, Pyrazinamide 150mg, Isoniazid 50mg",,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
+Rifapentine 300mg,300mg,,,Rifapentine 300mg,,,LBP,,MoPH AMAN active medications list,,2026-10-10,false
