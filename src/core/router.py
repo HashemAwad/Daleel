@@ -5,7 +5,11 @@ from shared.contracts import Inquiry, ToolResult
 from core import providers
 
 DIRECTORY_TERMS = ["pharmacy", "saydaliyye", "صيدلية", "hospital", "مستشفى", "phc", "clinic", "مركز", "nearest", "2arib", "قريب"]
-MEDICINE_TERMS = ["price", "cost", "سعر", "كم سعر", "combien", "prix", "free", "مجاني", "دوا", "medicine", "drug"]
+# Medicine = PRICE/COST/FREE intent only. The bare words "medicine"/"drug"/"دوا"
+# appear in procedure questions ("how do I get my cancer medicine"), so we don't
+# trigger on them — those fall through to procedure retrieval. A4 replaces this
+# with LLM tool-calling.
+MEDICINE_TERMS = ["price", "cost", "how much", "سعر", "كم سعر", "combien", "coûte", "prix", "free", "مجاني", "مجانا"]
 
 
 def route(inq: Inquiry) -> ToolResult:
