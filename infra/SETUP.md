@@ -18,14 +18,20 @@ if Docker or Ollama is not running, the database is unhealthy, or a stub provide
 It prints row counts: **`procedures: 0 rows` means B's ingestion still has to be run on this laptop**
 (`PYTHONPATH=src .venv/bin/python src/ai/ingest.py URL [URL ...]`), otherwise procedure questions get the hotline reply.
 
-**Public URL (terminal 2).** Pick one:
+**Public URL (terminal 2): through the AWS server.** Twilio needs an address that never changes, so the AWS
+server is the front door and passes requests down an SSH tunnel to this laptop:
+`WhatsApp -> Twilio -> https://13-51-237-14.sslip.io -> tunnel -> this laptop`.
 ```bash
-ngrok http --url=<your-name>.ngrok-free.app 8000     # free account gives ONE fixed domain: set it once in Twilio
-cloudflared tunnel --url http://localhost:8000       # no account, but a NEW url on every restart
+bash infra/tunnel_to_aws.sh     # leave it open; reconnects by itself within seconds if the connection drops
 ```
-ngrok shows browsers a one-time "you are about to visit" page; WhatsApp webhooks are not affected.
-Then put the URL in `.env` as `PUBLIC_BASE_URL=https://...` (no trailing slash), add the Twilio values,
-restart `run_demo.sh`, and set the Twilio sandbox webhook to `https://<public-url>/webhook/whatsapp` (POST).
+Needs this laptop's SSH public key on the server and its public IP range in the server's firewall
+(D adds both; the laptop's key is the line from `cat ~/.ssh/id_ed25519.pub`). In `.env` set
+`PUBLIC_BASE_URL=https://13-51-237-14.sslip.io` and restart `run_demo.sh`; the Twilio webhook is
+`https://13-51-237-14.sslip.io/webhook/whatsapp` (POST) and never changes.
+If the laptop moves to another network (venue Wi-Fi, hotspot) the tunnel will keep failing until D adds that
+network's range to the firewall: check `curl ifconfig.me` at the venue before the demo.
+Without AWS (no key, no firewall): `ngrok http --url=<name>.ngrok-free.app 8000` or
+`cloudflared tunnel --url http://localhost:8000` (a new URL on every restart; set `PUBLIC_BASE_URL` to it).
 
 **Check it from a phone on mobile data:** `https://<public-url>/health` returns `{"ok":true,...}`, and
 `https://<public-url>/health/channels` shows no provider starting with `Stub`.
