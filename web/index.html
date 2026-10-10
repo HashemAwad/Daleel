@@ -85,18 +85,14 @@
   bdi{unicode-bidi:isolate}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 
-  /* The sheet: a bounded page on the desk, with visible edges. This is what
-     gives light mode depth without resorting to cards or drop shadows. */
-  #app{
-    height:100%; display:flex; flex-direction:column;
-    max-width:54rem; margin-inline:auto; background:var(--paper);
-    border-inline:1px solid var(--rule);
-  }
-  @media (max-width:880px){ #app{border-inline:0; max-width:none} }
+  /* Full bleed. Depth comes from banding the surfaces, not from boxing the
+     page in: the record is the bright sheet, the chrome sits back on the
+     ground tone above and below it. */
+  #app{height:100%; display:flex; flex-direction:column; background:var(--paper)}
   .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:22px}
 
   /* ---- letterhead ------------------------------------------------------- */
-  .letterhead{flex:none; background:var(--paper)}
+  .letterhead{flex:none; background:var(--ground)}
   .lockup{display:flex; align-items:center; gap:13px; padding-block:13px;
           padding-top:calc(13px + env(safe-area-inset-top))}
   .cedar{width:31px; height:31px; flex:none; fill:var(--cedar); display:block}
@@ -136,7 +132,7 @@
                width:84px; background:var(--seal)}
 
   /* ---- record ----------------------------------------------------------- */
-  #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain}
+  #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain; background:var(--paper)}
   #log{display:flex; flex-direction:column; padding-block:30px 10px}
 
   .m{max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere}
@@ -206,7 +202,7 @@
   .ex:active{padding-inline-start:6px}
 
   /* ---- composer --------------------------------------------------------- */
-  .composer{flex:none; background:var(--paper); border-top:1px solid var(--rule)}
+  .composer{flex:none; background:var(--ground); border-top:1px solid var(--rule)}
   .well{display:flex; align-items:flex-end; gap:10px; padding-block:12px}
   #t{
     flex:1; border:0; outline:0; background:transparent; color:var(--ink);

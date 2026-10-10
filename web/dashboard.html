@@ -222,18 +222,14 @@
   }
 
   body{
-    background:var(--ground); color:var(--ink-1);
+    background:var(--paper); color:var(--ink-1);
     font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
                 "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
     font-size:16px; line-height:1.75; font-variant-numeric:tabular-nums;
   }
-  .wrap{
-    max-width:62rem; background:var(--paper); min-height:100vh;
-    border-inline:1px solid var(--rule-2); padding-inline:22px;
-  }
-  @media (max-width:1000px){ .wrap{border-inline:0} }
+  .wrap{max-width:62rem; padding-inline:22px}
 
-  .masthead{border-bottom:0; padding-bottom:12px; background:var(--paper)}
+  .masthead{border-bottom:0; padding-bottom:12px; background:var(--ground)}
   .cedar{fill:var(--moph-green)}
   .titles span{font-family:"Iowan Old Style",Palatino,Georgia,serif; font-size:10px; letter-spacing:.11em}
   .band{height:2px; background:var(--moph-green); position:relative;
