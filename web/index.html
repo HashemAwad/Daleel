@@ -209,8 +209,8 @@
   .standing b{color:var(--bad); font-weight:700}
   /* ODbL attribution for the facility data: always visible, quiet, and still a real link */
   .data-credit{font-size:13px; color:var(--quiet); text-align:center; margin:0;
-               padding-bottom:calc(14px + env(safe-area-inset-bottom))}
-  .data-credit a{color:inherit; text-underline-offset:3px}
+               padding-bottom:env(safe-area-inset-bottom)}
+  .data-credit a{color:inherit; text-underline-offset:3px; display:inline-flex; align-items:center; min-height:44px; padding-inline:10px}
 
   :is(button,a,textarea):focus-visible{outline:3px solid var(--focus); outline-offset:3px}
   #t:focus-visible{outline:0}
