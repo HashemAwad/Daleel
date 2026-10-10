@@ -6,7 +6,7 @@ Branch per ticket: `feat/d/<ID>`. Done = the check passes **and** `PYTHONPATH=sr
 
 ---
 ### D0 · Publish the schema — Sprint 0 · **Do this first — it unblocks B and C**
-`src/data/init/schema.sql`: create tables per `docs/CONTRACTS.md` (`procedures` w/ `vector`, `facilities` w/ PostGIS `geom`, `drugs`, `hotlines`, `transcripts`, `metadata`); enable `vector` + `postgis` extensions. `docker compose up -d` auto-runs it.
+`src/data/init/schema.sql`: create tables per `docs/CONTRACTS.md` (`procedures` w/ `vector(1024)`, `facilities` w/ plain lat/lon, `drugs`, `hotlines`, `transcripts`, `metadata`, + `cazas`/aliases); enable `vector` + `pg_trgm` (no PostGIS). `docker compose up -d` auto-runs it on a fresh volume; `python -m data.db` re-applies it. **Status: done, pending review/push.**
 **Done when:** `docker compose up -d` then `\dt` shows all 6 tables; post "schema is up" in the channel.
 
 ### D1 · DB helper — Sprint 0–1 · **Independent**
@@ -21,7 +21,7 @@ Branch per ticket: `feat/d/<ID>`. Done = the check passes **and** `PYTHONPATH=sr
 `src/data/medicine.py`: `class MedicineLookupImpl.find(name) -> [DrugRecord]` (case/typo-tolerant match).
 **Done when:** `MedicineLookupImpl().find("Concor")` returns a `DrugRecord`; `/chat` price question now returns real data (providers auto-picks it up).
 
-### D4 · Directory search (PostGIS) — Sprint 2–3 · **Independent**
+### D4 · Directory search (caza filter / haversine) — Sprint 2–3 · **Independent**
 `src/data/directory.py`: `class DirectorySearchImpl.nearest(kind, caza?, lat?, lon?, k)`. Load ≥1 directory (PHC or hospitals); normalise caza spellings (Aley / عاليه / 3ale).
 **Done when:** `nearest("pharmacy", caza="Aley")` returns rows; `/chat` directory question returns real facilities.
 

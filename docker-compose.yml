@@ -1,15 +1,36 @@
-# Postgres with pgvector + PostGIS, one container. `docker compose up -d`
+# Postgres + pgvector + pg_trgm, one container. `docker compose up -d`
+# Owner: D. Schema: src/data/init/schema.sql — docker runs it ONLY on an empty volume.
+# On an existing volume, re-apply with:  PYTHONPATH=src python -m data.db
 services:
   db:
-    image: postgis/postgis:16-3.4
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    # Keep user text out of server logs: no statement logging, terse errors
+    # (terse drops the "Failing row contains (...)" DETAIL line).
+    command:
+      - postgres
+      - -c
+      - log_statement=none
+      - -c
+      - log_min_duration_statement=-1
+      - -c
+      - log_error_verbosity=terse
+      - -c
+      - log_min_error_statement=panic
     environment:
       POSTGRES_USER: daleel
       POSTGRES_PASSWORD: daleel
       POSTGRES_DB: daleel
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"      # loopback only; never publish the DB on a shared network
     volumes:
       - daleel_pg:/var/lib/postgresql/data
-      - ./src/data/init:/docker-entrypoint-initdb.d   # D puts schema.sql here
+      # ONLY schema.sql lives here. `z` = SELinux label (Fedora/RHEL); ignored elsewhere.
+      - ./src/data/init:/docker-entrypoint-initdb.d:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daleel -d daleel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 volumes:
   daleel_pg:

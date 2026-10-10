@@ -20,15 +20,17 @@ This file is loaded automatically by Claude Code. If you are an agent working in
 
 ## How we work (AI-driven, fast)
 - **You only edit files inside your module folder** (see ownership below). The one shared file is `src/shared/contracts.py` — changing a type/signature there needs a heads-up in the team channel first.
-- **Branch per ticket:** `feat/<you>/<ticket-id>` (e.g. `feat/b/B3-redaction`). Never push to `main`.
-- **Small PRs, one ticket each.** Open a PR, get a quick teammate +1, squash-merge.
+- **Work on `main`, in small commits, one ticket each.** Before every push: `git pull --rebase`, then `PYTHONPATH=src pytest -q` must be green. Never force-push `main`. (Branches/PRs are optional — fine for a risky change.)
+- **Announce in the team channel** any change to `src/shared/contracts.py` or `src/data/init/schema.sql`.
+- **Demo freeze:** feature freeze Sun 10:00 — then tag `demo-freeze` and demo from that tag; only bug fixes after.
 - **Definition of done = the ticket's "Done when" check passes** AND the smoke test is green.
 - Build against `shared.contracts`. If your module isn't ready, the stubs in `core/stubs.py` keep the app running — don't edit stubs to fake features.
 
 ## Run & test
 ```bash
 python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
-docker compose up -d                       # Postgres + pgvector + PostGIS
+docker compose up -d                       # Postgres + pgvector (+ pg_trgm); schema auto-applies on a fresh volume
+PYTHONPATH=src python -m data.db           # re-apply schema to an existing volume (idempotent)
 cp .env.example .env                        # fill in ANTHROPIC_API_KEY etc.
 PYTHONPATH=src uvicorn core.app:app --reload   # backend at http://localhost:8000
 PYTHONPATH=src pytest -q                     # smoke tests — must stay green
