@@ -55,6 +55,16 @@ def channel_health() -> JSONResponse:
             "from_number": settings.twilio_whatsapp_from or None,
             "signature_enforced": channel_settings.require_twilio_signature,
         },
+        "whatsapp_meta": {
+            # Twilio's trial blocks inbound webhooks; Meta's test number is the
+            # fallback provider. Either one being ready is enough to demo.
+            "configured": channel_settings.meta_configured,
+            "has_access_token": bool(channel_settings.meta_access_token),
+            "has_phone_number_id": bool(channel_settings.meta_phone_number_id),
+            "has_app_secret": bool(channel_settings.meta_app_secret),
+            "verify_token_set": bool(channel_settings.meta_verify_token),
+            "signature_enforced": channel_settings.require_meta_signature,
+        },
         "privacy": {
             # loud flag: a placeholder salt means user_refs are guessable
             "salt_configured": not identity.salt_is_weak(),

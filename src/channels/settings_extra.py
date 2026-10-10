@@ -26,5 +26,20 @@ class ChannelSettings:
     # "join <two-words>" — the Twilio sandbox pairing code, shown on /join.
     sandbox_join_code = os.getenv("TWILIO_SANDBOX_JOIN_CODE", "").strip()
 
+    # --- Meta WhatsApp Cloud API (second provider; see whatsapp_meta.py) ---
+    # Twilio's trial blocks inbound webhooks entirely, so Meta's free test
+    # number is the path to a live WhatsApp demo. Both handlers coexist.
+    meta_app_secret = os.getenv("WHATSAPP_APP_SECRET", "").strip()
+    meta_access_token = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
+    meta_phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+    # We echo this back to Meta on the GET verification handshake.
+    meta_verify_token = os.getenv("WHATSAPP_VERIFY_TOKEN", "").strip()
+    meta_graph_version = os.getenv("WHATSAPP_GRAPH_VERSION", "v21.0").strip()
+    require_meta_signature = _flag("REQUIRE_META_SIGNATURE")
+
+    @property
+    def meta_configured(self) -> bool:
+        return bool(self.meta_access_token and self.meta_phone_number_id)
+
 
 channel_settings = ChannelSettings()

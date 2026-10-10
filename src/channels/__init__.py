@@ -48,10 +48,10 @@ def register(app: Any) -> list[str]:
 
     # imported here, not at package import time, so `from channels import x`
     # inside these modules can never hit a half-initialised package
-    from channels import metrics, qr, web, whatsapp
+    from channels import metrics, qr, web, whatsapp, whatsapp_meta
 
     added: list[str] = []
-    for router in (web.router, metrics.router, qr.router, whatsapp.router):
+    for router in (web.router, metrics.router, qr.router, whatsapp.router, whatsapp_meta.router):
         router_paths = _paths(router.routes)
         if router_paths & _paths(app.routes):
             continue  # already mounted by someone else

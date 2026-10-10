@@ -34,6 +34,19 @@ def signed(payload: dict, token: str = TOKEN) -> dict:
     return {"X-Twilio-Signature": RequestValidator(token).compute_signature(URL, payload)}
 
 
+@pytest.fixture(autouse=True)
+def _env_independent(monkeypatch):
+    """Pin the two settings that decide the signature outcome.
+
+    `signed()` signs over the TestClient's own URL, so a real PUBLIC_BASE_URL in
+    a developer's .env (a live tunnel, say) would make the app verify against a
+    different URL and reject a correctly-signed request. Default both here;
+    tests that exercise these set them explicitly.
+    """
+    monkeypatch.setattr(settings, "public_base_url", "")
+    monkeypatch.setattr(channel_settings, "require_twilio_signature", False)
+
+
 # ---- C2: webhook + signature ----------------------------------------------
 def test_webhook_replies_with_twiml_in_dev_mode(monkeypatch):
     """No auth token configured (fresh .env) => dev mode, request goes through."""
