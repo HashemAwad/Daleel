@@ -1,46 +1,431 @@
 <!doctype html>
-<!-- Minimal RTL-aware chat widget. Member C replaces/expands this.
-     Serve the page, set API to your backend URL. -->
-<html lang="ar" dir="auto">
+<!-- Daleel chat widget. Owner: C (tickets C0, C1, C5).
+     Arabic-first, RTL page with per-message bidi detection so Arabic, Arabizi,
+     French and English all render correctly in the same thread.
+     No external assets: this page must work on a flaky venue network. -->
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Daleel — دليل</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Daleel · دليل</title>
 <style>
-  body{font-family:system-ui,"Segoe UI",sans-serif;margin:0;background:#E8F2EE}
-  #app{max-width:520px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:#fff}
-  header{background:#0F5C4A;color:#fff;padding:14px 16px;font-weight:600}
-  #log{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
-  .m{padding:9px 12px;border-radius:12px;max-width:80%;white-space:pre-wrap}
-  .u{align-self:flex-end;background:#2F5D8A;color:#fff}
-  .b{align-self:flex-start;background:#F2F6F5;color:#1F2933}
-  form{display:flex;gap:8px;padding:10px;border-top:1px solid #ddd}
-  input{flex:1;padding:10px;border:1px solid #ccc;border-radius:10px;font-size:15px}
-  button{background:#0F5C4A;color:#fff;border:0;border-radius:10px;padding:0 16px;font-size:15px}
+  :root{
+    --brand:#0F5C4A; --brand-ink:#0B4639; --brand-soft:#E8F2EE;
+    --user:#2F5D8A; --surface:#ffffff; --ink:#1F2933; --muted:#5B6770;
+    --line:#DCE5E2; --bot:#F2F6F5;
+    --danger:#B3261E; --danger-soft:#FCECEA;
+    --warn:#8A5A00; --warn-soft:#FFF4E0;
+    --info-soft:#EDF2F8;
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --brand:#15785F; --brand-ink:#0F5C4A; --brand-soft:#11201C;
+      --user:#2B5580; --surface:#141A18; --ink:#E8EDEB; --muted:#9AA7A3;
+      --line:#26312E; --bot:#1C2422;
+      --danger:#FF9B93; --danger-soft:#3A1A17;
+      --warn:#F0C070; --warn-soft:#352810;
+      --info-soft:#1A2430;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--brand-soft); color:var(--ink);
+    font-family:"Noto Sans Arabic","Segoe UI","Helvetica Neue",system-ui,-apple-system,"Arial",sans-serif;
+    font-size:16px; line-height:1.55;
+  }
+  /* Mixed-script text: let the browser pick direction per string. */
+  .bidi{unicode-bidi:plaintext; text-align:start}
+  bdi{unicode-bidi:isolate}
+
+  #app{
+    max-width:560px; margin:0 auto; height:100%; display:flex; flex-direction:column;
+    background:var(--surface); box-shadow:0 0 28px rgba(0,0,0,.08);
+  }
+  header{background:var(--brand); color:#fff; padding:12px 16px calc(12px + env(safe-area-inset-top))}
+  .hrow{display:flex; align-items:center; gap:10px}
+  .logo{font-weight:700; font-size:19px; letter-spacing:.2px}
+  .sub{font-size:12.5px; opacity:.9; margin-top:2px}
+  .spacer{flex:1}
+  .dot{width:9px; height:9px; border-radius:50%; background:#9AE6B4; flex:none}
+  .dot.bad{background:#FFB4A9}
+  .hlinks{display:flex; gap:12px; margin-top:8px; font-size:12.5px}
+  .hlinks a{color:#fff; opacity:.92; text-decoration:underline; text-underline-offset:2px}
+
+  .notice{
+    background:var(--info-soft); color:var(--muted); font-size:12.5px;
+    padding:8px 16px; border-bottom:1px solid var(--line);
+  }
+  .notice p{margin:0; text-align:start}
+  .notice p + p{margin-top:2px}
+
+  #log{flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px}
+  .m{
+    padding:10px 13px; border-radius:var(--radius); max-width:85%;
+    white-space:pre-wrap; overflow-wrap:anywhere;
+  }
+  .m.u{align-self:flex-end; background:var(--user); color:#fff; border-end-end-radius:4px}
+  .m.b{align-self:flex-start; background:var(--bot); border-end-start-radius:4px}
+  .m.sys{align-self:center; background:transparent; color:var(--muted); font-size:13px; max-width:100%; text-align:center}
+
+  .badge{
+    display:inline-block; font-size:11.5px; font-weight:600; padding:2px 8px;
+    border-radius:999px; margin-bottom:6px;
+  }
+  .badge.emergency{background:var(--danger-soft); color:var(--danger)}
+  .badge.refused,.badge.unanswered{background:var(--warn-soft); color:var(--warn)}
+
+  .srcs{margin-top:10px; padding-top:8px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px}
+  .src{font-size:13px; display:flex; gap:6px; align-items:baseline}
+  .src a{color:var(--brand); font-weight:600}
+  @media (prefers-color-scheme: dark){ .src a{color:#7FD1B9} }
+  .src .when{color:var(--muted); font-size:11.5px}
+
+  .typing{display:flex; gap:4px; align-items:center; padding:12px 14px}
+  .typing i{width:7px; height:7px; border-radius:50%; background:var(--muted); display:block; animation:b 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.18s}
+  .typing i:nth-child(3){animation-delay:.36s}
+  @keyframes b{0%,60%,100%{opacity:.25; transform:translateY(0)}30%{opacity:1; transform:translateY(-3px)}}
+
+  .chips{display:flex; flex-wrap:wrap; gap:7px; padding:0 16px 10px}
+  .chip{
+    font:inherit; font-size:13.5px; padding:7px 12px; border-radius:999px; cursor:pointer;
+    background:var(--brand-soft); color:var(--brand-ink); border:1px solid var(--line);
+  }
+  @media (prefers-color-scheme: dark){ .chip{color:#CDE7DF} }
+  .chip:hover{border-color:var(--brand)}
+  .chip[aria-pressed="true"]{background:var(--brand); color:#fff; border-color:var(--brand)}
+
+  .langbar{display:flex; gap:6px; padding:10px 16px 6px; align-items:center; font-size:12.5px; color:var(--muted)}
+
+  form{display:flex; gap:8px; padding:10px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--line)}
+  input[type=text]{
+    flex:1; padding:12px 14px; border:1px solid var(--line); border-radius:12px;
+    font:inherit; background:var(--surface); color:var(--ink); min-width:0;
+  }
+  input[type=text]:focus-visible,button:focus-visible,.chip:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  button.send{background:var(--brand); color:#fff; border:0; border-radius:12px; padding:0 18px; font:inherit; font-size:18px; cursor:pointer}
+  button.send:disabled{opacity:.5; cursor:default}
+  .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 </style>
 </head>
 <body>
 <div id="app">
-  <header>Daleel · دليل — MoPH Health Assistant</header>
-  <div id="log"></div>
-  <form id="f"><input id="t" placeholder="اسأل سؤالك… / Ask a question…" autocomplete="off"/><button>➤</button></form>
+  <header>
+    <div class="hrow">
+      <div>
+        <div class="logo">دليل · Daleel</div>
+        <div class="sub">وزارة الصحة العامة · Ministry of Public Health</div>
+      </div>
+      <div class="spacer"></div>
+      <span id="dot" class="dot" title="الخدمة تعمل · service up"></span>
+    </div>
+    <div class="hlinks">
+      <a href="/join">واتساب · WhatsApp</a>
+      <a href="/dashboard">لوحة المعلومات · Dashboard</a>
+    </div>
+  </header>
+
+  <!-- One language per element with an explicit dir: mixing both in a single
+       paragraph makes the bidi algorithm strand the trailing punctuation. -->
+  <div class="notice">
+    <p dir="rtl" lang="ar">معلومات رسمية فقط — لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل <bdi dir="ltr">140</bdi>.</p>
+    <p dir="ltr" lang="en">Official information only — no medical or dosing advice. In an emergency call <bdi dir="ltr">140</bdi>.</p>
+  </div>
+
+  <div class="langbar">
+    <span id="langLabel">اللغة · Language</span>
+    <div class="chips" style="padding:0" role="group" aria-labelledby="langLabel" id="langs"></div>
+  </div>
+
+  <div id="log" role="log" aria-live="polite" aria-label="المحادثة · conversation"></div>
+
+  <div class="chips" id="quick"></div>
+
+  <form id="f" autocomplete="off">
+    <label class="sr" for="t">اكتب سؤالك · type your question</label>
+    <input id="t" type="text" dir="auto" class="bidi"
+           placeholder="اسأل سؤالك… / Ask a question…" enterkeyhint="send"/>
+    <button class="send" type="submit" id="send" aria-label="إرسال · send">➤</button>
+  </form>
 </div>
+
 <script>
-const API = (location.origin || "http://localhost:8000") + "/chat";
-const log = document.getElementById("log");
-function add(text, who){const d=document.createElement("div");d.className="m "+who;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;}
-document.getElementById("f").addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  const t=document.getElementById("t"); const q=t.value.trim(); if(!q)return;
-  add(q,"u"); t.value="";
-  try{
-    const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({channel:"web",text:q,user_ref:"web-demo"})});
-    const a=await r.json();
-    add(a.text + (a.sources&&a.sources.length?"\n\n"+a.sources.map(s=>"↗ "+s.url).join("\n"):""),"b");
-  }catch(err){add("Network error: "+err,"b");}
-});
-add("Welcome / أهلاً. Ask about procedures, pharmacies, medicines, or hotlines.","b");
+"use strict";
+const API      = (location.origin || "http://localhost:8000");
+const log      = document.getElementById("log");
+const input    = document.getElementById("t");
+const sendBtn  = document.getElementById("send");
+
+let lang = null;            // null = let the backend/model follow the user
+let hotlines = [];
+let busy = false;
+
+/* ---------- identity: an opaque session ref, never anything personal ------ */
+const REF_KEY = "daleel_user_ref";
+async function userRef(){
+  let ref = null;
+  try { ref = localStorage.getItem(REF_KEY); } catch(e){}
+  if (ref) return ref;
+  try {
+    const r = await fetch(API + "/api/session");
+    ref = (await r.json()).user_ref;
+  } catch(e){
+    ref = "web_local_" + Math.random().toString(36).slice(2,12);
+  }
+  try { localStorage.setItem(REF_KEY, ref); } catch(e){}
+  return ref;
+}
+
+/* ---------- rendering ----------------------------------------------------- */
+function bubble(who){
+  const d = document.createElement("div");
+  d.className = "m " + who + " bidi";
+  d.setAttribute("dir","auto");          // per-message direction detection
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  return d;
+}
+
+function say(text, who){
+  const d = bubble(who);
+  d.textContent = text;                   // textContent: never inject markup
+  log.scrollTop = log.scrollHeight;
+  return d;
+}
+
+const BADGES = {
+  emergency:  "طوارئ · emergency",
+  refused:    "لا نصائح طبية · no medical advice",
+  unanswered: "لا يوجد مصدر رسمي · no official source",
+};
+
+function showAnswer(a){
+  const d = bubble("b");
+
+  if (BADGES[a.outcome]){
+    const b = document.createElement("span");
+    b.className = "badge " + a.outcome;
+    b.textContent = BADGES[a.outcome];
+    d.appendChild(b);
+    d.appendChild(document.createElement("br"));
+  }
+
+  const body = document.createElement("span");
+  body.setAttribute("dir","auto");
+  body.className = "bidi";
+  body.textContent = a.text || "";
+  d.appendChild(body);
+
+  const srcs = (a.sources || []).filter(s => s && s.url);
+  if (srcs.length){
+    const wrap = document.createElement("div");
+    wrap.className = "srcs";
+    const seen = new Set();
+    for (const s of srcs){
+      if (seen.has(s.url)) continue;
+      seen.add(s.url);
+      const row = document.createElement("div");
+      row.className = "src bidi";
+      row.setAttribute("dir","auto");
+
+      const link = document.createElement("a");
+      link.href = s.url;                  // href only; text is set separately
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "↗ " + (s.title || s.url);
+      row.appendChild(link);
+
+      if (s.checked_on){
+        const when = document.createElement("span");
+        when.className = "when";
+        when.appendChild(document.createTextNode("("));
+        const d2 = document.createElement("bdi");
+        d2.dir = "ltr";
+        d2.textContent = s.checked_on;
+        when.appendChild(d2);
+        when.appendChild(document.createTextNode(")"));
+        row.appendChild(when);
+      }
+      wrap.appendChild(row);
+    }
+    d.appendChild(wrap);
+  }
+  log.scrollTop = log.scrollHeight;
+}
+
+function typing(on){
+  let el = document.getElementById("typing");
+  if (on && !el){
+    el = document.createElement("div");
+    el.id = "typing";
+    el.className = "m b typing";
+    el.innerHTML = "<i></i><i></i><i></i>";
+    el.setAttribute("aria-label","يكتب… · typing");
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+  } else if (!on && el){
+    el.remove();
+  }
+}
+
+/* ---------- quick replies ------------------------------------------------- */
+const STARTERS = [
+  { label:"كيف أجدّد دفتر الدواء؟",           text:"كيف أجدّد دفتر الدواء المزمن؟" },
+  { label:"أقرب صيدلية",                      text:"أقرب صيدلية" },
+  { label:"kif 2a2dar la2i mosta2fa 7koume?", text:"kif 2a2dar la2i mosta2fa 7koume 2arib?" },
+  { label:"Prix du médicament",               text:"combien coûte le Concor 5?" },
+  { label:"Hotlines",                         text:"what are the ministry hotlines?" },
+];
+
+function quickReplies(stage){
+  const bar = document.getElementById("quick");
+  bar.textContent = "";
+  const items = stage === "start"
+    ? STARTERS
+    : [{ label:"سؤال تاني · Another question", act:"another" },
+       { label:"تحدث مع شخص · Talk to a person", act:"human" }];
+
+  for (const it of items){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip bidi";
+    b.setAttribute("dir","auto");
+    b.textContent = it.label;
+    b.addEventListener("click", () => {
+      if (it.act === "another"){ quickReplies("start"); input.focus(); return; }
+      if (it.act === "human"){ showHotlines(); return; }
+      send(it.text);
+    });
+    bar.appendChild(b);
+  }
+}
+
+function showHotlines(){
+  const d = bubble("b");
+  const head = document.createElement("div");
+  head.className = "bidi";
+  head.setAttribute("dir","auto");
+  head.textContent = "الخطوط الساخنة · Hotlines";
+  d.appendChild(head);
+
+  const list = document.createElement("div");
+  list.className = "srcs";
+  const rows = hotlines.length ? hotlines : [
+    { name:"MoPH hotline", number:"1787", purpose:"general health info" },
+    { name:"Red Cross",    number:"140",  purpose:"emergency / ambulance" },
+  ];
+  for (const h of rows){
+    const row = document.createElement("div");
+    row.className = "src bidi";
+    row.setAttribute("dir","auto");
+    const a = document.createElement("a");
+    a.href = "tel:" + h.number;
+    const num = document.createElement("bdi");   // numbers stay LTR inside RTL text
+    num.dir = "ltr";
+    num.textContent = h.number;
+    a.appendChild(num);
+    row.appendChild(a);
+    const txt = document.createElement("span");
+    txt.textContent = " — " + h.name + " · " + h.purpose;
+    row.appendChild(txt);
+    list.appendChild(row);
+  }
+  d.appendChild(list);
+  log.scrollTop = log.scrollHeight;
+}
+
+/* ---------- language chips ------------------------------------------------ */
+const LANGS = [
+  { code:null,      label:"تلقائي · Auto" },
+  { code:"ar",      label:"العربية" },
+  { code:"arabizi", label:"Arabizi" },
+  { code:"fr",      label:"Français" },
+  { code:"en",      label:"English" },
+];
+
+function langChips(){
+  const bar = document.getElementById("langs");
+  bar.textContent = "";
+  for (const l of LANGS){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = l.label;
+    b.setAttribute("aria-pressed", String(l.code === lang));
+    b.addEventListener("click", () => { lang = l.code; langChips(); input.focus(); });
+    bar.appendChild(b);
+  }
+}
+
+/* ---------- sending ------------------------------------------------------- */
+async function send(text){
+  if (busy) return;
+  const q = (text || input.value).trim();
+  if (!q) return;
+
+  say(q, "u");
+  input.value = "";
+  busy = true; sendBtn.disabled = true;
+  typing(true);
+
+  try {
+    const r = await fetch(API + "/chat", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        channel:"web", text:q, user_ref: await userRef(), lang: lang,
+      }),
+    });
+    typing(false);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    showAnswer(await r.json());
+    quickReplies("after");
+  } catch (err){
+    typing(false);
+    const d = say("تعذّر الاتصال بالخدمة. حاول مرة أخرى.\nCouldn't reach the service. Please try again.", "sys");
+    const retry = document.createElement("button");
+    retry.type = "button"; retry.className = "chip"; retry.textContent = "إعادة المحاولة · Retry";
+    retry.style.marginTop = "6px";
+    retry.addEventListener("click", () => { retry.remove(); send(q); });
+    d.appendChild(document.createElement("br"));
+    d.appendChild(retry);
+  } finally {
+    busy = false; sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+document.getElementById("f").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+
+/* ---------- boot ---------------------------------------------------------- */
+(async function boot(){
+  langChips();
+  quickReplies("start");
+  say("أهلاً بك في دليل. اسأل عن الإجراءات، الصيدليات، أسعار الأدوية، أو الخطوط الساخنة.\n"
+    + "Welcome to Daleel. Ask about procedures, pharmacies, medicine prices, or hotlines.", "b");
+
+  try {
+    const h = await fetch(API + "/api/hotlines");
+    if (h.ok) hotlines = (await h.json()).hotlines || [];
+  } catch(e){}
+
+  try {
+    const s = await fetch(API + "/health/channels");
+    if (!s.ok) throw new Error();
+  } catch(e){
+    const dot = document.getElementById("dot");
+    dot.classList.add("bad");
+    dot.title = "تعذّر الوصول إلى الخدمة · service unreachable";
+  }
+  input.focus();
+
+  // Deep link: /?q=... asks a question straight away, so a QR, an SMS or a
+  // link from a MoPH page can drop someone into a specific answer.
+  const q = new URLSearchParams(location.search).get("q");
+  if (q) send(q);
+})();
 </script>
 </body>
 </html>
