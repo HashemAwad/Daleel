@@ -16,8 +16,11 @@ def _inq(text="", audio_url=None, lang=None):
     ("combien coûte le Concor 5?", "medicine"),
     ("سعر الدوا", "medicine"),
 ])
-def test_router_picks_tool(text, expected):
-    assert router.route(_inq(text)).tool == expected
+def test_keyword_router_picks_tool(text, expected):
+    # Test the deterministic keyword rules directly. route() may defer to the
+    # model when one is installed (covered separately in the model-routing tests),
+    # so asserting on route() here would depend on the environment.
+    assert router.route_keywords(_inq(text)) == expected
 
 
 # ---- A4: model-driven routing overrides keywords when a real model exists --
