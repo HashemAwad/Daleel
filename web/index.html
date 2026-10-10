@@ -1,352 +1,268 @@
 <!doctype html>
-<!-- Daleel chat widget. Owner: C (tickets C0, C1, C5).
-     Arabic-first, RTL page with per-message bidi detection so Arabic, Arabizi,
-     French and English all render correctly in the same thread.
-     No external assets: this page must work on a flaky venue network — every
-     colour, font stack, animation and icon below is inline on purpose. -->
+<!-- Daleel chat. Owner: C (tickets C0, C1, C5).
+     Arabic-first, RTL, with per-message bidi detection so Arabic, Arabizi,
+     French and English render correctly in one thread. Language is detected
+     per message by the backend — the reader is never asked to pick one.
+     No external assets: this page must work on a flaky venue network, so the
+     cedar is inline SVG and every colour and rule is in this file. -->
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<meta name="theme-color" content="#0E5A48" media="(prefers-color-scheme: light)"/>
-<meta name="theme-color" content="#08120F" media="(prefers-color-scheme: dark)"/>
-<title>Daleel · دليل</title>
+<meta name="theme-color" content="#FFFFFF"/>
+<title>دليل · Daleel — وزارة الصحة العامة</title>
 <style>
-  /* ============================================================
-     Palette: cedar green against cool limestone. Chosen for MoPH —
-     institutional, not startup. Six named values, each with a job.
-     ============================================================ */
+  /* Identity taken from the ministry's own lockup: cedar green for the state,
+     red reserved for the ministry line and for emergencies. Nothing else is
+     coloured, which is what makes it read as official rather than as an app. */
   :root{
     color-scheme: light;
-    --cedar:#0E5A48;        /* brand, actions, links */
-    --cedar-deep:#072E25;   /* header floor, pressed states */
-    --cedar-lift:#1A8C6F;   /* glow, focus, live accents */
-    --mint:#DCEDE6;         /* soft brand fill */
-    --paper:#EDF2F0;        /* page behind the shell */
-    --surface:#FFFFFF;      /* the shell itself */
-    --ink:#14201D;
-    --muted:#5C6B66;
-    --line:#E0E7E4;
-    --bot:#F3F7F5;          /* assistant bubble */
-    --user-a:#17584A;       /* user bubble gradient */
-    --user-b:#1E7A63;
-    --danger:#A3291F; --danger-soft:#FBE9E7;
-    --warn:#7A4E06;  --warn-soft:#FBF0DC;
-
-    --radius:18px;
-    --radius-sm:10px;
-    /* Overshoot for things that should feel physical; expo-out for the rest. */
-    --spring:cubic-bezier(.22,1.2,.36,1);
-    --ease:cubic-bezier(.16,1,.3,1);
-    --shell-shadow:
-      0 1px 2px rgba(7,46,37,.06),
-      0 8px 24px -8px rgba(7,46,37,.14),
-      0 32px 64px -32px rgba(7,46,37,.22);
+    --green:#15693A;
+    --green-deep:#0E4A29;
+    --red:#C62127;
+    --ink:#161817;
+    --ink-2:#3F4442;
+    --muted:#6E7471;
+    --line:#E4E6E3;
+    --line-soft:#EFF1EE;
+    --page:#FFFFFF;
+    --raised:#F6F7F5;     /* user message, input well */
+    --amber:#8A5B00; --amber-soft:#FBF2DF;
+    --red-soft:#FBEBEA;
+    --measure:46rem;      /* reading column — keeps lines under ~80 chars */
   }
   @media (prefers-color-scheme: dark){
     :root{
       color-scheme: dark;
-      --cedar:#2FA183; --cedar-deep:#061411; --cedar-lift:#49C7A3;
-      --mint:#14302A; --paper:#070B0A; --surface:#101715;
-      --ink:#E9F0ED; --muted:#93A49E; --line:#223029;
-      --bot:#18211E; --user-a:#1B6553; --user-b:#248A70;
-      --danger:#FF9D94; --danger-soft:#38150F;
-      --warn:#F2C572;  --warn-soft:#2E2206;
-      --shell-shadow:0 0 0 1px rgba(255,255,255,.04), 0 40px 80px -40px rgba(0,0,0,.8);
+      --green:#4FAE77; --green-deep:#8FD3AC; --red:#FF8F8A;
+      --ink:#ECEFED; --ink-2:#C2C8C5; --muted:#8E9793;
+      --line:#272B29; --line-soft:#1E2220;
+      --page:#121413; --raised:#1B1E1C;
+      --amber:#E8BE78; --amber-soft:#2A2109; --red-soft:#2E1513;
     }
   }
 
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; background:var(--paper); color:var(--ink);
-    font-family:"Noto Sans Arabic","SF Arabic","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
-    font-size:16px; line-height:1.6;
-    -webkit-font-smoothing:antialiased;
-    /* a whisper of cedar light behind the shell, so the page isn't flat grey */
-    background-image:
-      radial-gradient(60rem 40rem at 50% -10%, color-mix(in oklab, var(--cedar) 12%, transparent), transparent 70%);
-    background-attachment:fixed;
+    margin:0; background:var(--page); color:var(--ink);
+    font-family:"Noto Sans Arabic","SF Arabic",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:16.5px; line-height:1.7;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   }
-  /* Mixed-script text: let the browser pick direction per string. */
   .bidi{unicode-bidi:plaintext; text-align:start}
   bdi{unicode-bidi:isolate}
-
-  #app{
-    max-width:580px; margin:0 auto; height:100%;
-    display:flex; flex-direction:column;
-    background:var(--surface); box-shadow:var(--shell-shadow);
-    position:relative; overflow:hidden;
-  }
-  @media (min-width:640px){
-    body{padding:22px 16px}
-    #app{height:calc(100% - 44px); border-radius:26px; border:1px solid var(--line)}
-  }
-
-  /* ---------- header: one slow aurora, the page's only idle motion -------- */
-  header{
-    position:relative; isolation:isolate; color:#fff;
-    background:linear-gradient(165deg, var(--cedar) 0%, var(--cedar-deep) 100%);
-    padding:18px 20px 16px; padding-top:calc(18px + env(safe-area-inset-top));
-    overflow:hidden;
-  }
-  header::before{   /* drifting light — deliberate, slow, never loops visibly */
-    content:""; position:absolute; inset:-60% -30%; z-index:-1;
-    background:
-      radial-gradient(28rem 16rem at 22% 18%, color-mix(in oklab, var(--cedar-lift) 55%, transparent), transparent 62%),
-      radial-gradient(22rem 14rem at 82% 72%, color-mix(in oklab, #7FE3C4 28%, transparent), transparent 60%);
-    animation:drift 26s var(--ease) infinite alternate;
-  }
-  @keyframes drift{ to{ transform:translate3d(4%, -5%, 0) scale(1.12) } }
-
-  .hrow{display:flex; align-items:center; gap:12px}
-  .mark{   /* cedar glyph, drawn in CSS — no image to fail to load */
-    width:38px; height:38px; flex:none; border-radius:12px;
-    background:rgba(255,255,255,.14);
-    border:1px solid rgba(255,255,255,.22);
-    display:grid; place-items:center; font-size:20px; line-height:1;
-    backdrop-filter:blur(6px);
-  }
-  .wordmark{font-size:25px; font-weight:800; letter-spacing:-.2px; line-height:1.15}
-  .wordmark .lat{font-size:15px; font-weight:600; opacity:.78; letter-spacing:.4px}
-  .sub{font-size:12.5px; opacity:.82; margin-top:3px; font-weight:500}
-  .spacer{flex:1}
-
-  .live{display:flex; align-items:center; gap:7px; font-size:11.5px; opacity:.9;
-        background:rgba(255,255,255,.12); padding:5px 10px; border-radius:999px;
-        border:1px solid rgba(255,255,255,.16)}
-  .dot{width:7px; height:7px; border-radius:50%; background:#6EE7B7; flex:none; position:relative}
-  .dot::after{content:""; position:absolute; inset:-4px; border-radius:50%;
-              border:1.5px solid #6EE7B7; opacity:.55; animation:halo 2.4s var(--ease) infinite}
-  @keyframes halo{ 70%,100%{ transform:scale(2.1); opacity:0 } }
-  .dot.bad{background:#FCA5A5} .dot.bad::after{border-color:#FCA5A5; animation:none; opacity:0}
-
-  .hlinks{display:flex; gap:8px; margin-top:13px}
-  .hlinks a{
-    color:#fff; font-size:12.5px; font-weight:600; text-decoration:none;
-    padding:6px 12px; border-radius:999px;
-    background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.16);
-    transition:background .22s var(--ease), transform .22s var(--spring);
-  }
-  .hlinks a:hover{background:rgba(255,255,255,.2); transform:translateY(-1px)}
-
-  /* ---------- standing notice ---------- */
-  .notice{
-    background:var(--mint); color:var(--ink); font-size:12.5px;
-    padding:10px 20px; border-bottom:1px solid var(--line);
-    display:flex; gap:9px; align-items:flex-start;
-  }
-  .notice .ic{flex:none; opacity:.75; font-size:13px; line-height:1.5}
-  .notice p{margin:0; text-align:start; opacity:.88}
-  .notice p + p{margin-top:1px; opacity:.66}
-
-  /* ---------- language row ---------- */
-  .langbar{display:flex; gap:9px; padding:12px 20px 4px; align-items:center;
-           font-size:11.5px; color:var(--muted); font-weight:600;
-           letter-spacing:.2px; flex-wrap:wrap}
-
-  /* ---------- conversation ---------- */
-  #log{
-    flex:1; overflow-y:auto; padding:16px 20px 8px;
-    display:flex; flex-direction:column; gap:12px;
-    scroll-behavior:smooth; overscroll-behavior:contain;
-    /* content dissolves into the header rather than slamming into it */
-    mask-image:linear-gradient(to bottom, transparent 0, #000 22px);
-  }
-  .m{
-    padding:12px 15px; border-radius:var(--radius); max-width:86%;
-    white-space:pre-wrap; overflow-wrap:anywhere; position:relative;
-    animation:rise .5s var(--spring) both;
-  }
-  @keyframes rise{
-    from{ opacity:0; transform:translateY(12px) scale(.97); filter:blur(3px) }
-    to  { opacity:1; transform:none;                        filter:blur(0) }
-  }
-  .m.u{
-    align-self:flex-end; color:#fff; border-end-end-radius:6px;
-    background:linear-gradient(140deg, var(--user-b), var(--user-a));
-    box-shadow:0 6px 18px -8px color-mix(in oklab, var(--user-a) 70%, transparent);
-  }
-  .m.b{
-    align-self:flex-start; background:var(--bot); border-end-start-radius:6px;
-    border:1px solid var(--line);
-  }
-  .m.sys{
-    align-self:center; background:transparent; color:var(--muted);
-    font-size:13px; max-width:100%; text-align:center; border:0; padding:6px 0;
-  }
-
-  .badge{
-    display:inline-flex; align-items:center; gap:5px;
-    font-size:11px; font-weight:700; padding:3px 9px;
-    border-radius:999px; margin-bottom:7px; letter-spacing:.1px;
-  }
-  .badge::before{content:""; width:5px; height:5px; border-radius:50%; background:currentColor}
-  .badge.emergency{background:var(--danger-soft); color:var(--danger)}
-  .badge.refused,.badge.unanswered{background:var(--warn-soft); color:var(--warn)}
-
-  /* sources read as a cited block, not another paragraph */
-  .srcs{
-    margin-top:11px; padding:9px 11px; display:flex; flex-direction:column; gap:7px;
-    border-radius:var(--radius-sm);
-    background:color-mix(in oklab, var(--cedar) 6%, transparent);
-    border-inline-start:2.5px solid color-mix(in oklab, var(--cedar) 42%, transparent);
-  }
-  .src{font-size:13px; display:flex; gap:6px; align-items:baseline; flex-wrap:wrap}
-  .src a{
-    color:var(--cedar); font-weight:650; text-decoration:none;
-    border-bottom:1px solid color-mix(in oklab, var(--cedar) 35%, transparent);
-    transition:border-color .2s var(--ease);
-  }
-  .src a:hover{border-bottom-color:var(--cedar)}
-  @media (prefers-color-scheme: dark){ .src a{color:#79DCBC} }
-  .src .when{color:var(--muted); font-size:11.5px}
-
-  .typing{display:flex; gap:5px; align-items:center; padding:14px 16px; width:fit-content}
-  .typing i{
-    width:7px; height:7px; border-radius:50%; background:var(--cedar);
-    display:block; opacity:.3; animation:bob 1.3s var(--ease) infinite;
-  }
-  .typing i:nth-child(2){animation-delay:.16s}
-  .typing i:nth-child(3){animation-delay:.32s}
-  @keyframes bob{30%{opacity:1; transform:translateY(-4px)}}
-
-  /* ---------- chips ---------- */
-  .chips{display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 12px}
-  .chip{
-    font:inherit; font-size:13.5px; font-weight:600; padding:8px 14px;
-    border-radius:999px; cursor:pointer; color:var(--cedar);
-    background:color-mix(in oklab, var(--cedar) 7%, var(--surface));
-    border:1px solid color-mix(in oklab, var(--cedar) 20%, transparent);
-    transition:transform .3s var(--spring), background .22s var(--ease),
-               border-color .22s var(--ease), box-shadow .22s var(--ease);
-  }
-  @media (prefers-color-scheme: dark){ .chip{color:#9FE3CD} }
-  .chip:hover{
-    transform:translateY(-2px);
-    background:color-mix(in oklab, var(--cedar) 14%, var(--surface));
-    border-color:color-mix(in oklab, var(--cedar) 45%, transparent);
-    box-shadow:0 6px 16px -8px color-mix(in oklab, var(--cedar) 60%, transparent);
-  }
-  .chip:active{transform:translateY(0) scale(.97)}
-  .chip[aria-pressed="true"]{
-    background:var(--cedar); color:#fff; border-color:var(--cedar);
-    box-shadow:0 6px 16px -8px color-mix(in oklab, var(--cedar) 75%, transparent);
-  }
-  /* staggered arrival — the one orchestrated moment, on load only */
-  .stagger > *{animation:chipIn .45s var(--spring) both}
-  @keyframes chipIn{ from{opacity:0; transform:translateY(8px) scale(.94)} }
-
-  /* ---------- composer ---------- */
-  form{
-    display:flex; gap:10px; padding:12px 20px;
-    padding-bottom:calc(14px + env(safe-area-inset-bottom));
-    border-top:1px solid var(--line);
-    background:var(--surface);
-  }
-  .field{flex:1; position:relative; display:flex; min-width:0}
-  input[type=text]{
-    flex:1; padding:13px 16px; border-radius:14px; font:inherit; min-width:0;
-    background:color-mix(in oklab, var(--cedar) 4%, var(--surface));
-    color:var(--ink);
-    border:1px solid var(--line);
-    transition:border-color .22s var(--ease), box-shadow .22s var(--ease), background .22s var(--ease);
-  }
-  input[type=text]::placeholder{color:var(--muted); opacity:.75}
-  input[type=text]:focus{
-    outline:none; background:var(--surface);
-    border-color:var(--cedar);
-    box-shadow:0 0 0 4px color-mix(in oklab, var(--cedar) 16%, transparent);
-  }
-  button.send{
-    width:50px; height:50px; flex:none; border:0; border-radius:15px; cursor:pointer;
-    background:linear-gradient(140deg, var(--cedar-lift), var(--cedar));
-    color:#fff; font-size:17px; display:grid; place-items:center;
-    box-shadow:0 8px 20px -10px color-mix(in oklab, var(--cedar) 85%, transparent);
-    transition:transform .3s var(--spring), box-shadow .22s var(--ease), opacity .2s linear;
-  }
-  button.send:hover:not(:disabled){transform:translateY(-2px) scale(1.04)}
-  button.send:active:not(:disabled){transform:scale(.93)}
-  button.send:disabled{opacity:.45; cursor:default; box-shadow:none}
-  button.send .arrow{display:block; transition:transform .3s var(--spring)}
-  button.send:hover:not(:disabled) .arrow{transform:translateX(-3px)}
-
-  input[type=text]:focus-visible,button:focus-visible,.chip:focus-visible,.hlinks a:focus-visible{
-    outline:2.5px solid var(--cedar-lift); outline-offset:2px;
-  }
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 
-  /* A government service must not force motion on anyone. */
+  #app{height:100%; display:flex; flex-direction:column}
+  .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:20px}
+
+  /* ---------------- masthead: the official lockup, nothing more ----------- */
+  .masthead{
+    border-bottom:1px solid var(--line); background:var(--page);
+    padding-block:10px; padding-top:calc(10px + env(safe-area-inset-top));
+    flex:none;
+  }
+  .lockup{display:flex; align-items:center; gap:12px}
+  .cedar{width:30px; height:30px; flex:none; fill:var(--green); display:block}
+  .titles{display:flex; flex-direction:column; line-height:1.18}
+  .t-state{
+    font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--green);
+    text-transform:uppercase;
+  }
+  .t-ministry{
+    font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--red);
+    text-transform:uppercase;
+  }
+  .rule{width:1px; align-self:stretch; background:var(--line); margin-inline:4px}
+  .service{display:flex; flex-direction:column; line-height:1.2}
+  .service b{font-size:15px; font-weight:700; letter-spacing:-.1px}
+  .service span{font-size:11.5px; color:var(--muted)}
+  .grow{flex:1}
+  .navlinks{display:flex; gap:18px; font-size:13px}
+  .navlinks a{
+    color:var(--ink-2); text-decoration:none; padding-block:4px;
+    border-bottom:1.5px solid transparent;
+  }
+  .navlinks a:hover{color:var(--green); border-bottom-color:var(--green)}
+  @media (max-width:560px){ .navlinks{display:none} .service span{display:none} }
+
+  /* ---------------- conversation ----------------------------------------- */
+  #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain}
+  #log{display:flex; flex-direction:column; gap:22px; padding-block:26px 8px}
+
+  .m{max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere}
+  /* The reader's own words sit in a quiet well; the service answers in plain
+     type at full measure, the way a document speaks. */
+  .m.u{
+    background:var(--raised); border-radius:16px; padding:11px 16px;
+    max-width:84%; margin-inline-start:auto; color:var(--ink);
+  }
+  .m.b{color:var(--ink)}
+  .m.sys{
+    color:var(--muted); font-size:14px; text-align:center;
+    border-block:1px solid var(--line-soft); padding-block:12px;
+  }
+  .m.enter{animation:settle .32s cubic-bezier(.2,.6,.3,1) both}
+  @keyframes settle{from{opacity:0; transform:translateY(6px)}}
+
+  .badge{
+    display:inline-block; font-size:11.5px; font-weight:700; letter-spacing:.02em;
+    padding:2px 8px; border-radius:4px; margin-bottom:8px;
+  }
+  .badge.emergency{background:var(--red-soft); color:var(--red)}
+  .badge.refused,.badge.unanswered{background:var(--amber-soft); color:var(--amber)}
+
+  .srcs{
+    margin-top:14px; padding-top:11px; border-top:1px solid var(--line);
+    display:flex; flex-direction:column; gap:7px;
+  }
+  .srcs-h{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+  .src{font-size:13.5px; display:flex; gap:7px; align-items:baseline; flex-wrap:wrap; line-height:1.5}
+  .src a{color:var(--green); text-decoration:none; border-bottom:1px solid var(--line)}
+  .src a:hover{border-bottom-color:var(--green)}
+  .src .when{color:var(--muted); font-size:12px}
+
+  .typing{display:flex; gap:5px; align-items:center; height:24px}
+  .typing i{width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.35; animation:bob 1.25s ease-in-out infinite}
+  .typing i:nth-child(2){animation-delay:.15s}
+  .typing i:nth-child(3){animation-delay:.3s}
+  @keyframes bob{30%{opacity:.9; transform:translateY(-3px)}}
+
+  /* ---------------- opening state ---------------------------------------- */
+  #hero{padding-block:11vh 0; text-align:center}
+  #hero .cedar-lg{width:46px; height:46px; fill:var(--green); margin-inline:auto; display:block}
+  #hero h1{font-size:30px; font-weight:700; margin:18px 0 6px; letter-spacing:-.3px}
+  #hero p{margin:0 auto; color:var(--muted); font-size:15px; max-width:34rem}
+  .suggest{display:grid; gap:9px; margin-top:30px; text-align:start}
+  @media (min-width:620px){ .suggest{grid-template-columns:1fr 1fr} }
+  .sg{
+    font:inherit; font-size:14.5px; color:var(--ink-2); cursor:pointer;
+    background:var(--page); border:1px solid var(--line); border-radius:12px;
+    padding:13px 15px; text-align:start; line-height:1.45;
+    transition:border-color .18s ease, background .18s ease;
+  }
+  .sg:hover{border-color:var(--green); background:var(--raised)}
+
+  /* ---------------- composer --------------------------------------------- */
+  .composer{flex:none; background:var(--page); padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+  .well{
+    display:flex; align-items:flex-end; gap:8px;
+    border:1px solid var(--line); border-radius:18px; background:var(--page);
+    padding:7px 7px 7px 14px; transition:border-color .18s ease, box-shadow .18s ease;
+  }
+  .well:focus-within{border-color:var(--green); box-shadow:0 0 0 3px color-mix(in oklab, var(--green) 12%, transparent)}
+  #t{
+    flex:1; border:0; outline:0; background:transparent; color:var(--ink);
+    font:inherit; resize:none; padding:9px 2px; max-height:168px; min-height:24px;
+    line-height:1.6;
+  }
+  #t::placeholder{color:var(--muted)}
+  #send{
+    width:36px; height:36px; flex:none; border:0; border-radius:10px; cursor:pointer;
+    background:var(--green); color:#fff; display:grid; place-items:center;
+    transition:opacity .18s ease, background .18s ease;
+  }
+  #send:hover:not(:disabled){background:var(--green-deep)}
+  #send:disabled{opacity:.3; cursor:default}
+  #send svg{width:16px; height:16px; fill:currentColor; display:block}
+  .legal{
+    font-size:11.5px; color:var(--muted); text-align:center;
+    padding:9px 0 2px; line-height:1.5;
+  }
+  .legal b{color:var(--red); font-weight:700}
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px; padding-block:14px 0}
+  .chip{
+    font:inherit; font-size:13.5px; color:var(--ink-2); cursor:pointer;
+    background:var(--page); border:1px solid var(--line); border-radius:999px;
+    padding:6px 13px; transition:border-color .18s ease, color .18s ease;
+  }
+  .chip:hover{border-color:var(--green); color:var(--green)}
+
+  :is(button,a,textarea):focus-visible{outline:2px solid var(--green); outline-offset:2px}
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
-    #log{scroll-behavior:auto}
   }
 </style>
 </head>
 <body>
+<!-- One cedar, defined once, referenced wherever it is needed. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="cedar" viewBox="0 0 64 64">
+  <path d="M32 3 L21.5 17h5.5L18.5 29h6L10 43h18.5v18h7V43H54L39.5 29h6L37 17h5.5Z"/>
+</symbol></svg>
+
 <div id="app">
-  <header>
-    <div class="hrow">
-      <div class="mark" aria-hidden="true">🌿</div>
-      <div>
-        <div class="wordmark">دليل <span class="lat">Daleel</span></div>
-        <div class="sub">وزارة الصحة العامة · Ministry of Public Health</div>
+  <div class="masthead">
+    <div class="col lockup">
+      <svg class="cedar" aria-hidden="true"><use href="#cedar"/></svg>
+      <div class="titles">
+        <span class="t-state" lang="en">Republic of Lebanon</span>
+        <span class="t-ministry" lang="en">Ministry of Public Health</span>
       </div>
-      <div class="spacer"></div>
-      <span class="live"><span id="dot" class="dot"></span><span id="dotLabel">مباشر</span></span>
-    </div>
-    <div class="hlinks">
-      <a href="/join">واتساب · WhatsApp</a>
-      <a href="/dashboard">لوحة المعلومات · Dashboard</a>
-    </div>
-  </header>
-
-  <!-- One language per element with an explicit dir: mixing both in a single
-       paragraph makes the bidi algorithm strand the trailing punctuation. -->
-  <div class="notice">
-    <span class="ic" aria-hidden="true">⚕</span>
-    <div>
-      <p dir="rtl" lang="ar">معلومات رسمية فقط — لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل <bdi dir="ltr">140</bdi>.</p>
-      <p dir="ltr" lang="en">Official information only — no medical or dosing advice. In an emergency call <bdi dir="ltr">140</bdi>.</p>
+      <div class="rule" aria-hidden="true"></div>
+      <div class="service">
+        <b>دليل <span style="font-weight:600">· Daleel</span></b>
+        <span>مساعد المعلومات الصحية</span>
+      </div>
+      <div class="grow"></div>
+      <nav class="navlinks">
+        <a href="/join">واتساب</a>
+        <a href="/dashboard">لوحة المعلومات</a>
+      </nav>
     </div>
   </div>
 
-  <div class="langbar">
-    <span id="langLabel">اللغة · Language</span>
-    <div class="chips" style="padding:0" role="group" aria-labelledby="langLabel" id="langs"></div>
+  <div id="scroll">
+    <div class="col">
+      <section id="hero">
+        <svg class="cedar-lg" aria-hidden="true"><use href="#cedar"/></svg>
+        <h1>كيف يمكننا مساعدتك؟</h1>
+        <p dir="auto" class="bidi">اسأل عن الإجراءات الرسمية، الصيدليات والمستشفيات الحكومية، أسعار الأدوية، أو الخطوط الساخنة. اكتب بالعربية أو بالـArabizi أو بالفرنسية أو بالإنكليزية.</p>
+        <div class="suggest" id="suggest"></div>
+      </section>
+
+      <div id="log" role="log" aria-live="polite" aria-label="المحادثة"></div>
+      <div class="chips" id="quick"></div>
+    </div>
   </div>
 
-  <div id="log" role="log" aria-live="polite" aria-label="المحادثة · conversation"></div>
-
-  <div class="chips" id="quick"></div>
-
-  <form id="f" autocomplete="off">
-    <label class="sr" for="t">اكتب سؤالك · type your question</label>
-    <div class="field">
-      <input id="t" type="text" dir="auto" class="bidi"
-             placeholder="اسأل سؤالك… / Ask a question…" enterkeyhint="send"/>
+  <div class="composer">
+    <div class="col">
+      <form id="f" autocomplete="off">
+        <label class="sr" for="t">اكتب سؤالك</label>
+        <div class="well">
+          <textarea id="t" rows="1" dir="auto" class="bidi" enterkeyhint="send"
+                    placeholder="اسأل سؤالك…"></textarea>
+          <button id="send" type="submit" aria-label="إرسال">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l15-7-4.5 7L19 19z"/></svg>
+          </button>
+        </div>
+      </form>
+      <p class="legal" dir="auto">
+        معلومات رسمية فقط — لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل <b><bdi dir="ltr">140</bdi></b>.
+      </p>
     </div>
-    <button class="send" type="submit" id="send" aria-label="إرسال · send">
-      <span class="arrow" aria-hidden="true">➤</span>
-    </button>
-  </form>
+  </div>
 </div>
 
 <script>
 "use strict";
-const API      = (location.origin || "http://localhost:8000");
-const log      = document.getElementById("log");
-const input    = document.getElementById("t");
-const sendBtn  = document.getElementById("send");
+const API     = (location.origin || "http://localhost:8000");
+const log     = document.getElementById("log");
+const scroller= document.getElementById("scroll");
+const input   = document.getElementById("t");
+const sendBtn = document.getElementById("send");
+const hero    = document.getElementById("hero");
 
-let lang = null;            // null = let the backend/model follow the user
 let hotlines = [];
 let busy = false;
+let started = false;
 
-/* Keep the newest message in view. smooth unless the reader asked otherwise. */
 const CALM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function scrollDown(){
-  log.scrollTo({ top: log.scrollHeight, behavior: CALM ? "auto" : "smooth" });
+  scroller.scrollTo({ top: scroller.scrollHeight, behavior: CALM ? "auto" : "smooth" });
 }
 
 /* ---------- identity: an opaque session ref, never anything personal ------ */
@@ -368,7 +284,7 @@ async function userRef(){
 /* ---------- rendering ----------------------------------------------------- */
 function bubble(who){
   const d = document.createElement("div");
-  d.className = "m " + who + " bidi";
+  d.className = "m " + who + " bidi" + (CALM ? "" : " enter");
   d.setAttribute("dir","auto");          // per-message direction detection
   log.appendChild(d);
   scrollDown();
@@ -383,9 +299,9 @@ function say(text, who){
 }
 
 const BADGES = {
-  emergency:  "طوارئ · emergency",
-  refused:    "لا نصائح طبية · no medical advice",
-  unanswered: "لا يوجد مصدر رسمي · no official source",
+  emergency:  "طوارئ",
+  refused:    "لا نصائح طبية",
+  unanswered: "لا يوجد مصدر رسمي",
 };
 
 function showAnswer(a){
@@ -406,9 +322,15 @@ function showAnswer(a){
   d.appendChild(body);
 
   const srcs = (a.sources || []).filter(s => s && s.url);
-  if (srcs.length){
+  const isDir = a.tool === "directory";
+  if (srcs.length || isDir){
     const wrap = document.createElement("div");
     wrap.className = "srcs";
+    const h = document.createElement("div");
+    h.className = "srcs-h";
+    h.textContent = "المصدر";
+    wrap.appendChild(h);
+
     const seen = new Set();
     for (const s of srcs){
       if (seen.has(s.url)) continue;
@@ -421,7 +343,7 @@ function showAnswer(a){
       link.href = s.url;                  // href only; text is set separately
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      link.textContent = "↗ " + (s.title || s.url);
+      link.textContent = s.title || s.url;
       row.appendChild(link);
 
       if (s.checked_on){
@@ -437,22 +359,22 @@ function showAnswer(a){
       }
       wrap.appendChild(row);
     }
-    d.appendChild(wrap);
-  }
 
-  // Facility data is OpenStreetMap, licensed ODbL — attribution is a licence
-  // condition, so it ships with every directory answer, sources or not.
-  if (a.tool === "directory"){
-    const credit = document.createElement("div");
-    credit.className = "src bidi";
-    credit.setAttribute("dir", "ltr");
-    const cl = document.createElement("a");
-    cl.href = "https://www.openstreetmap.org/copyright";
-    cl.target = "_blank";
-    cl.rel = "noopener noreferrer";
-    cl.textContent = "© OpenStreetMap contributors";
-    credit.appendChild(cl);
-    d.appendChild(credit);
+    // Facility data is OpenStreetMap, licensed ODbL — attribution is a licence
+    // condition, so it ships with every directory answer, sources or not.
+    if (isDir){
+      const credit = document.createElement("div");
+      credit.className = "src";
+      credit.setAttribute("dir", "ltr");
+      const cl = document.createElement("a");
+      cl.href = "https://www.openstreetmap.org/copyright";
+      cl.target = "_blank";
+      cl.rel = "noopener noreferrer";
+      cl.textContent = "© OpenStreetMap contributors";
+      credit.appendChild(cl);
+      wrap.appendChild(credit);
+    }
+    d.appendChild(wrap);
   }
 
   scrollDown();
@@ -465,7 +387,7 @@ function typing(on){
     el.id = "typing";
     el.className = "m b typing";
     el.innerHTML = "<i></i><i></i><i></i>";
-    el.setAttribute("aria-label","يكتب… · typing");
+    el.setAttribute("aria-label","يكتب…");
     log.appendChild(el);
     scrollDown();
   } else if (!on && el){
@@ -473,69 +395,65 @@ function typing(on){
   }
 }
 
-/* ---------- quick replies ------------------------------------------------- */
+/* ---------- openers and follow-ups ---------------------------------------
+   Written in four languages on purpose: the first screen has to show that
+   mixing them is expected, without a language picker telling you to choose. */
 const STARTERS = [
-  { label:"كيف أجدّد دفتر الدواء؟",           text:"كيف أجدّد دفتر الدواء المزمن؟" },
-  { label:"أقرب صيدلية",                      text:"أقرب صيدلية" },
-  { label:"kif 2a2dar la2i mosta2fa 7koume?", text:"kif 2a2dar la2i mosta2fa 7koume 2arib?" },
-  { label:"Prix du médicament",               text:"combien coûte le Concor 5?" },
-  { label:"Hotlines",                         text:"what are the ministry hotlines?" },
+  { label:"كيف أجدّد دفتر الدواء المزمن؟",      text:"كيف أجدّد دفتر الدواء المزمن؟" },
+  { label:"أقرب صيدلية في عاليه",               text:"أقرب صيدلية في عاليه" },
+  { label:"kif 2a2dar la2i mosta2fa 7koume?",   text:"kif 2a2dar la2i mosta2fa 7koume 2arib?" },
+  { label:"Combien coûte le Concor 5 ?",        text:"combien coûte le Concor 5?" },
 ];
 
-/* Chips arrive in sequence the first time only — after that they just swap. */
-function stagger(bar){
-  if (CALM) return;
-  bar.classList.add("stagger");
-  [...bar.children].forEach((c, i) => { c.style.animationDelay = (i * 55) + "ms"; });
-}
-
-function quickReplies(stage){
-  const bar = document.getElementById("quick");
+function openers(){
+  const bar = document.getElementById("suggest");
   bar.textContent = "";
-  const items = stage === "start"
-    ? STARTERS
-    : [{ label:"سؤال تاني · Another question", act:"another" },
-       { label:"تحدث مع شخص · Talk to a person", act:"human" }];
-
-  for (const it of items){
+  for (const it of STARTERS){
     const b = document.createElement("button");
-    b.type = "button";
-    b.className = "chip bidi";
+    b.type = "button"; b.className = "sg bidi";
     b.setAttribute("dir","auto");
     b.textContent = it.label;
+    b.addEventListener("click", () => send(it.text));
+    bar.appendChild(b);
+  }
+}
+
+function followUps(){
+  const bar = document.getElementById("quick");
+  bar.textContent = "";
+  for (const it of [{ label:"سؤال آخر", act:"another" },
+                    { label:"تحدث مع شخص", act:"human" }]){
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip";
+    b.textContent = it.label;
     b.addEventListener("click", () => {
-      if (it.act === "another"){ quickReplies("start"); input.focus(); return; }
-      if (it.act === "human"){ showHotlines(); return; }
-      send(it.text);
+      if (it.act === "another"){ bar.textContent = ""; input.focus(); return; }
+      showHotlines();
     });
     bar.appendChild(b);
   }
-  stagger(bar);
 }
 
 function showHotlines(){
   const d = bubble("b");
   const head = document.createElement("div");
-  head.className = "bidi";
-  head.setAttribute("dir","auto");
-  head.textContent = "الخطوط الساخنة · Hotlines";
+  head.className = "bidi"; head.setAttribute("dir","auto");
+  head.textContent = "الخطوط الساخنة";
   d.appendChild(head);
 
   const list = document.createElement("div");
   list.className = "srcs";
   const rows = hotlines.length ? hotlines : [
-    { name:"MoPH hotline", number:"1787", purpose:"general health info" },
-    { name:"Red Cross",    number:"140",  purpose:"emergency / ambulance" },
+    { name:"الخط الساخن لوزارة الصحة", number:"1787", purpose:"معلومات صحية عامة" },
+    { name:"الصليب الأحمر اللبناني",    number:"140",  purpose:"طوارئ وإسعاف" },
   ];
   for (const h of rows){
     const row = document.createElement("div");
-    row.className = "src bidi";
-    row.setAttribute("dir","auto");
+    row.className = "src bidi"; row.setAttribute("dir","auto");
     const a = document.createElement("a");
     a.href = "tel:" + h.number;
     const num = document.createElement("bdi");   // numbers stay LTR inside RTL text
-    num.dir = "ltr";
-    num.textContent = h.number;
+    num.dir = "ltr"; num.textContent = h.number;
     a.appendChild(num);
     row.appendChild(a);
     const txt = document.createElement("span");
@@ -547,30 +465,15 @@ function showHotlines(){
   scrollDown();
 }
 
-/* ---------- language chips ------------------------------------------------ */
-const LANGS = [
-  { code:null,      label:"تلقائي · Auto" },
-  { code:"ar",      label:"العربية" },
-  { code:"arabizi", label:"Arabizi" },
-  { code:"fr",      label:"Français" },
-  { code:"en",      label:"English" },
-];
-
-function langChips(){
-  const bar = document.getElementById("langs");
-  const first = bar.children.length === 0;
-  bar.textContent = "";
-  for (const l of LANGS){
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "chip";
-    b.textContent = l.label;
-    b.setAttribute("aria-pressed", String(l.code === lang));
-    b.addEventListener("click", () => { lang = l.code; langChips(); input.focus(); });
-    bar.appendChild(b);
-  }
-  if (first) stagger(bar);
+/* ---------- composer behaviour ------------------------------------------- */
+function autoGrow(){
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 168) + "px";
 }
+input.addEventListener("input", autoGrow);
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+});
 
 /* ---------- sending ------------------------------------------------------- */
 async function send(text){
@@ -578,8 +481,11 @@ async function send(text){
   const q = (text || input.value).trim();
   if (!q) return;
 
+  if (!started){ started = true; hero.remove(); }
+  document.getElementById("quick").textContent = "";
+
   say(q, "u");
-  input.value = "";
+  input.value = ""; autoGrow();
   busy = true; sendBtn.disabled = true;
   typing(true);
 
@@ -587,20 +493,19 @@ async function send(text){
     const r = await fetch(API + "/chat", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        channel:"web", text:q, user_ref: await userRef(), lang: lang,
-      }),
+      // lang is omitted on purpose: the backend detects it per message.
+      body: JSON.stringify({ channel:"web", text:q, user_ref: await userRef() }),
     });
     typing(false);
     if (!r.ok) throw new Error("HTTP " + r.status);
     showAnswer(await r.json());
-    quickReplies("after");
+    followUps();
   } catch (err){
     typing(false);
-    const d = say("تعذّر الاتصال بالخدمة. حاول مرة أخرى.\nCouldn't reach the service. Please try again.", "sys");
+    const d = say("تعذّر الاتصال بالخدمة. حاول مرة أخرى.", "sys");
     const retry = document.createElement("button");
-    retry.type = "button"; retry.className = "chip"; retry.textContent = "إعادة المحاولة · Retry";
-    retry.style.marginTop = "6px";
+    retry.type = "button"; retry.className = "chip"; retry.textContent = "إعادة المحاولة";
+    retry.style.marginTop = "8px";
     retry.addEventListener("click", () => { retry.remove(); send(q); });
     d.appendChild(document.createElement("br"));
     d.appendChild(retry);
@@ -614,26 +519,13 @@ document.getElementById("f").addEventListener("submit", (e) => { e.preventDefaul
 
 /* ---------- boot ---------------------------------------------------------- */
 (async function boot(){
-  langChips();
-  quickReplies("start");
-  say("أهلاً بك في دليل. اسأل عن الإجراءات، الصيدليات، أسعار الأدوية، أو الخطوط الساخنة.\n"
-    + "Welcome to Daleel. Ask about procedures, pharmacies, medicine prices, or hotlines.", "b");
+  openers();
+  input.focus();
 
   try {
     const h = await fetch(API + "/api/hotlines");
     if (h.ok) hotlines = (await h.json()).hotlines || [];
   } catch(e){}
-
-  try {
-    const s = await fetch(API + "/health/channels");
-    if (!s.ok) throw new Error();
-  } catch(e){
-    const dot = document.getElementById("dot");
-    dot.classList.add("bad");
-    dot.closest(".live").title = "تعذّر الوصول إلى الخدمة · service unreachable";
-    document.getElementById("dotLabel").textContent = "غير متصل";
-  }
-  input.focus();
 
   // Deep link: /?q=... asks a question straight away, so a QR, an SMS or a
   // link from a MoPH page can drop someone into a specific answer.
