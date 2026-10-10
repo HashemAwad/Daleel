@@ -1,0 +1,482 @@
+<!doctype html>
+<!-- Daleel Phase-2 dashboard. Owner: C (ticket C4).
+     Reads ONLY /api/metrics, which aggregates the anonymised `metadata` table
+     (topic, subtopic, caza, lang, outcome, day). No transcripts, no numbers, no
+     names ever reach this page. Falls back to clearly-labelled mock rows until
+     D's retention job writes real ones.
+     No external assets: works offline on a venue network. -->
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Daleel Dashboard</title>
+<style>
+  /* Tokens live on :root so the dark overrides below can reach every element.
+     Dark is declared twice on purpose: the media query covers the OS setting,
+     the data-theme scope covers an explicit choice and must win both ways. */
+  :root{
+    color-scheme: light;
+    --page:#F4F6F5; --surface-1:#FFFFFF;
+    --text-primary:#0B0B0B; --text-secondary:#52514E; --text-muted:#6E6B66;
+    --line:#E1E0D9; --baseline:#C3C2B7;
+    --brand:#0F5C4A;
+    /* single-series magnitude hue (brand green) */
+    --series-mag:#0F5C4A;
+    /* categorical slots — fixed per language, never by rank.
+       Validated: light surface #fff, worst adjacent CVD ΔE 9.1 / normal 22.9. */
+    --cat-ar:#2a78d6; --cat-arabizi:#eb6834; --cat-fr:#1baf7a; --cat-en:#eda100;
+    /* status (icon + label always accompany these) */
+    --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+    --track:#E6EEEB;
+  }
+  /* Dark steps are chosen for the dark surface (#141A18), not flipped:
+     validated worst adjacent CVD ΔE 8.4, normal-vision 19.8, all ≥3:1. */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --page:#0D0D0D; --surface-1:#141A18;
+      --text-primary:#FFFFFF; --text-secondary:#C3C2B7; --text-muted:#9AA7A3;
+      --line:#2C2C2A; --baseline:#383835;
+      --brand:#15785F;
+      --series-mag:#4FBF9B;
+      --cat-ar:#3987e5; --cat-arabizi:#d95926; --cat-fr:#199e70; --cat-en:#c98500;
+      --track:#1F2A27;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --page:#0D0D0D; --surface-1:#141A18;
+    --text-primary:#FFFFFF; --text-secondary:#C3C2B7; --text-muted:#9AA7A3;
+    --line:#2C2C2A; --baseline:#383835;
+    --brand:#15785F;
+    --series-mag:#4FBF9B;
+    --cat-ar:#3987e5; --cat-arabizi:#d95926; --cat-fr:#199e70; --cat-en:#c98500;
+    --track:#1F2A27;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--page); color:var(--text-primary);
+    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Arabic",sans-serif;
+    font-size:15px; line-height:1.5;
+  }
+  .wrap{max-width:1060px; margin:0 auto; padding:20px 16px 56px}
+
+  header.top{display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+  h1{font-size:21px; margin:0; font-weight:700}
+  .tagline{color:var(--text-secondary); font-size:13.5px; margin:2px 0 0}
+  .grow{flex:1}
+  .btn{
+    font:inherit; font-size:13.5px; padding:7px 13px; border-radius:9px; cursor:pointer;
+    background:var(--surface-1); color:var(--text-primary); border:1px solid var(--line);
+  }
+  .btn:hover{border-color:var(--brand)}
+  .btn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+  .banner{
+    display:flex; gap:9px; align-items:flex-start; margin:14px 0 18px; padding:10px 13px;
+    border-radius:10px; font-size:13.5px; border:1px solid var(--line);
+    background:var(--surface-1); color:var(--text-secondary);
+  }
+  .banner .ic{flex:none; font-size:15px; line-height:1.3}
+  .banner.mock{border-color:var(--warning)}
+
+  .card{
+    background:var(--surface-1); border:1px solid var(--line); border-radius:12px;
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .card h2{font-size:15px; margin:0 0 2px; font-weight:650}
+  .card .sub{color:var(--text-secondary); font-size:12.5px; margin:0 0 14px}
+
+  /* ---- hero + stat tiles ---- */
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px}
+  .tile{background:var(--surface-1); border:1px solid var(--line); border-radius:12px; padding:14px 16px}
+  .tile .label{color:var(--text-secondary); font-size:12.5px}
+  .tile .value{font-size:28px; font-weight:650; letter-spacing:-.4px; margin-top:4px}
+  .tile.hero .value{font-size:48px; line-height:1.05}
+  .tile .note{color:var(--text-muted); font-size:12px; margin-top:4px}
+  .meter{height:7px; border-radius:999px; background:var(--track); margin-top:10px; overflow:hidden}
+  .meter > span{display:block; height:100%; border-radius:999px}
+  .statline{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary); margin-top:7px}
+  .dot{width:9px; height:9px; border-radius:50%; flex:none}
+
+  /* ---- horizontal bars ---- */
+  .bars{display:flex; flex-direction:column; gap:9px}
+  .row{display:grid; grid-template-columns:minmax(120px,27%) 1fr auto; gap:10px; align-items:center}
+  .row .name{font-size:13.5px; color:var(--text-secondary); overflow-wrap:anywhere}
+  .track{position:relative; height:22px}
+  .bar{
+    height:22px; background:var(--series-mag);
+    border-start-start-radius:0; border-end-start-radius:0;
+    border-start-end-radius:4px; border-end-end-radius:4px;
+    min-width:2px;
+  }
+  .row .val{font-size:13px; font-variant-numeric:tabular-nums; color:var(--text-secondary); min-width:2.6em; text-align:end}
+
+  /* ---- stacked language bar ---- */
+  .stack{display:flex; gap:2px; height:30px; margin-bottom:12px} /* 2px surface gaps */
+  .seg{position:relative; min-width:3px; border-radius:3px; display:flex; align-items:center; justify-content:center}
+  .seg span{font-size:12px; font-weight:600; padding:0 6px; white-space:nowrap}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--text-secondary)}
+  .legend .k{display:flex; align-items:center; gap:6px}
+  .legend .sw{width:11px; height:11px; border-radius:3px; flex:none}
+
+  /* ---- day columns ---- */
+  .cols{display:flex; align-items:flex-end; gap:12px; height:140px; padding-top:18px; border-bottom:1px solid var(--baseline)}
+  .col{flex:1; max-width:48px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%}
+  .col .capval{font-size:12px; font-variant-numeric:tabular-nums; color:var(--text-secondary); margin-bottom:4px}
+  .col .fill{
+    width:100%; background:var(--series-mag); min-height:2px;
+    border-start-start-radius:4px; border-start-end-radius:4px;
+  }
+  .colLabels{display:flex; gap:12px; margin-top:7px}
+  .colLabels div{flex:1; max-width:48px; text-align:center; font-size:11.5px; color:var(--text-muted); font-variant-numeric:tabular-nums}
+
+  /* ---- tables ---- */
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th,td{text-align:start; padding:7px 8px; border-bottom:1px solid var(--line)}
+  th{color:var(--text-secondary); font-weight:600; font-size:12.5px}
+  td.num,th.num{text-align:end; font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  details{margin-top:14px}
+  summary{cursor:pointer; font-size:13px; color:var(--text-secondary)}
+  summary:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:760px){ .two{grid-template-columns:1fr} }
+
+  #tip{
+    position:fixed; pointer-events:none; opacity:0; transition:opacity .1s;
+    background:var(--text-primary); color:var(--surface-1); font-size:12.5px;
+    padding:6px 9px; border-radius:7px; z-index:9; white-space:nowrap;
+  }
+  .foot{color:var(--text-muted); font-size:12px; margin-top:22px; text-align:center}
+</style>
+</head>
+<body class="viz-root">
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Daleel · Ministry dashboard</h1>
+      <p class="tagline">Anonymised question metadata — no transcripts, no phone numbers, no names.</p>
+    </div>
+    <div class="grow"></div>
+    <button class="btn" id="refresh" type="button">Refresh</button>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+  <div id="content" aria-busy="true"></div>
+
+  <p class="foot">
+    Phase 2 · built from the <code>metadata</code> table only.
+    <a href="/">Back to the chat widget</a>
+  </p>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+"use strict";
+
+/* Colour follows the entity: a language keeps its hue whatever its rank. */
+const LANGS = [
+  { code:"ar",      label:"Arabic · العربية", varname:"--cat-ar" },
+  { code:"arabizi", label:"Arabizi",          varname:"--cat-arabizi" },
+  { code:"fr",      label:"Français",         varname:"--cat-fr" },
+  { code:"en",      label:"English",          varname:"--cat-en" },
+];
+const OUTCOMES = [
+  { key:"answered",   label:"Answered",            status:"good",     icon:"✓" },
+  { key:"unanswered", label:"No official source",   status:"warning",  icon:"!" },
+  { key:"refused",    label:"Refused (no advice)",  status:"serious",  icon:"⊘" },
+  { key:"escalated",  label:"Escalated to a human", status:"serious",  icon:"↗" },
+  { key:"emergency",  label:"Emergency routed",     status:"critical", icon:"▲" },
+];
+
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+};
+const human = (s) => String(s || "")
+  .replace(/_/g, " ")
+  .replace(/^./, (c) => c.toUpperCase());
+const cssVar = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
+
+/* Text sitting inside a coloured fill picks white or ink by the fill's own
+   luminance, so it clears contrast on yellow as well as on blue. */
+function inkOn(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return "#fff";
+  const n = parseInt(m[1], 16);
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return (L + 0.05) / 0.05 > 4.5 ? "#0B0B0B" : "#FFFFFF";
+}
+const langMeta = (code) => LANGS.find((l) => l.code === code)
+  || { code, label: human(code), varname:"--text-muted" };
+
+/* ---- tooltip (hover layer on every mark) -------------------------------- */
+const tip = document.getElementById("tip");
+function hoverable(node, text){
+  node.addEventListener("pointerenter", () => { tip.textContent = text; tip.style.opacity = "1"; });
+  node.addEventListener("pointermove", (e) => {
+    tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
+    tip.style.top  = (e.clientY - tip.offsetHeight - 10) + "px";
+  });
+  node.addEventListener("pointerleave", () => { tip.style.opacity = "0"; });
+}
+
+/* ---- pieces -------------------------------------------------------------- */
+function card(title, sub){
+  const c = el("section", "card");
+  c.appendChild(el("h2", null, title));
+  if (sub) c.appendChild(el("p", "sub", sub));
+  return c;
+}
+
+function tableView(headers, rows, label){
+  const d = el("details");
+  d.appendChild(el("summary", null, label || "Table view"));
+  const t = el("table");
+  const thead = el("thead"), tr = el("tr");
+  headers.forEach((h, i) => {
+    const th = el("th", i ? "num" : null, h.label !== undefined ? h.label : h);
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr); t.appendChild(thead);
+  const tb = el("tbody");
+  for (const r of rows){
+    const row = el("tr");
+    r.forEach((cell, i) => row.appendChild(el("td", i ? "num" : null, cell)));
+    tb.appendChild(row);
+  }
+  t.appendChild(tb); d.appendChild(t);
+  return d;
+}
+
+/* Single-series magnitude: one hue, length carries the value, value at the tip. */
+function barChart(items, unitLabel){
+  const max = Math.max(...items.map((i) => i.count), 1);
+  const box = el("div", "bars");
+  for (const it of items){
+    const row = el("div", "row");
+    row.appendChild(el("div", "name", it.name));
+    const track = el("div", "track");
+    const bar = el("div", "bar");
+    bar.style.width = Math.max(2, (it.count / max) * 100) + "%";
+    hoverable(bar, `${it.name}: ${it.count.toLocaleString()} ${unitLabel}`);
+    track.appendChild(bar);
+    row.appendChild(track);
+    row.appendChild(el("div", "val", it.count.toLocaleString()));
+    box.appendChild(row);
+  }
+  return box;
+}
+
+/* Categorical identity: legend always present; labels only where they fit. */
+function languageStack(languages, total){
+  const wrap = el("div");
+  const stack = el("div", "stack");
+  const known = languages.slice().sort(
+    (a, b) => LANGS.findIndex(l => l.code === a.label) - LANGS.findIndex(l => l.code === b.label)
+  );
+  for (const l of known){
+    const meta = langMeta(l.label);
+    const share = total ? (l.count / total) * 100 : 0;
+    const seg = el("div", "seg");
+    seg.style.flex = String(Math.max(share, 0.6));
+    seg.style.background = `var(${meta.varname})`;
+    // only label inside the segment when the text comfortably fits (~44px)
+    if (share >= 9){
+      const txt = el("span", null, Math.round(share) + "%");
+      txt.style.color = inkOn(cssVar(meta.varname));  // against the fill, not the surface
+      seg.appendChild(txt);
+    }
+    hoverable(seg, `${meta.label}: ${l.count.toLocaleString()} turns (${share.toFixed(1)}%)`);
+    stack.appendChild(seg);
+  }
+  wrap.appendChild(stack);
+
+  const legend = el("div", "legend");
+  for (const l of known){
+    const meta = langMeta(l.label);
+    const k = el("div", "k");
+    const sw = el("span", "sw");
+    sw.style.background = `var(${meta.varname})`;
+    k.appendChild(sw);
+    k.appendChild(el("span", null, `${meta.label} — ${l.count.toLocaleString()}`));
+    legend.appendChild(k);
+  }
+  wrap.appendChild(legend);
+  return wrap;
+}
+
+function dayColumns(days){
+  const max = Math.max(...days.map((d) => d.count), 1);
+  const wrap = el("div");
+  const cols = el("div", "cols");
+  for (const d of days){
+    const col = el("div", "col");
+    col.appendChild(el("div", "capval", d.count.toLocaleString()));
+    const fill = el("div", "fill");
+    fill.style.height = Math.max(2, (d.count / max) * 100) + "%";
+    hoverable(fill, `${d.label}: ${d.count.toLocaleString()} turns`);
+    col.appendChild(fill);
+    cols.appendChild(col);
+  }
+  wrap.appendChild(cols);
+  const labels = el("div", "colLabels");
+  for (const d of days) labels.appendChild(el("div", null, d.label.slice(5)));
+  wrap.appendChild(labels);
+  return wrap;
+}
+
+/* ---- tiles --------------------------------------------------------------- */
+function tile(label, value, note, opts){
+  const t = el("div", "tile" + (opts && opts.hero ? " hero" : ""));
+  t.appendChild(el("div", "label", label));
+  t.appendChild(el("div", "value", value));
+  if (note) t.appendChild(el("div", "note", note));
+  if (opts && opts.meter){
+    const m = el("div", "meter");
+    const f = el("span");
+    f.style.width = Math.min(100, opts.meter.pct) + "%";
+    f.style.background = `var(--${opts.meter.status})`;
+    m.appendChild(f);
+    t.appendChild(m);
+    const line = el("div", "statline");
+    const dot = el("span", "dot");
+    dot.style.background = `var(--${opts.meter.status})`;
+    line.appendChild(dot);
+    line.appendChild(el("span", null, `${opts.meter.icon} ${opts.meter.text}`));
+    t.appendChild(line);
+  }
+  return t;
+}
+
+function severity(pct, warnAt, critAt){
+  if (pct >= critAt) return { status:"critical", icon:"▲", text:"needs attention" };
+  if (pct >= warnAt) return { status:"warning",  icon:"!", text:"watch" };
+  return { status:"good", icon:"✓", text:"within target" };
+}
+
+/* ---- render -------------------------------------------------------------- */
+function render(m){
+  const content = document.getElementById("content");
+  content.textContent = "";
+  content.setAttribute("aria-busy", "false");
+
+  /* source banner */
+  const banner = document.getElementById("banner");
+  banner.hidden = false;
+  banner.className = "banner" + (m.source === "mock" ? " mock" : "");
+  banner.textContent = "";
+  banner.appendChild(el("span", "ic", m.source === "mock" ? "!" : "✓"));
+  banner.appendChild(el("span", null, m.source === "mock"
+    ? "Showing mock data — the metadata table is empty or unreachable. Numbers below are illustrative."
+    : "Live data from the metadata table (anonymised rows written after transcripts are deleted)."));
+
+  /* KPIs */
+  const kpis = el("div", "kpis");
+  const unansweredSev = severity(m.unanswered_rate, 10, 25);
+  const escSev = severity(m.escalation_rate, 5, 15);
+  kpis.appendChild(tile("Questions handled", m.total_turns.toLocaleString(),
+    `${m.days.length} day${m.days.length === 1 ? "" : "s"} of activity`, { hero:true }));
+  kpis.appendChild(tile("Answered with a source", m.answered.toLocaleString(),
+    m.total_turns ? `${(100 * m.answered / m.total_turns).toFixed(1)}% of all questions` : "—"));
+  kpis.appendChild(tile("No official source", m.unanswered_rate + "%",
+    `${m.unanswered.toLocaleString()} questions fell back to a hotline`,
+    { meter:{ pct:m.unanswered_rate, ...unansweredSev } }));
+  kpis.appendChild(tile("Escalated or emergency", m.escalation_rate + "%",
+    `${m.escalations.toLocaleString()} routed to a human or an ambulance`,
+    { meter:{ pct:m.escalation_rate, ...escSev } }));
+  content.appendChild(kpis);
+
+  /* topics */
+  const topics = card("Top topics", "What people ask about most. One colour: length carries the value.");
+  const topicItems = m.topics.map((t) => ({ name:human(t.label), count:t.count }));
+  topics.appendChild(barChart(topicItems, "questions"));
+  topics.appendChild(tableView(["Topic", "Questions"], topicItems.map((t) => [t.name, t.count.toLocaleString()])));
+  content.appendChild(topics);
+
+  /* language + outcomes side by side */
+  const two = el("div", "two");
+
+  const langs = card("Language mix", "Share of questions by language and script.");
+  langs.appendChild(languageStack(m.languages, m.total_turns));
+  langs.appendChild(tableView(["Language", "Questions"],
+    m.languages.map((l) => [langMeta(l.label).label, l.count.toLocaleString()])));
+  two.appendChild(langs);
+
+  const outc = card("Outcomes", "Every turn ends in exactly one outcome.");
+  const tbl = el("table");
+  const tb = el("tbody");
+  const byKey = Object.fromEntries(m.outcomes.map((o) => [o.label, o.count]));
+  for (const o of OUTCOMES){
+    const count = byKey[o.key] || 0;
+    const tr = el("tr");
+    const tdName = el("td");
+    const line = el("span", "statline");
+    line.style.margin = "0";
+    const dot = el("span", "dot");
+    dot.style.background = `var(--${o.status})`;
+    line.appendChild(dot);
+    line.appendChild(el("span", null, `${o.icon} ${o.label}`)); // icon + label, never colour alone
+    tdName.appendChild(line);
+    tr.appendChild(tdName);
+    tr.appendChild(el("td", "num", count.toLocaleString()));
+    tr.appendChild(el("td", "num", m.total_turns ? (100 * count / m.total_turns).toFixed(1) + "%" : "—"));
+    tb.appendChild(tr);
+  }
+  const thead = el("thead"), htr = el("tr");
+  ["Outcome", "Count", "Share"].forEach((h, i) => htr.appendChild(el("th", i ? "num" : null, h)));
+  thead.appendChild(htr);
+  tbl.appendChild(thead); tbl.appendChild(tb);
+  outc.appendChild(tbl);
+  two.appendChild(outc);
+  content.appendChild(two);
+
+  /* daily volume */
+  const trend = card("Daily volume", "Questions per day.");
+  trend.appendChild(dayColumns(m.days));
+  trend.appendChild(tableView(["Day", "Questions"], m.days.map((d) => [d.label, d.count.toLocaleString()])));
+  content.appendChild(trend);
+
+  /* coverage gaps + geography */
+  const two2 = el("div", "two");
+  const gaps = card("Coverage gaps", "Topics that most often had no official source — the content backlog.");
+  if (m.unanswered_topics.length){
+    gaps.appendChild(barChart(m.unanswered_topics.map((t) => ({ name:human(t.label), count:t.count })), "unanswered"));
+  } else {
+    gaps.appendChild(el("p", "sub", "No unanswered questions in this period."));
+  }
+  two2.appendChild(gaps);
+
+  const geo = card("Top cazas", "Where questions come from (district only — never a precise location).");
+  const cazaItems = m.cazas.map((c) => ({ name:human(c.label), count:c.count }));
+  geo.appendChild(barChart(cazaItems, "questions"));
+  geo.appendChild(tableView(["Caza", "Questions"], cazaItems.map((c) => [c.name, c.count.toLocaleString()])));
+  two2.appendChild(geo);
+  content.appendChild(two2);
+}
+
+async function load(){
+  const content = document.getElementById("content");
+  content.setAttribute("aria-busy", "true");
+  try {
+    const r = await fetch("/api/metrics");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    render(await r.json());
+  } catch (err){
+    content.textContent = "";
+    const c = card("Dashboard unavailable", "Could not reach /api/metrics.");
+    c.appendChild(el("p", null, String(err.message || err)));
+    content.appendChild(c);
+  }
+}
+
+document.getElementById("refresh").addEventListener("click", load);
+load();
+</script>
+</body>
+</html>

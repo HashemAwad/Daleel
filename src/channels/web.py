@@ -1,0 +1,80 @@
+"""Web channel endpoints + static pages. Owner: C.
+
+`POST /chat` itself lives in core (A owns it). This module adds only what the
+widget and the dashboard need around it:
+
+    GET /api/session        mint an opaque session id for a new browser
+    GET /api/hotlines       the hotline list, so numbers aren't hardcoded in HTML
+    GET /health/channels    demo-time diagnostics (what's wired, what isn't)
+    GET /dashboard, /join   serve the other two pages in /web
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi import APIRouter
+from fastapi.responses import FileResponse, JSONResponse
+
+from shared.config import settings
+
+from channels import identity
+from channels.settings_extra import channel_settings
+
+router = APIRouter(tags=["web"])
+
+WEB_DIR = Path(__file__).resolve().parents[2] / "web"
+
+
+@router.get("/api/session")
+def session() -> dict:
+    """A fresh pseudonymous ref for a browser with no stored session."""
+    return {"user_ref": identity.new_web_session()}
+
+
+@router.get("/api/hotlines")
+def hotlines() -> dict:
+    from core import providers  # late import: keeps module import cheap
+
+    return {"hotlines": [h.model_dump() for h in providers.HOTLINES]}
+
+
+@router.get("/health/channels")
+def channel_health() -> JSONResponse:
+    """Is each channel actually wired? Used by the widget's status dot and by
+    us on stage to see at a glance what is live."""
+    from core import providers
+
+    whatsapp_ready = bool(settings.twilio_auth_token and settings.public_base_url)
+    body = {
+        "ok": True,
+        "web": True,
+        "whatsapp": {
+            "configured": whatsapp_ready,
+            "has_auth_token": bool(settings.twilio_auth_token),
+            "has_public_url": bool(settings.public_base_url),
+            "from_number": settings.twilio_whatsapp_from or None,
+            "signature_enforced": channel_settings.require_twilio_signature,
+        },
+        "privacy": {
+            # loud flag: a placeholder salt means user_refs are guessable
+            "salt_configured": not identity.salt_is_weak(),
+        },
+        "providers": {
+            "llm": type(providers.llm).__name__,
+            "transcriber": type(providers.transcriber).__name__,
+            "procedures": type(providers.procedures).__name__,
+            "directory": type(providers.directory).__name__,
+            "medicine": type(providers.medicine).__name__,
+        },
+    }
+    return JSONResponse(body)
+
+
+@router.get("/dashboard", include_in_schema=False)
+def dashboard() -> FileResponse:
+    return FileResponse(WEB_DIR / "dashboard.html")
+
+
+@router.get("/join", include_in_schema=False)
+def join() -> FileResponse:
+    return FileResponse(WEB_DIR / "join.html")

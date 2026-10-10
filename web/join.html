@@ -1,0 +1,183 @@
+<!doctype html>
+<!-- WhatsApp join page. Owner: C (ticket C5).
+     A judge scans the QR, WhatsApp opens with the sandbox join message
+     pre-filled, they hit send, and they're talking to Daleel.
+     The QR comes from /qr.svg; if that endpoint is unavailable the page falls
+     back to the link and the manual steps, so the demo never dead-ends. -->
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Daleel · WhatsApp</title>
+<style>
+  :root{
+    --brand:#0F5C4A; --brand-soft:#E8F2EE; --surface:#fff; --ink:#1F2933;
+    --muted:#5B6770; --line:#DCE5E2; --warn:#8A5A00; --warn-soft:#FFF4E0;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --brand:#15785F; --brand-soft:#11201C; --surface:#141A18; --ink:#E8EDEB;
+      --muted:#9AA7A3; --line:#26312E; --warn:#F0C070; --warn-soft:#352810;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--brand-soft); color:var(--ink);
+    font-family:"Noto Sans Arabic","Segoe UI",system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.55;
+  }
+  .bidi{unicode-bidi:plaintext; text-align:start}
+  .wrap{max-width:560px; margin:0 auto; min-height:100%; background:var(--surface)}
+  header{background:var(--brand); color:#fff; padding:14px 18px calc(14px + env(safe-area-inset-top))}
+  header .t{font-weight:700; font-size:19px}
+  header .s{font-size:12.5px; opacity:.9}
+  main{padding:18px}
+  h2{font-size:16px; margin:0 0 8px}
+  p{margin:0 0 12px}
+  .qrbox{
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+    padding:18px; border:1px solid var(--line); border-radius:14px; margin-bottom:18px;
+  }
+  .qrbox img{width:230px; height:230px; background:#fff; border-radius:10px; padding:8px}
+  .cta{
+    display:inline-block; background:var(--brand); color:#fff; text-decoration:none;
+    padding:11px 18px; border-radius:11px; font-weight:600;
+  }
+  ol{margin:0 0 16px; padding-inline-start:22px}
+  li{margin-bottom:7px}
+  code{
+    background:var(--brand-soft); padding:2px 7px; border-radius:6px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:14px;
+    unicode-bidi:isolate; direction:ltr; display:inline-block;
+  }
+  .warn{background:var(--warn-soft); color:var(--warn); border-radius:10px; padding:11px 13px; font-size:13.5px; margin-bottom:16px}
+  .note{color:var(--muted); font-size:13px}
+  .alt{border-top:1px solid var(--line); margin-top:18px; padding-top:16px}
+  .alt a{color:var(--brand); font-weight:600}
+  @media (prefers-color-scheme: dark){ .alt a{color:#7FD1B9} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="t">دليل · Daleel على واتساب</div>
+    <div class="s">وزارة الصحة العامة · Ministry of Public Health</div>
+  </header>
+  <main>
+    <div id="state"></div>
+
+    <div class="alt">
+      <h2>بدون واتساب؟ · <bdi dir="ltr">No WhatsApp?</bdi></h2>
+      <p class="note">
+        <span dir="rtl" lang="ar" style="display:block">الدردشة على الويب تعمل دائماً، حتى لو كان واتساب غير متاح.</span>
+        <span dir="ltr" lang="en" style="display:block">The web chat always works, even if WhatsApp is down.</span>
+      </p>
+      <p><a href="/">← افتح الدردشة على الويب · <bdi dir="ltr">Open the web chat</bdi></a></p>
+    </div>
+  </main>
+</div>
+
+<script>
+"use strict";
+const state = document.getElementById("state");
+const el = (t, c, txt) => { const n = document.createElement(t); if (c) n.className = c; if (txt !== undefined) n.textContent = txt; return n; };
+
+/* One language per element with an explicit dir. A single node holding both
+   scripts makes the bidi algorithm strand trailing punctuation (".Scan the"). */
+function bilingual(tag, cls, ar, en){
+  const box = el(tag, cls);
+  const a = el("span", null, ar); a.dir = "rtl"; a.lang = "ar"; a.style.display = "block";
+  const e = el("span", null, en); e.dir = "ltr"; e.lang = "en"; e.style.display = "block";
+  box.appendChild(a); box.appendChild(e);
+  return box;
+}
+
+function heading(ar, en){
+  const h = el("h2");
+  h.appendChild(document.createTextNode(ar + " · "));
+  const b = el("bdi", null, en); b.dir = "ltr";
+  h.appendChild(b);
+  return h;
+}
+
+function voiceNote(){
+  return bilingual("p", "note",
+    "🎤 يمكنك إرسال رسالة صوتية — نحوّلها إلى نص ونجيب عليها.",
+    "Send a voice note — we transcribe it and answer.");
+}
+
+function renderConfigured(info){
+  state.textContent = "";
+
+  const box = el("div", "qrbox");
+  const img = el("img");
+  img.src = "/qr.svg?scale=7";
+  img.alt = "QR code to open WhatsApp with the join message ready";
+  img.addEventListener("error", () => { img.remove(); });
+  box.appendChild(img);
+  const cta = el("a", "cta", "افتح واتساب · Open WhatsApp");
+  cta.href = info.deep_link;
+  cta.rel = "noopener";
+  box.appendChild(cta);
+  state.appendChild(box);
+
+  state.appendChild(heading("الخطوات", "Steps"));
+  const ol = el("ol");
+  const steps = [
+    ["امسح الرمز أو اضغط الزر.", "Scan the code, or tap the button."],
+    info.join_message
+      ? ["أرسل رسالة الانضمام الجاهزة.", "Send the pre-filled join message."]
+      : ["أرسل أي رسالة للبدء.", "Send any message to start."],
+    ["اسأل سؤالك بالعربية أو الفرنسية أو الإنجليزية.", "Ask in Arabic, Arabizi, French or English."],
+  ];
+  for (const [ar, en] of steps) ol.appendChild(bilingual("li", null, ar, en));
+  state.appendChild(ol);
+
+  if (info.join_message){
+    const p = el("p", "bidi");
+    p.appendChild(document.createTextNode("رسالة الانضمام · Join message: "));
+    p.appendChild(el("code", null, info.join_message));
+    state.appendChild(p);
+  }
+  const num = el("p", "note bidi");
+  num.appendChild(document.createTextNode("الرقم · Number: "));
+  num.appendChild(el("code", null, info.number || "—"));
+  state.appendChild(num);
+  state.appendChild(voiceNote());
+
+  if (!info.qr_available){
+    state.appendChild(el("div", "warn",
+      "QR rendering is unavailable on the server (pip install segno). Use the button or the number above."));
+  }
+}
+
+function renderUnconfigured(){
+  state.textContent = "";
+  state.appendChild(bilingual("div", "warn",
+    "واتساب غير مُهيّأ بعد.",
+    "WhatsApp isn't configured yet. Set TWILIO_WHATSAPP_FROM (and TWILIO_SANDBOX_JOIN_CODE) in .env, then reload."));
+  state.appendChild(heading("ما ينقص", "What's missing"));
+  const ol = el("ol");
+  for (const s of [
+    "Twilio sandbox: Messaging → Try it out → WhatsApp.",
+    "Copy the sandbox number into TWILIO_WHATSAPP_FROM and the join code into TWILIO_SANDBOX_JOIN_CODE.",
+    "Point the sandbox webhook at PUBLIC_BASE_URL + /webhook/whatsapp.",
+  ]) ol.appendChild(el("li", null, s));
+  state.appendChild(ol);
+  state.appendChild(voiceNote());
+}
+
+(async function boot(){
+  state.appendChild(el("p", "note", "…"));
+  try {
+    const r = await fetch("/api/whatsapp-info");
+    const info = await r.json();
+    if (info.configured && info.deep_link) renderConfigured(info);
+    else renderUnconfigured();
+  } catch (err){
+    renderUnconfigured();
+  }
+})();
+</script>
+</body>
+</html>
