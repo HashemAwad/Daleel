@@ -13,7 +13,11 @@ from shared.contracts import Answer
 # Twilio accepts 1600 chars per message body; stay under it.
 WHATSAPP_LIMIT = 1500
 
-__all__ = ["xml_escape", "for_whatsapp", "sources_lines", "chunk"]
+# Facility data comes from OpenStreetMap, which is ODbL: attribution is a
+# licence condition, not a courtesy, so it rides with every directory answer.
+OSM_CREDIT = "© OpenStreetMap contributors"
+
+__all__ = ["xml_escape", "for_whatsapp", "sources_lines", "chunk", "OSM_CREDIT"]
 
 
 def sources_lines(answer: Answer) -> list[str]:
@@ -58,10 +62,12 @@ def chunk(text: str, limit: int = WHATSAPP_LIMIT) -> list[str]:
 
 
 def for_whatsapp(answer: Answer) -> list[str]:
-    """Full reply as WhatsApp message parts: answer text, then sources."""
+    """Full reply as WhatsApp message parts: answer text, sources, attribution."""
     body = (answer.text or "").strip()
     srcs = sources_lines(answer)
     if srcs:
         body = f"{body}\n\n" + "\n\n".join(srcs)
+    if answer.tool == "directory" and OSM_CREDIT not in body:
+        body = f"{body}\n\n{OSM_CREDIT}"
     parts = chunk(body)
     return parts or ["…"]

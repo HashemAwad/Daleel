@@ -252,6 +252,22 @@ function showAnswer(a){
     }
     d.appendChild(wrap);
   }
+
+  // Facility data is OpenStreetMap, licensed ODbL — attribution is a licence
+  // condition, so it ships with every directory answer, sources or not.
+  if (a.tool === "directory"){
+    const credit = document.createElement("div");
+    credit.className = "src bidi";
+    credit.setAttribute("dir", "ltr");
+    const cl = document.createElement("a");
+    cl.href = "https://www.openstreetmap.org/copyright";
+    cl.target = "_blank";
+    cl.rel = "noopener noreferrer";
+    cl.textContent = "© OpenStreetMap contributors";
+    credit.appendChild(cl);
+    d.appendChild(credit);
+  }
+
   log.scrollTop = log.scrollHeight;
 }
 

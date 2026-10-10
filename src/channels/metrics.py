@@ -23,6 +23,11 @@ router = APIRouter(tags=["dashboard"])
 
 ESCALATED_OUTCOMES = {"escalated", "emergency"}
 
+# k-anonymity: never publish a breakdown cell representing fewer than this many
+# conversations. topic + caza + day can single out one person in a small caza,
+# and this endpoint feeds a screen a ministry would look at.
+MIN_CELL = 5
+
 # Shaped like real rows so the page layout is honest about what Phase 2 shows.
 # Topics are snake_case to match the schema's CHECK (topic ~ '^[a-z_]{1,40}$');
 # the dashboard humanises them for display.
@@ -69,20 +74,48 @@ def _fetch_rows() -> list[dict[str, Any]]:
             return [dict(r) for r in cur.fetchall()]
 
 
-def _tally(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+def _tally(rows: list[dict[str, Any]], key: str,
+           min_cell: int = MIN_CELL) -> list[dict[str, Any]]:
+    """Counts per label, with small groups suppressed.
+
+    Any label seen fewer than `min_cell` times is withheld and rolled into a
+    single `withheld` entry. Publishing "mental_health · Bcharre · 1" on a
+    ministry screen can identify the one person who asked; the rolled-up count
+    keeps the totals honest without naming the group.
+    """
     totals: dict[str, int] = {}
     for r in rows:
         label = r.get(key) or "unspecified"
         totals[str(label)] = totals.get(str(label), 0) + int(r.get("n", 1))
-    ordered = sorted(totals.items(), key=lambda kv: (-kv[1], kv[0]))
-    return [{"label": k, "count": v} for k, v in ordered]
+
+    published = {k: v for k, v in totals.items() if v >= min_cell}
+    suppressed = {k: v for k, v in totals.items() if v < min_cell}
+
+    ordered = sorted(published.items(), key=lambda kv: (-kv[1], kv[0]))
+    out = [{"label": k, "count": v} for k, v in ordered]
+    if suppressed:
+        out.append({
+            "label": "withheld",
+            "count": sum(suppressed.values()),
+            "suppressed": True,
+            "groups": len(suppressed),   # how many, never which
+        })
+    return out
 
 
 def summarise(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
     total = sum(int(r.get("n", 1)) for r in rows)
-    outcomes = {o["label"]: o["count"] for o in _tally(rows, "outcome")}
-    escalated = sum(v for k, v in outcomes.items() if k in ESCALATED_OUTCOMES)
-    unanswered = outcomes.get("unanswered", 0)
+
+    # Headline figures come from the raw rows, not the suppressed tally: a
+    # whole-service count identifies nobody, and silently dropping a small
+    # outcome would under-report escalations — the opposite of useful.
+    raw_outcomes: dict[str, int] = {}
+    for r in rows:
+        raw_outcomes[str(r.get("outcome") or "unspecified")] = (
+            raw_outcomes.get(str(r.get("outcome") or "unspecified"), 0) + int(r.get("n", 1))
+        )
+    escalated = sum(v for k, v in raw_outcomes.items() if k in ESCALATED_OUTCOMES)
+    unanswered = raw_outcomes.get("unanswered", 0)
 
     def pct(part: int) -> float:
         return round(100 * part / total, 1) if total else 0.0
@@ -94,8 +127,10 @@ def summarise(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
         "unanswered_rate": pct(unanswered),
         "escalations": escalated,
         "escalation_rate": pct(escalated),
-        "refused": outcomes.get("refused", 0),
-        "answered": outcomes.get("answered", 0),
+        "refused": raw_outcomes.get("refused", 0),
+        "answered": raw_outcomes.get("answered", 0),
+        # stated on the page so a ministry reader knows why a row is missing
+        "min_cell": MIN_CELL,
         "topics": _tally(rows, "topic")[:10],
         "languages": _tally(rows, "lang"),
         "cazas": _tally(rows, "caza")[:10],

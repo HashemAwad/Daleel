@@ -46,6 +46,12 @@ def _env_independent(monkeypatch):
     monkeypatch.setattr(settings, "public_base_url", "")
     monkeypatch.setattr(channel_settings, "require_twilio_signature", False)
 
+    # B's real ProcedureSearchImpl downloads a ~2GB embedding model on first
+    # search. These tests exercise the channel, not retrieval, so pin the stub:
+    # otherwise the suite stalls on a network fetch.
+    from core import providers, stubs
+    monkeypatch.setattr(providers, "procedures", stubs.StubProcedureSearch())
+
 
 # ---- C2: webhook + signature ----------------------------------------------
 def test_webhook_replies_with_twiml_in_dev_mode(monkeypatch):
@@ -231,15 +237,18 @@ def test_metrics_falls_back_to_mock():
 
 
 def test_metrics_uses_real_rows_when_available(monkeypatch):
+    # counts sit above MIN_CELL on purpose: a 1-conversation cell is withheld
+    # now (see test_small_groups_are_withheld_from_breakdowns), so naming one
+    # here would be asserting the privacy hole rather than the data path.
     rows = [
-        {"topic": "vaccination", "caza": "Beirut", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 3},
-        {"topic": "drug_price", "caza": "Aley", "lang": "fr", "outcome": "unanswered", "day": "2026-10-10", "n": 1},
+        {"topic": "vaccination", "caza": "Beirut", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 15},
+        {"topic": "drug_price", "caza": "Aley", "lang": "fr", "outcome": "unanswered", "day": "2026-10-10", "n": 5},
     ]
     monkeypatch.setattr(metrics, "_fetch_rows", lambda: rows)
     m = client.get("/api/metrics").json()
     assert m["source"] == "metadata"
-    assert m["total_turns"] == 4
-    assert m["unanswered"] == 1 and m["unanswered_rate"] == 25.0
+    assert m["total_turns"] == 20
+    assert m["unanswered"] == 5 and m["unanswered_rate"] == 25.0
     assert m["unanswered_topics"][0]["label"] == "drug_price"
 
 
@@ -311,3 +320,54 @@ def test_unknown_transcriber_language_does_not_break_the_webhook(monkeypatch):
         form(Body="", NumMedia="1", MediaUrl0="https://x/a.ogg", MediaContentType0="audio/ogg")
     )
     assert inq.lang is None and inq.text
+
+
+# ---- open item C1: k-anonymity on the dashboard ---------------------------
+def test_small_groups_are_withheld_from_breakdowns():
+    """topic + caza + day can identify one person in a small caza."""
+    rows = [{"topic": "mental_health", "caza": "Bcharre", "lang": "ar",
+             "outcome": "escalated", "day": "2026-10-10", "n": 1},
+            {"topic": "vaccination", "caza": "Beirut", "lang": "ar",
+             "outcome": "answered", "day": "2026-10-10", "n": 40}]
+    out = metrics.summarise(rows, "metadata")
+    labels = [c["label"] for c in out["cazas"]]
+    assert "Bcharre" not in labels              # the identifying cell is gone
+    assert "Beirut" in labels
+    withheld = [c for c in out["cazas"] if c.get("suppressed")]
+    assert withheld and withheld[0]["count"] == 1
+
+
+def test_headline_totals_stay_exact_despite_suppression():
+    """Suppression must not under-report escalations — that would be worse
+    than useless to a ministry."""
+    rows = [{"topic": "emergency", "caza": "Akkar", "lang": "ar",
+             "outcome": "emergency", "day": "2026-10-10", "n": 2},
+            {"topic": "x", "caza": "Beirut", "lang": "ar",
+             "outcome": "answered", "day": "2026-10-10", "n": 30}]
+    out = metrics.summarise(rows, "metadata")
+    assert out["total_turns"] == 32
+    assert out["escalations"] == 2              # counted, though withheld below
+    assert "emergency" not in [o["label"] for o in out["outcomes"]]
+
+
+def test_threshold_is_published_so_the_page_can_explain_itself():
+    assert metrics.summarise(metrics.MOCK_ROWS, "mock")["min_cell"] == metrics.MIN_CELL
+
+
+# ---- open item C2: OpenStreetMap attribution (ODbL) -----------------------
+def test_directory_answers_carry_the_osm_credit():
+    ans = Answer(text="Pharmacy X, Main St", sources=[], tool="directory",
+                 grounded=True, outcome="answered", lang="en")
+    assert render.OSM_CREDIT in "\n".join(render.for_whatsapp(ans))
+
+
+def test_non_directory_answers_do_not():
+    ans = Answer(text="Bring your ID.", sources=[], tool="procedure",
+                 grounded=True, outcome="answered", lang="en")
+    assert render.OSM_CREDIT not in "\n".join(render.for_whatsapp(ans))
+
+
+def test_credit_is_not_duplicated_if_core_already_added_it():
+    ans = Answer(text=f"Pharmacy X. {render.OSM_CREDIT}", sources=[],
+                 tool="directory", grounded=True, outcome="answered", lang="en")
+    assert "\n".join(render.for_whatsapp(ans)).count(render.OSM_CREDIT) == 1

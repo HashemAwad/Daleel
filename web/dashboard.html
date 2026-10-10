@@ -111,6 +111,14 @@
     min-width:2px;
   }
   .row .val{font-size:13px; font-variant-numeric:tabular-nums; color:var(--text-secondary); min-width:2.6em; text-align:end}
+  /* k-anonymity: a withheld group is shown, never hidden — a missing row would
+     read as "no questions here", which is a different and wrong claim. */
+  .row.suppressed .name{color:var(--text-muted); font-style:italic}
+  .row.suppressed .bar{
+    background:repeating-linear-gradient(135deg,
+      var(--text-muted) 0 2px, transparent 2px 6px);
+    opacity:.55;
+  }
 
   /* ---- stacked language bar ---- */
   .stack{display:flex; gap:2px; height:30px; margin-bottom:12px} /* 2px surface gaps */
@@ -168,6 +176,8 @@
 
   <p class="foot">
     Phase 2 · built from the <code>metadata</code> table only.
+    Groups of fewer than <span id="mincell">5</span> conversations are withheld,
+    so no row can point to one person.
     <a href="/">Back to the chat widget</a>
   </p>
 </div>
@@ -254,17 +264,28 @@ function tableView(headers, rows, label){
   return d;
 }
 
+/* Tally rows -> chart items, turning the API's `withheld` bucket into a row
+   the reader can see. Small groups are suppressed server-side; see MIN_CELL. */
+function tallyItems(list){
+  return (list || []).map((t) => t.suppressed
+    ? { name:"Withheld — groups too small", count:t.count,
+        suppressed:true, groups:t.groups }
+    : { name:human(t.label), count:t.count });
+}
+
 /* Single-series magnitude: one hue, length carries the value, value at the tip. */
 function barChart(items, unitLabel){
   const max = Math.max(...items.map((i) => i.count), 1);
   const box = el("div", "bars");
   for (const it of items){
-    const row = el("div", "row");
+    const row = el("div", "row" + (it.suppressed ? " suppressed" : ""));
     row.appendChild(el("div", "name", it.name));
     const track = el("div", "track");
     const bar = el("div", "bar");
     bar.style.width = Math.max(2, (it.count / max) * 100) + "%";
-    hoverable(bar, `${it.name}: ${it.count.toLocaleString()} ${unitLabel}`);
+    hoverable(bar, it.suppressed
+      ? `${it.count.toLocaleString()} ${unitLabel} across ${it.groups} group${it.groups === 1 ? "" : "s"} too small to publish individually`
+      : `${it.name}: ${it.count.toLocaleString()} ${unitLabel}`);
     track.appendChild(bar);
     row.appendChild(track);
     row.appendChild(el("div", "val", it.count.toLocaleString()));
@@ -376,6 +397,10 @@ function render(m){
     ? "Showing mock data — the metadata table is empty or unreachable. Numbers below are illustrative."
     : "Live data from the metadata table (anonymised rows written after transcripts are deleted)."));
 
+  /* keep the footnote honest if the server ever changes the threshold */
+  const mc = document.getElementById("mincell");
+  if (mc && m.min_cell) mc.textContent = m.min_cell;
+
   /* KPIs */
   const kpis = el("div", "kpis");
   const unansweredSev = severity(m.unanswered_rate, 10, 25);
@@ -394,7 +419,7 @@ function render(m){
 
   /* topics */
   const topics = card("Top topics", "What people ask about most. One colour: length carries the value.");
-  const topicItems = m.topics.map((t) => ({ name:human(t.label), count:t.count }));
+  const topicItems = tallyItems(m.topics);
   topics.appendChild(barChart(topicItems, "questions"));
   topics.appendChild(tableView(["Topic", "Questions"], topicItems.map((t) => [t.name, t.count.toLocaleString()])));
   content.appendChild(topics);
@@ -446,14 +471,14 @@ function render(m){
   const two2 = el("div", "two");
   const gaps = card("Coverage gaps", "Topics that most often had no official source — the content backlog.");
   if (m.unanswered_topics.length){
-    gaps.appendChild(barChart(m.unanswered_topics.map((t) => ({ name:human(t.label), count:t.count })), "unanswered"));
+    gaps.appendChild(barChart(tallyItems(m.unanswered_topics), "unanswered"));
   } else {
     gaps.appendChild(el("p", "sub", "No unanswered questions in this period."));
   }
   two2.appendChild(gaps);
 
   const geo = card("Top cazas", "Where questions come from (district only — never a precise location).");
-  const cazaItems = m.cazas.map((c) => ({ name:human(c.label), count:c.count }));
+  const cazaItems = tallyItems(m.cazas);
   geo.appendChild(barChart(cazaItems, "questions"));
   geo.appendChild(tableView(["Caza", "Questions"], cazaItems.map((c) => [c.name, c.count.toLocaleString()])));
   two2.appendChild(geo);

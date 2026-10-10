@@ -30,8 +30,11 @@ def _meta_env(monkeypatch):
     monkeypatch.setattr(channel_settings, "meta_access_token", "test-token")
     monkeypatch.setattr(channel_settings, "meta_phone_number_id", "123456")
     monkeypatch.setattr(channel_settings, "require_meta_signature", False)
-    # never let a test reach the network
+    # never let a test reach the network: neither the Graph API reply nor B's
+    # ProcedureSearchImpl, which downloads a ~2GB embedding model on first use
     monkeypatch.setattr(whatsapp_meta, "send_text", lambda to, body: True)
+    from core import providers, stubs
+    monkeypatch.setattr(providers, "procedures", stubs.StubProcedureSearch())
 
 
 def payload(text="how do I renew my medication card?", **over) -> dict:
