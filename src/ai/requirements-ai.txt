@@ -3,3 +3,5 @@ sentence-transformers>=3.0
 # camel-tools: on Python 3.14 install with:  pip install --no-deps camel-tools emoji
 # (its editdistance dep has no wheel there; we only use camel_tools.utils.*, which does not need it)
 camel-tools>=1.5
+faster-whisper>=1.0   # B4 voice notes (local Whisper)
+av>=11,<17            # B4: decodes ogg/opus without ffmpeg; av>=17 breaks faster-whisper 1.2.x
