@@ -1,6 +1,6 @@
 # Open items — what is missing, and from whom
 
-Maintained by Dev D. Last updated Sat 10 Oct, after D3. Each item says who owns it and what breaks without it.
+Maintained by Dev D. Last updated Sat 10 Oct, after D5. Each item says who owns it and what breaks without it.
 Status is as read from `main` at that time — check the code before assuming an item is still open.
 
 ## Dev A — core (`src/core`)
@@ -9,8 +9,8 @@ Status is as read from `main` at that time — check the code before assuming an
 | A1 | Render a missing price as "price not available", not `price None LBP` | Most drug rows have no price; the model may improvise "free" or a number | `core/prompts.py` `build_context` |
 | A2 | System prompt: when several `[medicine]` records come back, ask "which one?" and quote no price | The lookup returns several products *without* prices on purpose; the model must not pick one | `core/prompts.py` |
 | A3 | **Blocks the directory demo.** Router passes no place to `directory.nearest(kind)` | One-line fix in `run_tool`: `providers.directory.nearest(_directory_kind(inq.text), caza=inq.text)`. `caza` accepts the whole sentence; D resolves the caza or town from it. Without it every directory question gets the 1787 fallback | `core/router.py:62` |
-| A4 | Nothing writes the `transcripts` table | The retention job (privacy demo) has nothing to delete. D will ship `data.transcripts.log_turn(...)` with D5; the pipeline has to call it, **after redaction** | `core/pipeline.py` |
-| A5 | No way to tell whether redaction is real or the identity stub | If `ai.redaction` fails to import, raw text would be stored. Needs a flag such as `providers.REDACTION_REAL` so storage is skipped when it is false | `core/providers.py` |
+| A4 | ~~Nothing writes the `transcripts` table~~ **Done by D (owner approved):** `pipeline.handle` now calls `data.transcripts.record(inq, answer)` after every turn, early returns included | — | `core/pipeline.py` |
+| A5 | ~~Redaction flag~~ **No longer needed:** `record()` runs the redactor plus its own number/email scrub, and stores text only when `STORE_TRANSCRIPT_TEXT=1` | — | — |
 | A6 | `/chat` still accepts a client-supplied `user_ref`, default `"anon"` | All such users share one session that never goes idle, so retention never fires for them. C now mints ids at `GET /api/session`; core should reject or replace `"anon"` | `core/app.py:29` |
 | A7 | No Arabizi price words in the router ("se3er", "adde", "kam") | "kam se3er el nexium 40" goes to procedure search, never to the medicine lookup | `core/router.py` `MEDICINE_TERMS` |
 | A8 | `"dose"` / `"mg of"` refuse before routing | "price of 5 mg of concor" is refused as dosing advice | `core/safety.py` `ADVICE_TERMS` |
@@ -18,7 +18,9 @@ Status is as read from `main` at that time — check the code before assuming an
 | A13 | Facility wording: say "3 of N pharmacies in Aley, not ranked by distance"; never call a hospital "public" | Results are ordered by town then name, not distance; the source has no public/private flag | `core/prompts.py` |
 | A10 | When `directory.nearest` returns `[]` (no location given), ask the user for their town. `data.directory.resolve_caza(text)` returns `None` in that case and never raises | Otherwise the reply is the generic "no official answer" | `core/pipeline.py` |
 | A11 | Facility answers need "opening hours and stock not confirmed — call before going" and "© OpenStreetMap contributors" | We have no hours data; OSM data is ODbL | `core/prompts.py` |
-| A12 | Do **not** write a `Metadata` row per turn | The retention job is the only writer, or the dashboard double-counts. `CLAUDE.md` still says "every turn writes a Metadata row" | `CLAUDE.md`, pipeline |
+| A12 | Do **not** add another `metadata` write | `data.transcripts.record` writes exactly one row per turn; a second writer would double-count | pipeline |
+| A14 | The hotline fallback overwrites the tool (`tool="hotline"`) | An unanswered pharmacy or price question is counted under topic `other`, so the dashboard cannot say *what* went unanswered. Keep the routed tool on the fallback `Answer` | `core/pipeline.py` `_fallback` |
+| A15 | Nothing sets `Inquiry.lang` / `Answer.lang` | `metadata.lang` is empty, so the dashboard's language mix is empty | pipeline / channels |
 
 ## Dev B — AI (`src/ai`) — nothing pushed yet
 | # | Missing | Why it matters |
@@ -33,6 +35,8 @@ Status is as read from `main` at that time — check the code before assuming an
 | # | Missing | Why it matters |
 |---|---------|----------------|
 | C1 | Dashboard should hide cells with fewer than 5 conversations | topic + caza + day can identify one person in a small district |
+| C3 | Real topic values are `procedures`, `directory`, `drug_price`, `emergency`, `dosing_request`, `other` | The dashboard's mock rows use other names (`pharmacy_locator`, `hospital_admission`) |
+| C4 | The dashboard shows mock rows only while `metadata` is empty | After the first real turn it shows just the real rows; the demo reset (D7) will seed realistic ones |
 | C2 | Credit line "© OpenStreetMap contributors" wherever facilities are shown | ODbL licence condition |
 
 ## Healthcare teammate
@@ -45,6 +49,14 @@ Status is as read from `main` at that time — check the code before assuming an
 | H5 | Spot-check ~30 drug rows against the official list (name, strength, form, price) | Prices were fetched 10 Oct from the MoPH database search |
 | H6 | A list of PHCs we can load (name, caza, address, phone) | The PHC network PDF in `data_source/` does not extract; "nearest PHC" returns nothing |
 
+## Whoever runs the app (deploy / demo)
+- **`SESSION_HASH_SALT` must be set to a real value in `.env`.** With the default `change-me`, no transcript rows are stored at all (metadata still is).
+- `STORE_TRANSCRIPT_TEXT=1` to keep scrubbed text for the demo; default is off (rows stored with `[not stored]`).
+- Start the retention loop: `PYTHONPATH=src python -m data.retention --loop` (`RETENTION_INTERVAL_SECONDS`, default 600; use ~20 for the demo). A compose service comes with D6.
+- Scrubbing masks phone numbers, long digit runs and emails — **not names** until Dev B's redactor lands. Demo input should contain a phone number, not a name.
+- Emergency and refusal turns never store text. Voice-note turns store no user text (the transcript is produced inside the pipeline).
+- Pitch wording: "temporary, masked, auto-deleted from our live database", not "keeps no transcripts".
+
 ## Data gaps (Dev D) — known, not blocking
 - Drug coverage: 30 common brands (first page of results each) + three ministry lists. 96 of 403 rows have a price. Common drugs such as Lipitor are absent. A single match can be the only form we fetched (Ventolin = nebuliser solution).
 - No `list_date`: the MoPH search page states none. Only the date we checked is stored.
@@ -54,4 +66,4 @@ Status is as read from `main` at that time — check the code before assuming an
 - `README.md:12` and `docs/GETTING_STARTED.md:20` still say "PostGIS".
 
 ## Dev D — still to build
-D5 `log_turn` + retention job · D6 deploy · D7 demo reset. (D0–D4 done.)
+D6 deploy (incl. retention loop service) · D7 demo reset (incl. seeding metadata). (D0–D5 done.)

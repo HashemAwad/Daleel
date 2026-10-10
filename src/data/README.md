@@ -47,6 +47,18 @@ PYTHONPATH=src python -m data.loaders      # idempotent; prints counts only
 - `resolve_caza(text)` → caza or `None`, never raises — for the router
 - everyday words that are also caza spellings (شوف, sur, sour) only count after a location word, unless they are the whole input
 
+## Turn recording and retention (`transcripts.py`, `retention.py`)
+`transcripts.record(inq, answer)` is called once per turn by `core.pipeline.handle` and never raises.
+- **`metadata`: one row per turn, always** — topic from the route (`procedures`, `directory`, `drug_price`, `emergency`, `dosing_request`, `other`), caza, lang, outcome, Beirut-local day. No model call, no text, no session link.
+- **`transcripts`: only for a channel-minted ref (`wa_…` / `web_…`) and a non-default `SESSION_HASH_SALT`.** Text only when `STORE_TRANSCRIPT_TEXT=1`, after the redactor and `scrub()` (numbers, emails); never for emergency / refusal turns. The table is unlogged.
+- `RECORD_TURNS=0` switches recording off (the test suite does this in `tests/conftest.py`).
+```bash
+PYTHONPATH=src python -m data.retention --once     # delete idle sessions (RETENTION_IDLE_MINUTES) + anything over 24h
+PYTHONPATH=src python -m data.retention --loop     # the same, every RETENTION_INTERVAL_SECONDS (default 600)
+PYTHONPATH=src python -m data.retention --status   # counts only
+docker compose exec db psql -U daleel -c "SELECT turn, role, text FROM transcripts ORDER BY created_at"   # show on stage
+```
+
 ## Tables (`init/schema.sql`)
 | Table | Notes |
 |-------|-------|
@@ -54,7 +66,7 @@ PYTHONPATH=src python -m data.loaders      # idempotent; prints counts only
 | `facilities` | `type` ∈ pharmacy/hospital/phc, `caza` → `cazas`, `lat`/`lon` nullable, provenance + `is_synthetic` |
 | `drugs` | `price` NULL = unknown (never 0), `is_free` NULL = unknown, `strength` matched exactly, provenance |
 | `hotlines` | `verified_on` NULL until a human called it |
-| `transcripts` | TEMPORARY, **redacted text only**, PK `(session_hash, turn)`, optional `outcome/tool/lang` |
+| `transcripts` | TEMPORARY and unlogged, scrubbed text or `[not stored]`, PK `(session_hash, turn)`, optional `outcome/tool/lang` |
 | `metadata` | the only thing that survives a chat: closed vocab, `day` only, **no id / timestamp / session link** |
 | `cazas`, `caza_aliases`, `drug_aliases` | spelling normalisation (Aley / عاليه / 3ale; panadol / بنادول) |
 

@@ -112,6 +112,9 @@ CREATE TABLE IF NOT EXISTS transcripts (
     PRIMARY KEY (session_hash, turn)
 );
 CREATE INDEX IF NOT EXISTS transcripts_created_at_idx ON transcripts (created_at);
+-- Unlogged: transcript text is never written to the write-ahead log, so it cannot outlive its
+-- DELETE in WAL files. A crash empties the table, which is fine for temporary data.
+ALTER TABLE transcripts SET UNLOGGED;
 
 -- ---- metadata: the only thing that survives a conversation -------------------
 -- Closed vocabularies so free text cannot land here. No id / created_at / session link,

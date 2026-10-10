@@ -8,9 +8,18 @@ import httpx
 from shared.contracts import Inquiry, Answer, Source, ToolResult
 from core import safety, router, providers
 from core.prompts import SYSTEM_PROMPT, build_context
+from data import transcripts
 
 
 def handle(inq: Inquiry) -> Answer:
+    """Answer one turn, then record it (D's module: scrubs, stores, never raises).
+    Wrapping here means the early returns (emergency, refusal, unreadable) are recorded too."""
+    answer = _handle(inq)
+    transcripts.record(inq, answer)
+    return answer
+
+
+def _handle(inq: Inquiry) -> Answer:
     # 0. Voice notes: turn audio into text before anything else
     inq = _ensure_text(inq)
     if not inq.text.strip():
