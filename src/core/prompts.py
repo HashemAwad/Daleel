@@ -27,7 +27,9 @@ def build_context(result: ToolResult) -> str:
         parts.append(f"[facility] {f.name}, {f.type}, {f.caza or ''}, {f.address or ''}, {f.phone or ''}{dist}")
     for dr in result.drugs:
         free = "free" if dr.is_free else ("not free" if dr.is_free is False else "unknown")
-        parts.append(f"[medicine] {dr.name}: price {dr.price} {dr.currency}, {free}, list {dr.list_date}")
+        price = f"price {dr.price} {dr.currency}" if dr.price else "price not available"
+        listed = f", list {dr.list_date}" if dr.list_date else ""
+        parts.append(f"[medicine] {dr.name}: {price}, {free}{listed}")
     for h in result.hotlines:
         parts.append(f"[hotline] {h.name} {h.number} — {h.purpose}")
     return "\n".join(parts)
