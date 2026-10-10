@@ -6,7 +6,7 @@ Status is as read from `main` at that time — check the code before assuming an
 ## Dev A — core (`src/core`)
 | # | Missing | Why it matters | Where |
 |---|---------|----------------|-------|
-| A1 | Render a missing price as "price not available", not `price None LBP` | Most drug rows have no price; the model may improvise "free" or a number | `core/prompts.py` `build_context` |
+| A1 | ~~Render a missing price as "price not available"~~ **Done by D (owner asked):** `build_context` no longer prints `price None` or `list None` | — | `core/prompts.py` |
 | A2 | System prompt: when several `[medicine]` records come back, ask "which one?" and quote no price | The lookup returns several products *without* prices on purpose; the model must not pick one | `core/prompts.py` |
 | A3 | ~~Router passes no place~~ **Done by A** (`467889a`): `run_tool` passes `caza=_resolve_caza(inq.text)` | — | — |
 | A4 | ~~Nothing writes the `transcripts` table~~ **Done by D (owner approved):** `pipeline.handle` now calls `data.transcripts.record(inq, answer)` after every turn, early returns included | — | `core/pipeline.py` |
@@ -56,7 +56,8 @@ Status is as read from `main` at that time — check the code before assuming an
 | H3 | Approve Arabic-script brand spellings (بنادول → Panadol, …) | `data.medicine.ALIASES` is empty until then, so Arabic-script drug names go to the hotline |
 | H4 | Which drugs are free, and under what condition | `is_free` is unset on every row; the AMAN list looks like the ministry-dispensed set but nobody has confirmed it |
 | H5 | Spot-check ~30 drug rows against the official list (name, strength, form, price) | Prices were fetched 10 Oct from the MoPH database search |
-| H6 | A list of PHCs we can load (name, caza, address, phone) | The PHC network PDF in `data_source/` does not extract; "nearest PHC" returns nothing |
+| H6 | ~~A list of PHCs we can load~~ **Done by D** (11 Oct): 220 PHCs from the MoPH Health Facility Locator | — |
+| H7 | **Decide the fallback number.** moph.gov.lb labels 1787 "Hotline for Health Services for Displaced Lebanese" and 1214 "MoPH Hotline" | The bot sends every unanswered question to 1787 (`core/pipeline.py`, `core/prompts.py`, `core/stubs.py`, `channels/whatsapp.py`, `web/index.html`). Call both, then A and C change the number in one commit |
 
 ## Deployment (as of Sat 10 Oct, evening)
 - **The demo runs on a teammate's MacBook** with the already-downloading `qwen2.5:7b` and a tunnel: `bash infra/laptop_setup.sh`, then `bash infra/run_demo.sh`. Steps in `infra/SETUP.md`.
@@ -74,10 +75,11 @@ Status is as read from `main` at that time — check the code before assuming an
 - Pitch wording: "temporary, masked, auto-deleted from our live database", not "keeps no transcripts".
 
 ## Data gaps (Dev D) — known, not blocking
-- Drug coverage: 30 common brands (first page of results each) + three ministry lists. 96 of 403 rows have a price. Common drugs such as Lipitor are absent. A single match can be the only form we fetched (Ventolin = nebuliser solution).
-- No `list_date`: the MoPH search page states none. Only the date we checked is stored.
+- Drug coverage (11 Oct): the whole MoPH database, 5,240 rows, 4,646 priced. Lipitor is not in the ministry's database at all. 345 products sold in several pack sizes have no price (the seed has no pack column). A bare brand name now matches more products, so "which one?" is asked more often.
+- `list_date` is 2026-10-05 on 4,166 rows (confirmed against the dated MoPH price list), empty elsewhere.
+- Procedures: 59 verified URLs in `src/data/seeds/procedure_urls.txt` for B to ingest on the demo laptop. No French pages exist; chronic-medication card, disability card and NSSF claims have no official page we could reach.
 - Directory: places resolve by caza name (any spelling) or by a town's first word as OSM spells it (Choueifat, Jounie/Jounieh, Achrafieh). Neighbourhoods not in the data (Hamra, Dahieh), regions ("the south") and Arabic-script town names do not resolve. `lat`/`lon` are ignored; nothing is ranked by distance. "clinic" / "مركز" map to `phc`, and no PHCs are loaded.
-- Pharmacies have no phone numbers or opening hours (OSM has none). The scope's user story promises a phone number per entry.
+- Pharmacies have no phone numbers or opening hours (OSM has none). The scope's user story promises a phone number per entry. PHCs (215 of 220) and 32 governmental hospitals now have one. New PHC and hospital rows have no coordinates and Arabic addresses.
 - `README.md:12` and `docs/GETTING_STARTED.md:20` still say "PostGIS".
 
 ## Dev D — still to build

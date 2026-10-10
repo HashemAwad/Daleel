@@ -54,7 +54,7 @@ def _one(conn, sql, *params):
 
 
 def test_d2_done_when(conn):
-    assert _one(conn, "SELECT count(*) AS n FROM hotlines")["n"] == 4
+    assert _one(conn, "SELECT count(*) AS n FROM hotlines")["n"] == 5
     assert _one(conn, "SELECT count(*) AS n FROM drugs")["n"] > 0
 
 

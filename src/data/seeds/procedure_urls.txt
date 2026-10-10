@@ -1,0 +1,71 @@
+# Verified procedure pages for Daleel. One URL per line; the trailing comment gives language and topic.
+# Every URL was fetched on 2026-10-10 and its body read: it loads and holds a procedure, not a news item.
+# Ingest: PYTHONPATH=src python src/ai/ingest.py URL [URL ...] --lang ar|fr|en   (strip the comment first)
+# No French pages: moph.gov.lb has no French version and Dawlati's pages are empty without JavaScript.
+# Not found on any reachable official page: chronic-medication card, disability card (MoSA), NSSF claims.
+# Details and what could not be verified: docs/DATA_RESEARCH.md
+
+# --- MoPH Administrative Services (official procedure records, Arabic only) ---
+https://www.moph.gov.lb/ar/AdministrativeServices/details/1  # lang=ar topic=drug coverage: request for medicine assistance from MoPH (form MPH12, conditions, 2 weeks)
+https://www.moph.gov.lb/ar/AdministrativeServices/details/185  # lang=ar topic=drug coverage: medicine assistance, IVIG (immune deficiency, ITP, Kawasaki, GB)
+https://www.moph.gov.lb/ar/AdministrativeServices/details/187  # lang=ar topic=drug coverage: medicine assistance, bleeding disorders
+https://www.moph.gov.lb/ar/AdministrativeServices/details/188  # lang=ar topic=drug coverage: medicine assistance, iron overload
+https://www.moph.gov.lb/ar/AdministrativeServices/details/206  # lang=ar topic=drug coverage: medicine assistance, psychotropics
+https://www.moph.gov.lb/ar/AdministrativeServices/details/6  # lang=ar topic=drug coverage: collecting cancer and incurable-disease medicines
+https://www.moph.gov.lb/ar/AdministrativeServices/details/80  # lang=ar topic=drug coverage: narcotic pain medicines for a cancer patient
+https://www.moph.gov.lb/ar/AdministrativeServices/details/72  # lang=ar topic=drug coverage: opioid substitution treatment request
+https://www.moph.gov.lb/ar/AdministrativeServices/details/84  # lang=ar topic=hospitalisation at ministry expense: health coverage, hospital admission request
+https://www.moph.gov.lb/ar/AdministrativeServices/details/81  # lang=ar topic=hospitalisation at ministry expense: extending a hospital stay (extractor drops the body, see DATA_RESEARCH)
+https://www.moph.gov.lb/ar/AdministrativeServices/details/82  # lang=ar topic=hospitalisation at ministry expense: second-category services request
+https://www.moph.gov.lb/ar/AdministrativeServices/details/121  # lang=ar topic=hospitalisation at ministry expense: approval for open-heart / valve / congenital defect surgery
+https://www.moph.gov.lb/ar/AdministrativeServices/details/83  # lang=ar topic=hospitalisation at ministry expense: prostheses and orthopaedic devices
+https://www.moph.gov.lb/ar/AdministrativeServices/details/87  # lang=ar topic=hospitalisation at ministry expense: chronic kidney failure (dialysis) patient register
+https://www.moph.gov.lb/ar/AdministrativeServices/details/85  # lang=ar topic=hospitalisation at ministry expense: monthly dialysis sessions report
+https://www.moph.gov.lb/ar/AdministrativeServices/details/124  # lang=ar topic=vaccination: child immunisation card
+https://www.moph.gov.lb/ar/AdministrativeServices/details/133  # lang=ar topic=vaccination: travellers going to endemic areas
+https://www.moph.gov.lb/ar/AdministrativeServices/details/127  # lang=ar topic=birth: newborn health record
+https://www.moph.gov.lb/ar/AdministrativeServices/details/134  # lang=ar topic=death: permit to bring a body into Lebanon
+https://www.moph.gov.lb/ar/AdministrativeServices/details/135  # lang=ar topic=death: permit to transfer a body abroad
+https://www.moph.gov.lb/ar/AdministrativeServices/details/122  # lang=ar topic=disability: invalidity pension for children/spouses of civil servants and retirees
+https://www.moph.gov.lb/ar/AdministrativeServices/details/132  # lang=ar topic=PHC / public health services: HIV counselling and follow-up
+https://www.moph.gov.lb/ar/AdministrativeServices/details/136  # lang=ar topic=PHC / public health services: tuberculosis treatment
+https://www.moph.gov.lb/ar/AdministrativeServices/details/139  # lang=ar topic=PHC / public health services: treatment after an animal bite (rabies)
+https://www.moph.gov.lb/ar/AdministrativeServices/details/140  # lang=ar topic=PHC / public health services: malaria diagnosis and treatment
+https://www.moph.gov.lb/ar/AdministrativeServices/details/119  # lang=ar topic=medical licence: general medicine
+https://www.moph.gov.lb/ar/AdministrativeServices/details/214  # lang=ar topic=medical licence: dentistry
+https://www.moph.gov.lb/ar/AdministrativeServices/details/39  # lang=ar topic=medical licence: pharmacy
+https://www.moph.gov.lb/ar/AdministrativeServices/details/250  # lang=ar topic=medical licence: licensed nurse
+https://www.moph.gov.lb/ar/AdministrativeServices/details/251  # lang=ar topic=medical licence: nurse
+https://www.moph.gov.lb/ar/AdministrativeServices/details/228  # lang=ar topic=medical licence: assistant nurse
+https://www.moph.gov.lb/ar/AdministrativeServices/details/217  # lang=ar topic=medical licence: midwife
+https://www.moph.gov.lb/ar/AdministrativeServices/details/167  # lang=ar topic=medical licence: physiotherapist
+https://www.moph.gov.lb/ar/AdministrativeServices/details/235  # lang=ar topic=medical licence: nutrition and dietetics
+https://www.moph.gov.lb/ar/AdministrativeServices/details/236  # lang=ar topic=medical licence: clinical / educational psychologist
+https://www.moph.gov.lb/ar/AdministrativeServices/details/231  # lang=ar topic=medical licence: licensed laboratory technician
+https://www.moph.gov.lb/ar/AdministrativeServices/details/105  # lang=ar topic=medical licence: title of medical specialist
+https://www.moph.gov.lb/ar/AdministrativeServices/details/100  # lang=ar topic=medical licence: certificate for non-Lebanese practitioners
+https://www.moph.gov.lb/ar/AdministrativeServices/details/102  # lang=ar topic=medical licence: amending a practice licence
+https://www.moph.gov.lb/ar/AdministrativeServices/details/38  # lang=ar topic=medical licence: opening and operating a pharmacy (extractor drops the body, see DATA_RESEARCH)
+https://www.moph.gov.lb/ar/AdministrativeServices/details/104  # lang=ar topic=medical licence: opening a charitable dispensary (extractor drops the body, see DATA_RESEARCH)
+
+# --- MoPH information pages ---
+https://www.moph.gov.lb/en/Pages/14/1402/phc-faq  # lang=en topic=PHC services: FAQ (who can use PHC centres, essential and chronic drugs)
+https://www.moph.gov.lb/ar/Pages/14/1402/phc-faq  # lang=ar topic=PHC services: FAQ (page is mostly English under Arabic menus)
+https://www.moph.gov.lb/en/Pages/3/749/primary-health-care  # lang=en topic=PHC services: overview and service list
+https://www.moph.gov.lb/ar/Pages/3/749/primary-health-care  # lang=ar topic=PHC services: overview and service list
+https://www.moph.gov.lb/en/Pages/127/53002/the-phc-centers-and-lists-of-child-vaccines-and-drugs-for-chronic-and-non-chronic-diseases-provided-  # lang=en topic=PHC services: centres and lists of vaccines and chronic / non-chronic drugs provided (very long page)
+https://www.moph.gov.lb/ar/Pages/127/53002/the-phc-centers-and-lists-of-child-vaccines-and-drugs-for-chronic-and-non-chronic-diseases-provided-  # lang=ar topic=PHC services: centres and lists of vaccines and chronic / non-chronic drugs provided (very long page)
+https://www.moph.gov.lb/en/Pages/3/1033/expanded-program-on-immunization  # lang=en topic=vaccination: Expanded Program on Immunization
+https://www.moph.gov.lb/ar/Pages/3/1033/expanded-program-on-immunization  # lang=ar topic=vaccination: Expanded Program on Immunization
+https://www.moph.gov.lb/en/Pages/3/4685/admission-criteria-guidelines  # lang=en topic=hospitalisation at ministry expense: admission criteria guidelines
+https://www.moph.gov.lb/ar/Pages/3/4685/admission-criteria-guidelines  # lang=ar topic=hospitalisation at ministry expense: admission criteria guidelines
+https://www.moph.gov.lb/en/Pages/3/4019/mother-and-child-health  # lang=en topic=birth: mother and child health programme
+https://www.moph.gov.lb/ar/Pages/3/4019/mother-and-child-health  # lang=ar topic=birth: mother and child health programme
+https://www.moph.gov.lb/en/Pages/3/77224/free-medicines-distributed-by-the-ministry-of-public-health  # lang=en topic=drug coverage: free medicines distributed by MoPH (short page, the lists are spreadsheets)
+https://www.moph.gov.lb/ar/Pages/3/77224/free-medicines-distributed-by-the-ministry-of-public-health  # lang=ar topic=drug coverage: free medicines distributed by MoPH (short page, the lists are spreadsheets)
+https://www.moph.gov.lb/en/view/75556/1564-the-lifeline  # lang=en topic=hotline: 1564 national lifeline, psychological support and suicide prevention
+https://www.moph.gov.lb/ar/view/75556/1564-the-lifeline  # lang=ar topic=hotline: 1564 national lifeline, psychological support and suicide prevention
+
+# --- Directorate General of Civil Status (Ministry of Interior) ---
+https://www.dgcs.gov.lb/arabic/applicationmechanisms/mechanism4  # lang=ar topic=birth and death certificates: civil registry offices (birth, death, marriage, divorce: documents, steps, fees)
+https://www.dgcs.gov.lb/arabic/applicationmechanisms/mechanism3  # lang=ar topic=birth and death certificates: foreigners' civil events department

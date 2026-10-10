@@ -1,5 +1,6 @@
 number,name,purpose,verified_on,source_url
-1787,MoPH hotline,general health info,,
-1214,Primary care,medication / coverage,,
-1564,Mental health,mental health support,,
-140,Red Cross,emergency / ambulance,,
+1787,MoPH hotline for displaced Lebanese,Hotline for Health Services for Displaced Lebanese (wording of the moph.gov.lb site header),,https://www.moph.gov.lb/en/contact
+1214,MoPH Hotline,MoPH Hotline (wording of the moph.gov.lb site header; the site states no further purpose),,https://www.moph.gov.lb/en/contact
+01/832700,MoPH hospital admission hotline,Hotline for the Patient Admission to Hospitals (wording of the moph.gov.lb site header),,https://www.moph.gov.lb/en/contact
+1564,The Lifeline (Embrace with the MoPH National Mental Health Programme),"National hotline for psychological support and suicide prevention, in partnership with Embrace (available 24/7)",,https://www.moph.gov.lb/en/view/75556/1564-the-lifeline
+140,Lebanese Red Cross,For Emergencies Call 140; the national medical emergency hotline,,https://www.redcross.org.lb/get-in-touch/

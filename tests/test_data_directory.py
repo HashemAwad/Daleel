@@ -155,9 +155,14 @@ def test_real_sentences(search):
     assert search.nearest("hospital", caza="مستشفى ببيروت")[0].caza == "Beirut"
 
 
+def test_phc_centres_are_loaded(search):
+    found = search.nearest("phc", caza="Aley", k=50)
+    assert found and all(f.type == "phc" and f.caza == "Aley" for f in found)
+    assert any(f.phone for f in found)
+
+
 def test_real_empty_cases(search):
     assert search.nearest("pharmacy") == []                       # no place
     assert search.nearest("pharmacy", caza="nearest pharmacy") == []
     assert search.nearest("pharmacy", caza="Atlantis") == []
-    assert search.nearest("phc", caza="Aley") == []               # no PHCs loaded
     assert search.nearest("dentist", caza="Aley") == []

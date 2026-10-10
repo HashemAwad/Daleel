@@ -21,15 +21,16 @@ PYTHONPATH=src python -m data.loaders      # idempotent; prints counts only
 ```
 | CSV | Rows | Source |
 |-----|------|--------|
-| `drugs.csv` | 403 (96 priced) | MoPH Lebanon National Drugs Database (30 common brands, with per-drug `source_url`) + MoPH lists handed to the team (allocation, tender 388, AMAN) |
-| `facilities.csv` | 967 pharmacies, 193 hospitals | OpenStreetMap via HOT/HDX export, snapshot 2026-10-05. **ODbL — credit "© OpenStreetMap contributors"**. No phone numbers, no opening hours, no PHCs yet |
+| `drugs.csv` | 5,240 (4,646 priced) | The whole MoPH Lebanon National Drugs Database (202 list pages, per-drug `source_url`) + MoPH lists handed to the team (allocation, tender 388, AMAN) |
+| `facilities.csv` | 967 pharmacies, 205 hospitals, 220 PHCs | OpenStreetMap via HOT/HDX export, snapshot 2026-10-05 (**ODbL — credit "© OpenStreetMap contributors"**) + MoPH Health Facility Locator: all PHCs (address + phone, no coordinates), 12 governmental hospitals, and a phone on 20 OSM hospitals. Pharmacies still have no phone; no opening hours |
 | `cazas.csv`, `caza_aliases.csv` | 26 / ~130 keys | hand-written; caza names match the OSM `adm2_name` values |
-| `hotlines.csv` | 4 | `verified_on` empty until someone calls each number |
+| `hotlines.csv` | 5 | wording copied from moph.gov.lb / redcross.org.lb; `verified_on` empty until someone calls each number. **The app does not read this table: its hotlines are `core/stubs.py`** |
 
 - Empty CSV cell = NULL = "unknown". A price is never 0; `is_free` is unset everywhere until a human confirms it.
 - Same name/strength/form at two prices (pack sizes) → price left unknown rather than guessed.
-- `list_date` is empty: the MoPH search page doesn't state one. `checked_on` is the day we fetched.
-- Regenerate drugs/facilities: `python -m data.build_seeds --osm <geojson> --xlsx data_source` (needs `openpyxl`).
+- `list_date` is 2026-10-05 where the dated MoPH public price list confirms the name and strength, else empty. `checked_on` is the day we fetched.
+- Sources, gaps and the spot-check list: `docs/DATA_RESEARCH.md`. MoPH pharmacies (981, 7 cazas) wait in `seeds/facilities_new.csv`: not merged, they would duplicate the OSM rows.
+- Regenerate: `python -m data.build_seeds --suffix _new --moph-all --price-list <xls>` / `--no-moph --moph-facilities` (see `docs/DATA_RESEARCH.md`); the merge into the live CSVs was done by hand on 11 Oct.
 - Use `data.normalize.normalize()` / `place_key()` for every key, at ingest **and** query time.
 
 ## Medicine lookup (`medicine.py`)
