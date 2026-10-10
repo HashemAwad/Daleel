@@ -227,7 +227,14 @@ def test_empty_answer_still_sends_something():
 
 
 # ---- C4: dashboard API -----------------------------------------------------
-def test_metrics_falls_back_to_mock():
+def test_metrics_falls_back_to_mock(monkeypatch):
+    # Force the DB read to fail. Since D5 the metadata table can hold real
+    # rows locally, so "no database" has to be simulated rather than assumed —
+    # otherwise this passes or fails depending on whether Docker is up.
+    def no_db():
+        raise RuntimeError("no database")
+
+    monkeypatch.setattr(metrics, "_fetch_rows", no_db)
     m = client.get("/api/metrics").json()
     assert m["source"] == "mock"
     for key in ("total_turns", "topics", "languages", "outcomes", "days",
