@@ -114,11 +114,12 @@ def test_real_misses_and_ambiguity(lookup):
     assert len(several) > 1 and all(d.price is None for d in several)
 
 
-def test_chat_end_to_end(lookup):
+def test_chat_end_to_end(lookup, monkeypatch):
     from fastapi.testclient import TestClient
     from core.app import app
-    from core import providers
+    from core import providers, stubs
     if not isinstance(providers.medicine, MedicineLookupImpl):
         pytest.skip("providers did not pick up the real lookup")
+    monkeypatch.setattr(providers, "llm", stubs.StubLLM())      # don't depend on a model being installed
     body = TestClient(app).post("/chat", json={"channel": "web", "text": "Combien coûte le Concor 5?", "user_ref": "t"}).json()
     assert body["tool"] == "medicine" and body["grounded"] is True

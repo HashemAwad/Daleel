@@ -125,7 +125,8 @@ def test_record_writes_scrubbed_turns_and_one_metadata_row(db):
     assert record(_inq("and in Saida?"), _ans()) is True
     turns = _turns(db)
     assert [(t["turn"], t["role"]) for t in turns] == [(1, "user"), (2, "assistant"), (3, "user"), (4, "assistant")]
-    assert turns[0]["text"] == "pharmacy in Aley, call me on [number]"
+    # masked by B's redactor ("[PHONE]") when installed, else by our scrub ("[number]")
+    assert turns[0]["text"].startswith("pharmacy in Aley, call me on [") and "123" not in turns[0]["text"]
     assert turns[1]["outcome"] == "answered" and turns[1]["tool"] == "directory"
     meta = _meta(db)
     assert sorted(m["caza"] for m in meta) == ["Aley", "Saida"]

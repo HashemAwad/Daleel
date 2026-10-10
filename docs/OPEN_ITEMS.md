@@ -1,6 +1,6 @@
 # Open items — what is missing, and from whom
 
-Maintained by Dev D. Last updated Sat 10 Oct, after D5. Each item says who owns it and what breaks without it.
+Maintained by Dev D. Last updated Sat 10 Oct, after D5 and Dev B's B1–B4. Each item says who owns it and what breaks without it.
 Status is as read from `main` at that time — check the code before assuming an item is still open.
 
 ## Dev A — core (`src/core`)
@@ -20,13 +20,14 @@ Status is as read from `main` at that time — check the code before assuming an
 | A11 | Facility answers need "opening hours and stock not confirmed — call before going" and "© OpenStreetMap contributors" | We have no hours data; OSM data is ODbL | `core/prompts.py` |
 | A12 | Do **not** add another `metadata` write | `data.transcripts.record` writes exactly one row per turn; a second writer would double-count | pipeline |
 | A14 | The hotline fallback overwrites the tool (`tool="hotline"`) | An unanswered pharmacy or price question is counted under topic `other`, so the dashboard cannot say *what* went unanswered. Keep the routed tool on the fallback `Answer` | `core/pipeline.py` `_fallback` |
+| A16 | `OllamaLLM.available()` is true when the Ollama server is up, even with **no model pulled** | The app then picks Ollama, every model call fails, and every `/chat` reply becomes the 1787 fallback. Check that the configured model is present, else fall back to the stub | `core/llm_ollama.py` |
 | A15 | Nothing sets `Inquiry.lang` / `Answer.lang` | `metadata.lang` is empty, so the dashboard's language mix is empty | pipeline / channels |
 
-## Dev B — AI (`src/ai`) — nothing pushed yet
+## Dev B — AI (`src/ai`) — B1–B4 landed (ingest, search, redaction, voice); classifier not yet
 | # | Missing | Why it matters |
 |---|---------|----------------|
 | B1 | Confirm the embedder is 1024-dim (bge-m3) | `procedures.embedding` is `vector(1024)`; any other size fails on insert |
-| B2 | `ai.redaction.redact` | Until it exists the pipeline uses the identity stub: nothing is redacted |
+| B2 | ~~`ai.redaction.redact`~~ **Landed.** It masks phones, IDs, emails and *introduced* names ("my name is …"); a bare name mid-sentence is not masked | Stored transcript text can still contain a name |
 | B3 | `ai.classifier.classify` must return closed vocabulary only | `metadata` has CHECK constraints: `topic`/`subtopic` match `^[a-z_]{1,40}$`, `caza` must be a `cazas.name_en` or null |
 | B5 | Redaction must not mask place names (Aley, Saida, Sour…) as if they were personal names | The directory lookup receives the *redacted* sentence; a masked place means no result |
 | B4 | Eval set should include medicine near-misses | Concor 5 vs 10, Concor vs Concor Plus, a bare brand name, a drug we don't have (Lipitor) — expected answer is the right strength, "which one?", or the hotline |
