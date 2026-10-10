@@ -13,7 +13,9 @@ from data import transcripts
 
 def handle(inq: Inquiry) -> Answer:
     """Answer one turn, then record it (D's module: scrubs, stores, never raises).
-    Wrapping here means the early returns (emergency, refusal, unreadable) are recorded too."""
+    Wrapping here means the early returns (emergency, refusal, unreadable) are recorded too.
+    Voice notes are transcribed first, so the recorded turn has their text and caza as well."""
+    inq = _ensure_text(inq)
     answer = _handle(inq)
     transcripts.record(inq, answer)
     return answer

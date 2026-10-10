@@ -1,6 +1,6 @@
 # Open items — what is missing, and from whom
 
-Maintained by Dev D. Last updated Sat 10 Oct, after D7 and the first cloud deploy.
+Maintained by Dev D. Last updated Sun 11 Oct, after the full review of D0–D7 and its fixes.
 Status is as read from `main` at that time — check the code before assuming an item is still open.
 
 ## Dev A — core (`src/core`)
@@ -21,31 +21,38 @@ Status is as read from `main` at that time — check the code before assuming an
 | A12 | Do **not** add another `metadata` write | `data.transcripts.record` writes exactly one row per turn; a second writer would double-count | pipeline |
 | A14 | The hotline fallback overwrites the tool (`tool="hotline"`) | An unanswered pharmacy or price question is counted under topic `other`, so the dashboard cannot say *what* went unanswered. Keep the routed tool on the fallback `Answer` | `core/pipeline.py` `_fallback` |
 | A17 | **The local model invents a source link on facility answers.** Asked "bade saydaliyye 2arib mn Aley" on the deployed server, `qwen2.5:3b` replied with one pharmacy and a made-up URL (`https://www.marinafarm.com.lb/`). The data has no URLs for facilities | A fabricated source in front of the jury. Facility and medicine answers should be rendered from the records without asking the model for a source, or any URL not present in the tool result should be stripped | `core/prompts.py`, `core/pipeline.py` |
+| A18 | `/chat` has no length limit on `text` (`ChatIn`) | One very long message ties up the worker (regex + model). The server's proxy now caps requests at 64 KB; add `Field(max_length=2000)` | `core/app.py` |
+| A19 | `providers.py` swaps in a stub silently, and the stubs return FAKE data (`StubMedicine` price 0.0, `StubDirectory` "Example pharmacy", `StubProcedureSearch` an invented procedure) | A typo or missing package in any module turns the bot into a fake one with no log line. Log at ERROR in each `except`, and make the stubs return `[]` so the hotline fallback fires. `infra/vm_setup.sh` now fails if a stub is live | `core/providers.py`, `core/stubs.py` |
+| A20 | `/health/channels`, `/docs` and `/openapi.json` are public | They show configuration flags, the sender number and provider names | `core/app.py`, `channels/web.py` |
+| A21 | `router.py` docstring says the model picks the tool; keywords do unless `MODEL_ROUTER=1` | Misleading for anyone reading it | `core/router.py:4` |
 | A16 | `OllamaLLM.available()` is true when the Ollama server is up, even with **no model pulled** | The app then picks Ollama, every model call fails, and every `/chat` reply becomes the 1787 fallback. Check that the configured model is present, else fall back to the stub | `core/llm_ollama.py` |
-| A15 | Nothing sets `Inquiry.lang` / `Answer.lang` | `metadata.lang` is empty, so the dashboard's language mix is empty | pipeline / channels |
+| A15 | `Inquiry.lang` is set only for voice notes (from Whisper); typed text leaves it empty | `metadata.lang` is empty for typed turns, so the dashboard's language mix under-counts | pipeline / channels |
 
-## Dev B — AI (`src/ai`) — B1–B4 landed (ingest, search, redaction, voice); classifier not yet
+## Dev B — AI (`src/ai`) — B1–B5 landed (ingest, search, redaction, voice, classifier)
 | # | Missing | Why it matters |
 |---|---------|----------------|
 | B1 | Confirm the embedder is 1024-dim (bge-m3) | `procedures.embedding` is `vector(1024)`; any other size fails on insert |
 | B2 | ~~`ai.redaction.redact`~~ **Landed.** It masks phones, IDs, emails and *introduced* names ("my name is …"); a bare name mid-sentence is not masked | Stored transcript text can still contain a name |
 | B3 | `ai.classifier.classify` must return closed vocabulary only | `metadata` has CHECK constraints: `topic`/`subtopic` match `^[a-z_]{1,40}$`, `caza` must be a `cazas.name_en` or null |
+| B6 | `ai/classifier.py` docstring says the retention job calls it. Nothing calls it at runtime | Misleading; see H2 |
+| B7 | `redact()` misses numbers written with doubled spaces, underscores or invisible direction marks (`03  123  456`, `03_123_456`), and its email pattern is slow on very long input | The MODEL sees those numbers (D's `scrub` only protects what is stored). Strip `[\u200b-\u200f]` first and allow up to 3 separators; bound the email quantifiers |
 | B5 | Redaction must not mask place names (Aley, Saida, Sour…) as if they were personal names | The directory lookup receives the *redacted* sentence; a masked place means no result |
 | B4 | Eval set should include medicine near-misses | Concor 5 vs 10, Concor vs Concor Plus, a bare brand name, a drug we don't have (Lipitor) — expected answer is the right strength, "which one?", or the hotline |
 
 ## Dev C — channels (`src/channels`, `web`)
 | # | Missing | Why it matters |
 |---|---------|----------------|
-| C1 | Dashboard should hide cells with fewer than 5 conversations | topic + caza + day can identify one person in a small district |
+| C1 | ~~Hide dashboard cells under 5~~ **Done by C** (`channels/metrics.py` withholds groups under 5) | — |
+| C5 | `channels/asgi.py` and `channels/__init__.py` say to run `channels.asgi:app` until core registers the routes | Core does register them now, so `core.app:app` serves everything |
 | C3 | Real topic values are `procedures`, `directory`, `drug_price`, `emergency`, `dosing_request`, `other` | The dashboard's mock rows use other names (`pharmacy_locator`, `hospital_admission`) |
 | C4 | The dashboard shows mock rows only while `metadata` is empty | After the first real turn it shows just the real rows; the demo reset (D7) will seed realistic ones |
-| C2 | Credit line "© OpenStreetMap contributors" wherever facilities are shown | ODbL licence condition |
+| C2 | ~~OSM credit line~~ **Done by C** (`web/index.html`, `channels/render.py`) | — |
 
 ## Healthcare teammate
 | # | Missing | Why it matters |
 |---|---------|----------------|
 | H1 | Call each hotline and record the date. **1214's purpose is unconfirmed** | `hotlines.verified_on` is empty for all four |
-| H2 | The fixed topic list for metadata (suggest adding mental-health and emergency) | Retention validates against it |
+| H2 | The fixed topic list for metadata (suggest adding mental-health) | Today topics come from a fixed map in `data.transcripts` (`procedures`, `directory`, `drug_price`, `emergency`, `dosing_request`, `other`); B's classifier has a different vocabulary and is not called |
 | H3 | Approve Arabic-script brand spellings (بنادول → Panadol, …) | `data.medicine.ALIASES` is empty until then, so Arabic-script drug names go to the hotline |
 | H4 | Which drugs are free, and under what condition | `is_free` is unset on every row; the AMAN list looks like the ministry-dispensed set but nobody has confirmed it |
 | H5 | Spot-check ~30 drug rows against the official list (name, strength, form, price) | Prices were fetched 10 Oct from the MoPH database search |
@@ -60,8 +67,9 @@ Status is as read from `main` at that time — check the code before assuming an
 ## Whoever runs the app (deploy / demo)
 - **`SESSION_HASH_SALT` must be set to a real value in `.env`.** With the default `change-me`, no transcript rows are stored at all (metadata still is).
 - `STORE_TRANSCRIPT_TEXT=1` to keep scrubbed text for the demo; default is off (rows stored with `[not stored]`).
-- Start the retention loop: `PYTHONPATH=src python -m data.retention --loop` (`RETENTION_INTERVAL_SECONDS`, default 600; use ~20 for the demo). A compose service comes with D6.
-- Scrubbing masks phone numbers, long digit runs and emails — **not names** until Dev B's redactor lands. Demo input should contain a phone number, not a name.
+- **Never run `pytest` on the demo server** (the DB tests reload seed tables and delete idle transcripts; `DALEEL_ENV=production` makes the suite refuse). Use `REQUIRE_DB=1 pytest -q` on a laptop for the pre-demo run so a down database fails instead of skipping.
+- Start the retention loop: `PYTHONPATH=src python -m data.retention --loop` (`RETENTION_INTERVAL_SECONDS`, default 600; use ~20 for the demo). On the server it runs as the `daleel-retention` systemd unit (`infra/vm_setup.sh`); on a laptop start it by hand.
+- Masked before storage: phone numbers, IDs, emails and names introduced as "my name is …" (B's redactor), plus a digit/email backstop (D's `scrub`). **Not masked: a bare name, an address, a spelled-out number.** Demo input should contain a phone number, not a name.
 - Emergency and refusal turns never store text. Voice-note turns store no user text (the transcript is produced inside the pipeline).
 - Pitch wording: "temporary, masked, auto-deleted from our live database", not "keeps no transcripts".
 

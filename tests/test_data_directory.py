@@ -53,6 +53,24 @@ def test_ambiguous_words_need_a_location_word_inside_a_sentence():
     assert _r("bade shouf saydaliyye b Aley") == ("Aley", None)
 
 
+@pytest.mark.parametrize("sentence", [
+    "بشوف شو بدي",            # "I'll see what I want"
+    "بعت الصور",              # "I sent the pictures"
+    "وشوف وين الصيدلية",       # "and look where the pharmacy is"
+    "bsur", "lsur", "bshouf kif njaded el jawaz",
+    "sour cream", "flat tyre", "shouf wen el saydaliyye",
+])
+def test_everyday_words_never_resolve(sentence):
+    assert _r(sentence) == (None, None)
+
+
+@pytest.mark.parametrize("word,caza", [("sur", "Sour"), ("sour", "Sour"), ("tyre", "Sour"), ("صور", "Sour"),
+                                       ("shouf", "Chouf"), ("شوف", "Chouf")])
+def test_each_ambiguous_word_needs_a_location_word(word, caza):
+    assert _r(f"pharmacy {word} please") == (None, None)
+    assert _r(f"pharmacy in {word} please") == (caza, None)
+
+
 def test_longest_phrase_and_first_mention_win():
     assert _r("hospital in Bint Jbeil") == ("Bent Jbeil", None)
     assert _r("hospital in Jbeil") == ("Jbeil", None)
@@ -74,27 +92,51 @@ def test_order_puts_named_town_then_same_name_town_first():
     assert [r["id"] for r in order(rows, "Aley", "choueifat", ALIASES)] == [1, 2, 3]
 
 
-def test_db_failure_returns_empty(monkeypatch):
+def test_db_failure_raises_from_nearest_but_not_from_resolve_caza(monkeypatch):
+    # [] from nearest() means "no place given" and makes the bot ask for a town; an outage must not look like that
     def boom():
         raise RuntimeError("secret")
     monkeypatch.setattr(directory, "_tables", None)
     monkeypatch.setattr(directory, "get_conn", boom)
-    assert DirectorySearchImpl().nearest("pharmacy", caza="Aley") == []
+    with pytest.raises(RuntimeError):
+        DirectorySearchImpl().nearest("pharmacy", caza="Aley")
+    with pytest.raises(RuntimeError):
+        DirectorySearchImpl().nearest("pharmacy")
     assert resolve_caza("pharmacy in Aley") is None
+    assert DirectorySearchImpl().nearest("dentist", caza="Aley") == []      # unknown kind: no DB needed
+
+
+def test_empty_place_tables_are_an_error_and_are_not_cached(monkeypatch):
+    class Empty:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def execute(self, *a):
+            class R(list):
+                def fetchall(self): return []
+            return R()
+    monkeypatch.setattr(directory, "_tables", None)
+    monkeypatch.setattr(directory, "get_conn", lambda: Empty())
+    with pytest.raises(RuntimeError):
+        directory._load()
+    assert directory._tables is None
 
 
 # ---- against the real seed data -------------------------------------------------
-@pytest.fixture(scope="module")
-def search():
-    from data.db import apply_schema
-    from data.loaders import load
-    try:
-        apply_schema()
-        load()
-    except Exception:
-        pytest.skip("Postgres not reachable")
-    directory._tables = None
+@pytest.fixture
+def search(db_ready, monkeypatch):
+    monkeypatch.setattr(directory, "_tables", None)      # fresh tables for this test, restored afterwards
     return DirectorySearchImpl()
+
+
+def test_real_coordinates_rank_by_distance(search):
+    got = search.nearest("pharmacy", lat=33.81, lon=35.60, k=5)          # Aley town
+    assert len(got) == 5 and got[0].caza == "Aley"
+    assert [f.distance_km for f in got] == sorted(f.distance_km for f in got) and got[0].distance_km < 5
+
+
+def test_real_everyday_sentences_resolve_to_no_place(search):
+    for sentence in ["بعت الصور", "وشوف وين الصيدلية", "how do I get my cancer medicine from the ministry?"]:
+        assert resolve_caza(sentence) is None, sentence
 
 
 def test_d4_done_when(search):

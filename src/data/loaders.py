@@ -16,12 +16,22 @@ from data.normalize import normalize, place_key
 SEEDS = Path(__file__).parent / "seeds"
 
 
-def _rows(name: str) -> list[dict]:
+def _rows(name: str, required: bool = True) -> list[dict]:
+    """A missing or empty required seed file is an error: loading it would wipe the table."""
     path = SEEDS / name
     if not path.exists():
+        if required:
+            raise FileNotFoundError(f"seed file missing: {path}")
         return []
     with open(path, newline="", encoding="utf-8") as fh:
-        return list(csv.DictReader(fh))
+        rows = list(csv.DictReader(fh))
+    if required and not rows:
+        raise ValueError(f"seed file has no rows: {path}")
+    return rows
+
+
+def _true(cell: str | None) -> bool:
+    return (cell or "").strip().lower() == "true"
 
 
 def _v(s: str | None):
@@ -60,7 +70,7 @@ def caza_alias_rows(cazas: list[dict], extra: list[dict]) -> list[tuple[str, str
 def load() -> dict[str, int]:
     cazas, drugs, facilities = _rows("cazas.csv"), _rows("drugs.csv"), _rows("facilities.csv")
     hotlines = _rows("hotlines.csv")
-    aliases = caza_alias_rows(cazas, _rows("caza_aliases.csv"))
+    aliases = caza_alias_rows(cazas, _rows("caza_aliases.csv", required=False))
 
     # generics = other products with the same ingredient(s) and strength that MoPH marks 'G'
     for d in drugs:
@@ -92,14 +102,14 @@ def load() -> dict[str, int]:
             [(d["name"], normalize(d["name"]), _v(d["strength"]), _v(d["form"]), _v(d["atc"]),
               sorted(generic_names.get((d["_ing"], d["strength"]), set()) - {d["name"]}),
               d["_ing"], _v(d["price"]), d["currency"] or "LBP", _v(d["list_date"]), _v(d["source"]),
-              _v(d["source_url"]), _v(d["checked_on"]), d["is_synthetic"] == "true") for d in drugs])
+              _v(d["source_url"]), _v(d["checked_on"]), _true(d["is_synthetic"])) for d in drugs])
 
         cur.execute("DELETE FROM facilities")
         cur.executemany(
             "INSERT INTO facilities (name, type, caza, address, phone, lat, lon, source, source_url, "
             "checked_on, is_synthetic) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             [(f["name"], f["type"], _v(f["caza"]), _v(f["address"]), _v(f["phone"]), _v(f["lat"]), _v(f["lon"]),
-              _v(f["source"]), _v(f["source_url"]), _v(f["checked_on"]), f["is_synthetic"] == "true")
+              _v(f["source"]), _v(f["source_url"]), _v(f["checked_on"]), _true(f["is_synthetic"]))
              for f in facilities])
 
     return {"cazas": len(cazas), "caza_aliases": len(aliases), "hotlines": len(hotlines),

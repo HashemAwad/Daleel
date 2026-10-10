@@ -9,9 +9,9 @@ Built for the Hack for Health hackathon (AUB). **Phase 1:** the chatbot. **Phase
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env            # add ANTHROPIC_API_KEY
-docker compose up -d            # Postgres + pgvector + PostGIS
+docker compose up -d            # Postgres + pgvector (+ pg_trgm)
 PYTHONPATH=src uvicorn core.app:app --reload
-PYTHONPATH=src pytest -q        # 4 passed
+PYTHONPATH=src pytest -q        # all green
 ```
 Then open `web/index.html`. Full setup: **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
 

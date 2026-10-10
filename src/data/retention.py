@@ -2,7 +2,7 @@
 
     PYTHONPATH=src python -m data.retention --once      # one sweep now (use this live on stage)
     PYTHONPATH=src python -m data.retention --loop      # sweep at start, then every RETENTION_INTERVAL_SECONDS
-    PYTHONPATH=src python -m data.retention --status    # counts + oldest age, never text; exit 1 if over the cap
+    PYTHONPATH=src python -m data.retention --status    # counts only, never text; exit 1 if anything is overdue
 
 The anonymous metadata row was already written when the turn happened (data.transcripts.record),
 so this job only deletes:
@@ -39,14 +39,26 @@ def run_once(idle_minutes: int | None = None) -> int:
     return deleted
 
 
+OVERDUE_SLACK_SECONDS = 120     # how long past the idle window before a session counts as overdue
+
+
 def status() -> dict:
+    """Counts only. `overdue_sessions` > 0 means the loop is not doing its job."""
     with get_conn() as conn:
         row = conn.execute(
             "SELECT count(*) AS transcript_rows, count(DISTINCT session_hash) AS sessions, "
             "COALESCE(EXTRACT(EPOCH FROM now() - min(created_at)), 0)::int AS oldest_seconds FROM transcripts"
         ).fetchone()
+        row["overdue_sessions"] = conn.execute(
+            "SELECT count(*) AS n FROM (SELECT 1 FROM transcripts GROUP BY session_hash "
+            "HAVING max(created_at) < now() - make_interval(mins => %s, secs => %s)) s",
+            (settings.retention_idle_minutes, _interval() + OVERDUE_SLACK_SECONDS)).fetchone()["n"]
         row["metadata_rows"] = conn.execute("SELECT count(*) AS n FROM metadata").fetchone()["n"]
     return row
+
+
+def _interval() -> int:
+    return int(os.getenv("RETENTION_INTERVAL_SECONDS", "600"))
 
 
 def main() -> int:
@@ -61,17 +73,21 @@ def main() -> int:
     if args.status:
         s = status()
         print(s)
-        return 1 if s["oldest_seconds"] > HARD_CAP_HOURS * 3600 + 600 else 0
+        return 1 if s["overdue_sessions"] or s["oldest_seconds"] > HARD_CAP_HOURS * 3600 + 600 else 0
     if args.once:
         print(f"deleted {run_once()} transcript rows")
         return 0
-    interval = int(os.getenv("RETENTION_INTERVAL_SECONDS", "600"))
+    failures = 0
     while True:
         try:
             log.info("deleted %d transcript rows", run_once())
+            failures = 0
         except Exception as e:
-            log.warning("retention sweep failed: %s", type(e).__name__)
-        time.sleep(interval)
+            failures += 1
+            log.warning("retention sweep failed (%d in a row): %s", failures, type(e).__name__)
+            if failures >= 3:       # exit non-zero so the service manager restarts us and records it
+                return 1
+        time.sleep(_interval())
 
 
 if __name__ == "__main__":

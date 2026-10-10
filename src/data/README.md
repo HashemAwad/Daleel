@@ -34,7 +34,9 @@ PYTHONPATH=src python -m data.loaders      # idempotent; prints counts only
 
 ## Medicine lookup (`medicine.py`)
 `MedicineLookupImpl().find(sentence)` takes the whole user sentence and fails closed:
-- matches only a product's full name as a whole-word phrase; no typo tolerance, no similarity scores
+- a product matches when its full name appears as a whole-word phrase; no typo tolerance, no similarity scores
+- if no full name matches, products sharing the brand's first word come back as a family, **always without a price** ("aspirin" is not "Aspirin Protect 100mg")
+- a number is a strength only with a unit ("5mg") or right after the name ("Concor 5"); "Concor for 10 people" asks for no strength
 - strength is exact ("Concor 5" never returns 10mg; "Concor 20" returns `[]`)
 - **one product → its price; several products → all returned with `price=None`** so the bot must ask which
 - anything doubtful, or a DB error → `[]` → the 1787 fallback
@@ -43,19 +45,19 @@ PYTHONPATH=src python -m data.loaders      # idempotent; prints counts only
 ## Directory search (`directory.py`)
 `DirectorySearchImpl().nearest(kind, caza=...)` — `caza` may be a caza name in any spelling, a town, or the whole user sentence.
 - no recognisable place → `[]` (never arbitrary facilities presented as "nearest")
-- **not ranked by distance**: named town first, then the town sharing the caza's name, then alphabetical; `lat`/`lon` are ignored for now
-- `resolve_caza(text)` → caza or `None`, never raises — for the router
-- everyday words that are also caza spellings (شوف, sur, sour) only count after a location word, unless they are the whole input
+- with `lat`/`lon`: ranked by real distance, `distance_km` filled. With a place only: **not ranked by distance** — named town first, then the town sharing the caza's name, then alphabetical
+- `resolve_caza(text)` → caza or `None`, never raises — for the router. `nearest()` **raises** on a database failure (the pipeline turns that into the hotline reply); `[]` means only "no place given"
+- everyday words that are also caza spellings (شوف, sur, sour, صور) only count after a location word or an attached "in the" (بالشوف), unless they are the whole input
 
 ## Turn recording and retention (`transcripts.py`, `retention.py`)
 `transcripts.record(inq, answer)` is called once per turn by `core.pipeline.handle` and never raises.
-- **`metadata`: one row per turn, always** — topic from the route (`procedures`, `directory`, `drug_price`, `emergency`, `dosing_request`, `other`), caza, lang, outcome, Beirut-local day. No model call, no text, no session link.
+- **`metadata`: one row per turn** (not when `RECORD_TURNS=0` or while backing off after a DB outage) — topic from the route (`procedures`, `directory`, `drug_price`, `emergency`, `dosing_request`, `other`), caza, lang, outcome, Beirut-local day. No model call, no text, no session key. Written in its own transaction, before the transcript.
 - **`transcripts`: only for a channel-minted ref (`wa_…` / `web_…`) and a non-default `SESSION_HASH_SALT`.** Text only when `STORE_TRANSCRIPT_TEXT=1`, after the redactor and `scrub()` (numbers, emails); never for emergency / refusal turns. The table is unlogged.
 - `RECORD_TURNS=0` switches recording off (the test suite does this in `tests/conftest.py`).
 ```bash
 PYTHONPATH=src python -m data.retention --once     # delete idle sessions (RETENTION_IDLE_MINUTES) + anything over 24h
 PYTHONPATH=src python -m data.retention --loop     # the same, every RETENTION_INTERVAL_SECONDS (default 600)
-PYTHONPATH=src python -m data.retention --status   # counts only
+PYTHONPATH=src python -m data.retention --status   # counts only; exit 1 if any session is overdue
 docker compose exec db psql -U daleel -c "SELECT turn, role, text FROM transcripts ORDER BY created_at"   # show on stage
 ```
 
@@ -81,7 +83,9 @@ docker compose exec db psql -U daleel -c "SELECT turn, role, text FROM transcrip
 | `db.py` | `get_conn()`, `apply_schema()` | — |
 | `directory.py` | `class DirectorySearchImpl.nearest(...)` | `DirectorySearch` |
 | `medicine.py` | `class MedicineLookupImpl.find(name)` | `MedicineLookup` |
-| `loaders/` | seed CSVs → tables | — |
-| `retention.py` | idle convos → `classify()` → `metadata` → delete transcript | — |
+| `loaders.py` | seed CSVs → tables (a missing or empty required CSV is an error, never a wipe) | — |
+| `transcripts.py` | `record(inq, answer)`: one metadata row per turn + the temporary transcript | — |
+| `retention.py` | deletes idle sessions and anything over 24h (it writes nothing) | — |
+| `demo.py` | demo reset + sample metadata | — |
 
 Full ticket: `docs/tickets/dev-d.md`.

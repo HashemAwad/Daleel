@@ -6,7 +6,7 @@ Branch per ticket: `feat/d/<ID>`. Done = the check passes **and** `PYTHONPATH=sr
 
 ---
 ### D0 · Publish the schema — Sprint 0 · **Do this first — it unblocks B and C**
-`src/data/init/schema.sql`: create tables per `docs/CONTRACTS.md` (`procedures` w/ `vector(1024)`, `facilities` w/ plain lat/lon, `drugs`, `hotlines`, `transcripts`, `metadata`, + `cazas`/aliases); enable `vector` + `pg_trgm` (no PostGIS). `docker compose up -d` auto-runs it on a fresh volume; `python -m data.db` re-applies it. **Status: done, pending review/push.**
+`src/data/init/schema.sql`: create tables per `docs/CONTRACTS.md` (`procedures` w/ `vector(1024)`, `facilities` w/ plain lat/lon, `drugs`, `hotlines`, `transcripts`, `metadata`, + `cazas`/aliases); enable `vector` + `pg_trgm` (no PostGIS). `docker compose up -d` auto-runs it on a fresh volume; `python -m data.db` re-applies it. **Status: done.** (9 tables: the 6 contract tables + `cazas`, `caza_aliases`, `drug_aliases`.)
 **Done when:** `docker compose up -d` then `\dt` shows all 6 tables; post "schema is up" in the channel.
 
 ### D1 · DB helper — Sprint 0–1 · **Independent**

@@ -28,7 +28,7 @@ services:
       # ONLY schema.sql lives here. `z` = SELinux label (Fedora/RHEL); ignored elsewhere.
       - ./src/data/init:/docker-entrypoint-initdb.d:ro,z
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U daleel -d daleel"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U daleel -d daleel"]   # TCP, not just the init-time socket
       interval: 5s
       timeout: 3s
       retries: 10

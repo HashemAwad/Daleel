@@ -26,18 +26,27 @@ def test_ingredient_key():
 
 
 @pytest.fixture(scope="module")
-def conn():
-    try:
-        apply_schema()
-        counts = load()
-        assert load() == counts          # idempotent
-        c = get_conn()
-    except Exception as e:
-        if isinstance(e, AssertionError):
-            raise
-        pytest.skip("Postgres not reachable")
+def conn(db_ready):
+    assert load() == load()              # idempotent
+    c = get_conn()
     yield c
     c.close()
+
+
+def test_missing_or_empty_seed_file_is_an_error_not_a_wipe(tmp_path, monkeypatch):
+    from data import loaders
+    monkeypatch.setattr(loaders, "SEEDS", tmp_path)
+    with pytest.raises(FileNotFoundError):
+        loaders.load()
+    (tmp_path / "cazas.csv").write_text("name_en,name_ar,name_fr\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        loaders._rows("cazas.csv")
+    assert loaders._rows("caza_aliases.csv", required=False) == []
+
+
+def test_synthetic_flag_is_case_insensitive():
+    from data.loaders import _true
+    assert _true("true") and _true(" TRUE ") and _true("True") and not _true("false") and not _true("")
 
 
 def _one(conn, sql, *params):

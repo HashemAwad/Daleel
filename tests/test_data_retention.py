@@ -1,6 +1,7 @@
-"""Turn recording + retention (D5). Pure tests need no DB; DB tests skip without Postgres."""
+"""Turn recording + retention (D5). Pure tests need no DB; DB tests use the shared `db_ready` fixture."""
+import psycopg
 import pytest
-from core import pipeline
+from core import pipeline, providers
 from data import retention, transcripts
 from data.transcripts import NO_TEXT, record, scrub, session_key, topic
 from shared.contracts import Answer, Inquiry
@@ -27,11 +28,21 @@ def on(monkeypatch):
 
 
 # ---- pure ------------------------------------------------------------------
-def test_scrub_masks_numbers_and_emails():
-    assert "70" not in scrub("call 70 123 456") and "[number]" in scrub("call 70 123 456")
-    assert scrub("+961-70-123456") == "[number]" and scrub("رقمي ٧٠١٢٣٤٥٦") == "رقمي [number]"
+@pytest.mark.parametrize("phone", [
+    "70 123 456", "+961-70-123456", "03/123456", "71/123456", "03  123  456", "03_123_456",
+    "03‏123456", "(03) 123 456", "70.123.456", "٧٠١٢٣٤٥٦", "٠٣/١٢٣٤٥٦", "123456",
+])
+def test_scrub_masks_phone_formats(phone):
+    out = scrub(f"call me on {phone} please")
+    assert out == "call me on [number] please", out
+
+
+def test_scrub_other_cases():
     assert scrub("mail me at a.b@example.com") == "mail me at [email]"
-    assert scrub("Concor 5 mg costs 870,164 LBP") == "Concor 5 mg costs 870,164 LBP"     # not a 7-digit run
+    assert scrub("a\x00b") == "ab"                                   # Postgres rejects NUL
+    assert scrub("Concor 5 mg costs 870,164 LBP") == "Concor 5 mg costs 870,164 LBP"
+    assert len(scrub("x" * 50_000)) == transcripts.MAX_TEXT          # bounded, and fast on hostile input
+    assert scrub("1-" * 40_000).count("[number]") >= 1
 
 
 def test_topic_comes_from_the_route():
@@ -44,12 +55,15 @@ def test_session_key_only_for_trusted_refs_and_a_real_salt(monkeypatch):
     monkeypatch.setattr(transcripts.settings, "session_hash_salt", "a-real-test-salt")
     key = session_key(REF)
     assert key and REF not in key and key != session_key(REF2)
-    assert session_key("anon") is None and session_key("+96170123456") is None and session_key("") is None
-    monkeypatch.setattr(transcripts.settings, "session_hash_salt", "change-me")
-    assert session_key(REF) is None
+    for bad in ["anon", "+96170123456", "", None, "web_" + "g" * 32, "web_" + "a" * 31, REF + "x"]:
+        assert session_key(bad) is None, bad
+    for weak in ["change-me", ""]:
+        monkeypatch.setattr(transcripts.settings, "session_hash_salt", weak)
+        assert session_key(REF) is None, weak
 
 
-def test_recording_is_off_under_pytest_by_default():
+def test_recording_is_off_under_pytest_by_default(monkeypatch):
+    monkeypatch.setattr(transcripts, "get_conn", lambda: pytest.fail("must not touch the DB"))
     assert record(_inq(), _ans()) is False
 
 
@@ -60,30 +74,51 @@ def test_pipeline_records_every_turn_including_early_returns(monkeypatch):
     assert seen == [("my father is not breathing", "emergency")]
 
 
-def test_db_failure_never_raises_and_backs_off(on, monkeypatch):
+def test_pipeline_records_the_transcribed_text_of_a_voice_note(monkeypatch):
+    seen = []
+    monkeypatch.setattr(pipeline.transcripts, "record", lambda inq, ans: seen.append(inq.text))
+    monkeypatch.setattr(pipeline, "_fetch_audio", lambda url: b"audio")
+
+    class Fake:
+        def transcribe(self, audio, mime):
+            return ("my father is not breathing", "en")
+    monkeypatch.setattr(providers, "transcriber", Fake())
+    voice = Inquiry(id="t", channel="web", text="", user_ref=REF, audio_url="https://example.com/v.ogg")
+    assert pipeline.handle(voice).outcome == "emergency"
+    assert seen == ["my father is not breathing"]              # not "", so caza and text can be recorded
+
+
+def test_db_outage_never_raises_and_backs_off(on, monkeypatch):
     calls = []
 
-    def boom():
+    def down():
         calls.append(1)
-        raise RuntimeError("secret row text")
+        raise psycopg.OperationalError("connection refused: secret")
     monkeypatch.setattr(transcripts, "resolve_caza", lambda text: None)
-    monkeypatch.setattr(transcripts, "get_conn", boom)
+    monkeypatch.setattr(transcripts, "get_conn", down)
     assert record(_inq(), _ans()) is False
     assert record(_inq(), _ans()) is False
-    assert len(calls) == 1                                  # second call skipped, no second timeout
+    assert len(calls) == 1                                  # second call skipped: no second timeout
+
+
+def test_one_bad_turn_does_not_silence_the_next(on, monkeypatch):
+    calls = []
+
+    def broken():
+        calls.append(1)
+        raise ValueError("not an outage")
+    monkeypatch.setattr(transcripts, "resolve_caza", lambda text: None)
+    monkeypatch.setattr(transcripts, "get_conn", broken)
+    assert record(_inq(), _ans()) is False
+    assert record(_inq(), _ans()) is False
+    assert len(calls) == 2                                  # no back-off for a non-outage error
 
 
 # ---- against Postgres ---------------------------------------------------------
 @pytest.fixture
-def db(on, monkeypatch):
-    from data.db import apply_schema, get_conn
-    from data.loaders import load
-    try:
-        apply_schema()
-        load()
-        conn = get_conn()
-    except Exception:
-        pytest.skip("Postgres not reachable")
+def db(db_ready, on, monkeypatch):
+    from data.db import get_conn
+    conn = get_conn()
     monkeypatch.setattr(transcripts, "topic", lambda answer: TEST_TOPIC)
     keys = [session_key(REF), session_key(REF2)]
 
@@ -110,14 +145,16 @@ def _meta(conn):
     return rows
 
 
+def _count(conn, table):
+    n = conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"]
+    conn.commit()
+    return n
+
+
 def _age(conn, ref, interval):
     conn.execute("UPDATE transcripts SET created_at = now() - %s::interval WHERE session_hash = %s",
                  (interval, session_key(ref)))
     conn.commit()
-
-
-def test_transcripts_table_is_unlogged(db):
-    assert db.execute("SELECT relpersistence AS p FROM pg_class WHERE relname = 'transcripts'").fetchone()["p"] == "u"
 
 
 def test_record_writes_scrubbed_turns_and_one_metadata_row(db):
@@ -130,7 +167,21 @@ def test_record_writes_scrubbed_turns_and_one_metadata_row(db):
     assert turns[1]["outcome"] == "answered" and turns[1]["tool"] == "directory"
     meta = _meta(db)
     assert sorted(m["caza"] for m in meta) == ["Aley", "Saida"]
-    assert set(meta[0]) == {"topic", "subtopic", "caza", "lang", "outcome", "day"}      # nothing that links to a session
+    assert set(meta[0]) == {"topic", "subtopic", "caza", "lang", "outcome", "day"}      # no session key, no timestamp
+
+
+def test_scrub_is_the_backstop_when_the_redactor_does_nothing(db, monkeypatch):
+    monkeypatch.setattr(providers, "redact", lambda text: text)
+    record(_inq("ring 03/123456"), _ans())
+    assert _turns(db)[0]["text"] == "ring [number]"
+
+
+def test_no_text_is_stored_when_the_redactor_fails(db, monkeypatch):
+    def boom(text):
+        raise RuntimeError("redactor crashed")
+    monkeypatch.setattr(providers, "redact", boom)
+    assert record(_inq(), _ans()) is True
+    assert [t["text"] for t in _turns(db)] == [NO_TEXT, NO_TEXT]
 
 
 def test_text_is_not_stored_unless_switched_on(db, monkeypatch):
@@ -139,27 +190,61 @@ def test_text_is_not_stored_unless_switched_on(db, monkeypatch):
     assert [t["text"] for t in _turns(db)] == [NO_TEXT, NO_TEXT]
 
 
-def test_emergency_stores_no_text_and_no_caza(db):
-    record(_inq("my father in Aley is not breathing"), _ans("hotline", "emergency", "Call 140"))
+@pytest.mark.parametrize("outcome", ["emergency", "refused"])
+def test_emergency_and_refusal_store_no_text_and_no_caza(db, outcome):
+    record(_inq("my father in Aley, what dose, he is not breathing 70 123 456"), _ans("hotline", outcome, "Call 140"))
     assert [t["text"] for t in _turns(db)] == [NO_TEXT, NO_TEXT]
     assert [m["caza"] for m in _meta(db)] == [None]
 
 
-def test_untrusted_ref_gets_metadata_but_no_transcript(db):
-    assert record(_inq(ref="anon"), _ans()) is True
-    assert db.execute("SELECT count(*) AS n FROM transcripts WHERE session_hash = 'anon'").fetchone()["n"] == 0
+@pytest.mark.parametrize("ref", ["anon", "+96170123456", "web_forged"])
+def test_untrusted_ref_gets_metadata_but_no_transcript(db, ref):
+    before = _count(db, "transcripts")
+    assert record(_inq(ref=ref), _ans()) is True
+    assert _count(db, "transcripts") == before               # nothing stored under ANY key
     assert len(_meta(db)) == 1
+
+
+def test_default_salt_stores_no_transcript(db, monkeypatch):
+    monkeypatch.setattr(transcripts.settings, "session_hash_salt", "change-me")
+    before = _count(db, "transcripts")
+    assert record(_inq(), _ans()) is True
+    assert _count(db, "transcripts") == before and len(_meta(db)) == 1
+
+
+def test_a_nul_character_does_not_lose_the_turn(db):
+    assert record(_inq("pharmacy in Aley\x00"), _ans()) is True
+    assert len(_turns(db)) == 2 and len(_meta(db)) == 1
+
+
+def test_metadata_survives_a_transcript_write_failure(db, monkeypatch):
+    monkeypatch.setattr(transcripts, "_INSERT_TURN", "INSERT INTO no_such_table VALUES (%s,%s,%s,%s,%s,%s,%s)")
+    assert record(_inq(), _ans()) is False
+    assert len(_meta(db)) == 1 and _turns(db) == []           # the count is kept; nothing half-written
+    assert transcripts._down_until == 0.0                     # and it was not treated as an outage
 
 
 def test_d5_done_when_idle_transcript_is_deleted_and_metadata_stays(db):
     record(_inq(), _ans())
     record(_inq(ref=REF2), _ans())
     _age(db, REF, "5 minutes")
+    _age(db, REF2, "1 minute")                               # idle, but inside the 2-minute window
     assert retention.run_once(idle_minutes=2) >= 2
-    assert _turns(db) == []                                 # idle session: gone
-    assert len(_turns(db, REF2)) == 2                       # active session: untouched
+    assert _turns(db) == []                                 # idle past the window: gone
+    assert len(_turns(db, REF2)) == 2                       # one minute idle: untouched (minutes, not seconds)
     assert len(_meta(db)) == 2                              # the anonymous rows remain
     assert retention.run_once(idle_minutes=2) == 0          # nothing left to do
+
+
+def test_run_once_defaults_to_the_configured_window(db, monkeypatch):
+    record(_inq(), _ans())
+    _age(db, REF, "5 minutes")
+    monkeypatch.setattr(retention.settings, "retention_idle_minutes", 30)
+    retention.run_once()
+    assert len(_turns(db)) == 2                             # 5 minutes < 30
+    monkeypatch.setattr(retention.settings, "retention_idle_minutes", 2)
+    retention.run_once()
+    assert _turns(db) == []
 
 
 def test_hard_cap_deletes_old_rows_of_an_active_session(db):
@@ -171,7 +256,13 @@ def test_hard_cap_deletes_old_rows_of_an_active_session(db):
     assert [t["turn"] for t in _turns(db)] == [2]
 
 
-def test_status_reports_counts_only(db):
+def test_status_reports_counts_only_and_flags_overdue_sessions(db, monkeypatch):
+    monkeypatch.setattr(retention.settings, "retention_idle_minutes", 2)
+    monkeypatch.setenv("RETENTION_INTERVAL_SECONDS", "20")
     record(_inq(), _ans())
     s = retention.status()
-    assert set(s) == {"transcript_rows", "sessions", "oldest_seconds", "metadata_rows"} and s["transcript_rows"] >= 2
+    assert set(s) == {"transcript_rows", "sessions", "oldest_seconds", "overdue_sessions", "metadata_rows"}
+    assert s["transcript_rows"] >= 2
+    overdue_before = s["overdue_sessions"]
+    _age(db, REF, "10 minutes")                              # the loop should have removed this by now
+    assert retention.status()["overdue_sessions"] == overdue_before + 1

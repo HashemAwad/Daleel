@@ -24,7 +24,7 @@ Adding an **optional** field to a model is safe. **Renaming or removing** a fiel
 | `DirectorySearch` | `nearest(kind, caza?, lat?, lon?, k) -> [Facility]` | D | `data.directory.DirectorySearchImpl` |
 | `MedicineLookup` | `find(name) -> [DrugRecord]` | D | `data.medicine.MedicineLookupImpl` |
 | `redact` (fn) | `redact(text) -> text` | B | `ai.redaction.redact` |
-| `classify` (fn) | `classify(transcript) -> Metadata` | D calls it, B builds it | `ai.classifier.classify` |
+| `classify` (fn) | `classify(transcript) -> Metadata` | B builds it. **Nothing calls it at runtime today**: metadata topics come from the route taken (`data.transcripts.topic`) | `ai.classifier.classify` |
 
 ## How integration happens (zero coordination)
 `core/providers.py` does `try: import real … except: use stub`. The moment you push a module exposing the name above, core uses it — no one edits core. If your real class raises on import (missing dep/env), core silently keeps the stub, so a broken import never takes down the app.
@@ -35,9 +35,9 @@ D publishes `src/data/init/schema.sql` in Sprint 0. Tables everyone else assumes
 `facilities(id, name, type, caza, address, phone, lat, lon, + provenance)` — plain lat/lon, **no PostGIS**; `caza` must exist in `cazas`,
 `drugs(name, price, currency, generics, is_free, list_date, + strength, form, provenance)` — `price` / `is_free` are NULL when unknown, never 0 / false,
 `hotlines(name, number, purpose, + verified_on)`,
-`transcripts(session_hash, turn, role, text, created_at, + outcome?, tool?, lang?)` — **redacted text only**, temporary,
-`metadata(topic, subtopic, caza, lang, outcome, day)` — closed vocab, no id / timestamp / session link.
+`transcripts(session_hash, turn, role, text, created_at, + outcome?, tool?, lang?)` — temporary; masked text or `[not stored]` (a bare name or an address is not masked),
+`metadata(topic, subtopic, caza, lang, outcome, day)` — no id / timestamp / session key; `lang`, `outcome`, `caza` are closed sets, `topic` is a lowercase-word pattern.
 
-Extra helper tables: `cazas`, `caza_aliases`, `drug_aliases`. Exact DDL: `src/data/init/schema.sql`.
+Extra helper tables: `cazas`, `caza_aliases` (place spellings) and `drug_aliases` (unused today). Exact DDL: `src/data/init/schema.sql`.
 Existing local volume? Re-apply with `PYTHONPATH=src python -m data.db` (idempotent). If you created your own `procedures` table by hand, drop it first.
-B's `retrieval.py` reads `procedures`; C's dashboard reads `metadata`; D's retention job writes `metadata` and deletes `transcripts`.
+B's `retrieval.py` reads `procedures`; C's dashboard reads `metadata`; `data.transcripts.record` writes one `metadata` row per turn (and the temporary `transcripts` rows); D's retention job only deletes `transcripts`.

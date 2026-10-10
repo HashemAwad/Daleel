@@ -17,13 +17,13 @@ pip install -r requirements.txt
 cp .env.example .env                 # fill in ANTHROPIC_API_KEY (ask the team lead)
 
 # 4. Database (needs Docker Desktop running)
-docker compose up -d                 # Postgres + pgvector + PostGIS on :5432
+docker compose up -d                 # Postgres + pgvector (+ pg_trgm) on :5432
 
 # 5. Run the backend
 PYTHONPATH=src uvicorn core.app:app --reload     # http://localhost:8000
 
 # 6. Prove it works
-PYTHONPATH=src pytest -q             # expect: 4 passed
+PYTHONPATH=src pytest -q             # all green
 curl -s localhost:8000/health        # {"ok":true,...}
 ```
 Open `web/index.html` in a browser (or `python -m http.server -d web 5500`) and ask a question — you'll get a stubbed answer. **That means the repo is healthy and you can start.**

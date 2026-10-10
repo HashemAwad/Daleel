@@ -11,11 +11,11 @@ This file is loaded automatically by Claude Code. If you are an agent working in
 
 **Voice notes are a core feature, not a bonus:** WhatsApp audio → transcribe → treat as a text inquiry.
 
-**Phase 1 (this weekend):** the chatbot. **Phase 2 (right after):** a ministry dashboard built from anonymised metadata. Build Phase 1 so Phase 2 is easy — that's why every turn writes a `Metadata` row and the retention job exists now. See `docs/ARCHITECTURE.md` and the full scope doc.
+**Phase 1 (this weekend):** the chatbot. **Phase 2 (right after):** a ministry dashboard built from anonymised metadata. Build Phase 1 so Phase 2 is easy — that's why every turn writes one anonymous `Metadata` row (`data.transcripts.record`) and the retention job exists now. See `docs/ARCHITECTURE.md` and the full scope doc.
 
 ## Privacy is a scored criterion — build it in Phase 1
 - **Redact** phone numbers / Lebanese IDs / names **before** any model call.
-- Store transcripts only temporarily; the **retention job** extracts anonymised `Metadata` then **deletes** the text + session hash.
+- Store transcripts only temporarily. One anonymous `Metadata` row is written **per turn** by `data.transcripts.record` (from the route taken, no model call); the **retention job only deletes** the text + session hash. Do not add a second metadata writer.
 - `user_ref` is always a **salted hash**, never a raw phone number.
 
 ## How we work (AI-driven, fast)
@@ -32,8 +32,9 @@ python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
 docker compose up -d                       # Postgres + pgvector (+ pg_trgm); schema auto-applies on a fresh volume
 PYTHONPATH=src python -m data.db           # re-apply schema to an existing volume (idempotent)
 cp .env.example .env                        # fill in ANTHROPIC_API_KEY etc.
-PYTHONPATH=src uvicorn core.app:app --reload   # backend at http://localhost:8000
-PYTHONPATH=src pytest -q                     # smoke tests — must stay green
+PYTHONPATH=src uvicorn core.app:app --reload   # backend + widget + channel routes at http://localhost:8000
+PYTHONPATH=src python -m data.retention --loop  # deletes idle transcripts; without it nothing is ever deleted
+PYTHONPATH=src pytest -q                     # must stay green. NEVER on the demo server: DB tests reload seeds + delete transcripts
 ```
 Open `web/index.html` (or serve it) to use the chat widget.
 

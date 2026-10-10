@@ -19,8 +19,12 @@ SCHEMA_PATH = Path(__file__).parent / "init" / "schema.sql"
 
 
 # ponytail: one connection per call. Fine for demo load; add psycopg_pool if latency bites.
+# A chat reply waits on these calls, so nothing may hang: 3s to connect, 3s for a lock, 30s per statement.
+_OPTIONS = "-c lock_timeout=3000 -c statement_timeout=30000"
+
+
 def get_conn() -> psycopg.Connection:
-    return psycopg.connect(settings.database_url, row_factory=dict_row, connect_timeout=3)
+    return psycopg.connect(settings.database_url, row_factory=dict_row, connect_timeout=3, options=_OPTIONS)
 
 
 def apply_schema() -> None:

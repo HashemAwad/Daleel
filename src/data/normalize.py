@@ -2,6 +2,7 @@
 
 Use the SAME function at ingest and at query time, or keys silently stop matching.
   normalize()  — drugs and general text. Keeps digits as-is ("Concor 5" stays 5).
+  fold()       — the same folding without stripping punctuation, for code that must see "2.5".
   place_key()  — place names only. Also folds Arabizi digits (3ale -> aale).
 """
 from __future__ import annotations
@@ -16,13 +17,17 @@ _MAP = str.maketrans({
 _ARABIZI = str.maketrans({"2": "a", "3": "a", "5": "kh", "7": "h", "8": "gh", "9": "s"})
 
 
-def normalize(text: str | None) -> str:
+def fold(text: str | None) -> str:
+    """Case, accents, Arabic letter forms and digits folded; punctuation KEPT (so "2.5" survives)."""
     # NFKD splits accents, tashkeel and hamza-on-alef into combining marks we then drop:
     # é -> e, أ/إ/آ -> ا, presentation forms -> plain letters.
     t = unicodedata.normalize("NFKD", text or "")
     t = "".join(c for c in t if not unicodedata.combining(c))
-    t = t.lower().translate(_MAP)
-    return " ".join(re.sub(r"[^\w\s]|_", " ", t).split())
+    return t.lower().translate(_MAP)
+
+
+def normalize(text: str | None) -> str:
+    return " ".join(re.sub(r"[^\w\s]|_", " ", fold(text)).split())
 
 
 def place_key(text: str | None) -> str:

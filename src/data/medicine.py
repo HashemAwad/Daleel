@@ -1,30 +1,34 @@
 """Medicine lookup over the `drugs` table. Owner: D. Contract: shared.contracts.MedicineLookup.
 
 The router hands us the WHOLE user sentence. A wrong price is the worst thing this bot
-can say, so every doubtful case returns [] and the pipeline falls back to the hotline:
+can say, so every doubtful case returns [] or drops the price:
 
-  * a drug matches only if its full name appears as a whole-word phrase in the sentence
+  * a product matches when its full name appears as a whole-word phrase in the sentence
+  * if no full name matches, products sharing the brand's first word are returned as a
+    "family" — ALWAYS without a price, even when there is only one, because the user did
+    not name that product ("aspirin" is not "Aspirin Protect 100mg")
+  * a number is a strength only if it carries a unit ("5mg") or directly follows the drug
+    name ("Concor 5"). "Concor for 10 people" asks for no strength.
   * strength is exact: "Concor 5" never returns the 10mg row; "Concor 20" returns nothing
+  * several products matching => all returned WITHOUT a price, so the bot has to ask which
   * no typo tolerance, no similarity scores
-  * several different products matching => all returned WITHOUT a price, so the bot has
-    to ask which one instead of quoting one variant's price as "the" price
 """
 from __future__ import annotations
 import logging
 import re
 from data.db import get_conn
-from data.normalize import normalize
+from data.normalize import fold, normalize
 from shared.contracts import DrugRecord
 
 log = logging.getLogger(__name__)
 MAX_RECORDS = 5
 
-_UNIT = r"(?:mg|mcg|µg|g|ml|iu|ui|%)"
+_UNIT = r"(?:mg|mcg|µg|μg|g|ml|iu|ui|%)"
 # A strength in a product NAME ("PROGRAF 0.5 MG", "Bavencio 20 mg/10 ml"): stripped before word matching.
 _NAME_STRENGTH = re.compile(rf"\d[\d.,]*\s*{_UNIT}?(?:\s*/\s*[\d.,]*\s*(?:mg|ml|g|dose|vial))?", re.I)
-# A standalone number, optionally with a unit. The look-arounds reject Arabizi letters-as-digits
-# ("se3r", "7abbet", "2arib") and the inside of a decimal.
-_NUMBER = re.compile(rf"(?<![\w.,])(\d+(?:[.,]\d+)?)(?:\s*{_UNIT})?(?![\w])", re.I)
+# Sentence tokens: a standalone number (optionally with a unit), or a word. The look-arounds keep
+# Arabizi letters-as-digits ("se3r", "7abbet", "2arib") as WORDS and never split a decimal.
+_TOKEN = re.compile(rf"(?P<num>(?<![\w.,])\d+(?:[.,]\d+)?)(?P<unit>\s*{_UNIT})?(?![\w])|(?P<word>[^\W_]+)", re.I)
 _NOISE = {"mg", "ml", "mcg", "g", "iu", "ui", "po", "iv", "sc", "im"}   # units / routes inside names
 # Brand first-words that are also ordinary words: never used for the family fallback.
 _STOP_BRANDS = {"children", "human", "hum"}
@@ -42,13 +46,20 @@ def _num(text: str) -> float:
     return float(text.replace(",", "."))               # 2,5 = French decimal
 
 
+def tokens(sentence: str | None) -> list[tuple]:
+    """('w', word) or ('n', value, has_unit), in sentence order."""
+    out: list[tuple] = []
+    for m in _TOKEN.finditer(fold(sentence)):
+        if m.group("num"):
+            out.append(("n", _num(m.group("num")), bool(m.group("unit"))))
+        else:
+            word = m.group("word")
+            out.append(("w", ALIASES.get(word, word)))
+    return out
+
+
 def numbers(text: str | None) -> set[float]:
-    return {_num(m.group(1)) for m in _NUMBER.finditer(normalize_digits(text))}
-
-
-def normalize_digits(text: str | None) -> str:
-    # normalize() would split "2.5" on the dot, so fold Arabic-Indic digits by hand here.
-    return (text or "").translate({0x0660 + i: str(i) for i in range(10)} | {0x06F0 + i: str(i) for i in range(10)})
+    return {t[1] for t in tokens(text) if t[0] == "n"}
 
 
 def name_words(name: str) -> list[str]:
@@ -60,43 +71,46 @@ def _strength_value(row: dict) -> float | None:
     """The one number that identifies this product's strength: the first number of `strength`
     (100 for '100 mg/10 ml'), else the first number in the name ('CONCOR AM 5')."""
     for source in (row.get("strength"), row["name"]):
-        m = re.search(r"\d+(?:[.,]\d+)*", normalize_digits(source))
+        m = re.search(r"\d+(?:[.,]\d+)*", fold(source))
         if m:
             return _num(m.group(0))
     return None
 
 
-def _has_phrase(tokens: list[str], phrase: list[str]) -> bool:
-    n = len(phrase)
-    return any(tokens[i:i + n] == phrase for i in range(len(tokens) - n + 1))
-
-
 def match(sentence: str, rows: list[dict]) -> list[dict]:
-    """Pure matching. Returns the matched rows; `ambiguous` rows have had their price removed."""
-    tokens = [ALIASES.get(t, t) for t in normalize(sentence).split()]
-    asked = numbers(sentence)
+    """Pure matching. Returns the matched rows, with `price` removed wherever it must not be quoted."""
+    toks = tokens(sentence)
+    words = [t[1] if t[0] == "w" else None for t in toks]          # None marks a number's position
+    with_unit = {t[1] for t in toks if t[0] == "n" and t[2]}
 
-    named = [(r, name_words(r["name"])) for r in rows]
-    named = [(r, w) for r, w in named if w]
-    hits = [(r, w) for r, w in named if _has_phrase(tokens, w)]
+    def phrase_end(phrase: list[str]) -> int | None:
+        n = len(phrase)
+        return next((i + n for i in range(len(words) - n + 1) if words[i:i + n] == phrase), None)
+
+    named = [(r, w) for r in rows if (w := name_words(r["name"]))]
+    hits = [(r, w, end) for r, w in named if (end := phrase_end(w)) is not None]
+    family = not hits
     if hits:
-        longest = max(len(w) for _, w in hits)           # "concor plus" beats "concor"
-        found = [r for r, w in hits if len(w) == longest]
-    else:                                                # brand family: "panadol" -> its variants
-        found = [r for r, w in named
-                 if len(w[0]) >= _MIN_BRAND_LEN and w[0] not in _STOP_BRANDS and w[0] in tokens]
-    if not found:
+        longest = max(len(w) for _, w, _ in hits)                   # "concor plus" beats "concor"
+        found = [(r, end) for r, w, end in hits if len(w) == longest]
+    else:                                                           # brand family: "panadol" -> its variants
+        found = [(r, words.index(w[0]) + 1) for r, w in named
+                 if len(w[0]) >= _MIN_BRAND_LEN and w[0] not in _STOP_BRANDS and w[0] in words]
+
+    kept = []
+    for r, end in found:
+        asked = set(with_unit)
+        if end < len(toks) and toks[end][0] == "n":                 # the number right after the name
+            asked.add(toks[end][1])
+        if not asked or _strength_value(r) in asked:                # a strength we don't have => dropped
+            kept.append(r)
+    if not kept:
         return []
 
-    if asked:
-        found = [r for r in found if _strength_value(r) in asked]
-        if not found:                                    # asked for a strength we don't have
-            return []
-
-    found.sort(key=lambda r: (r["name"], _strength_value(r) or 0, r.get("form") or ""))
-    if len(found) > 1:
-        found = [{**r, "price": None} for r in found]
-    return found[:MAX_RECORDS]
+    kept.sort(key=lambda r: (r["name"], _strength_value(r) or 0, r.get("form") or ""))
+    if family or len(kept) > 1:
+        kept = [{**r, "price": None} for r in kept]
+    return kept[:MAX_RECORDS]
 
 
 def _record(row: dict) -> DrugRecord:
@@ -121,7 +135,7 @@ def _record(row: dict) -> DrugRecord:
 class MedicineLookupImpl:
     def find(self, name: str) -> list[DrugRecord]:
         try:
-            # ponytail: reads all ~400 rows per call. Cache or prefilter if the table grows past a few thousand.
+            # ponytail: reads all ~400 rows per call (13-26 ms measured). Cache or prefilter past ~2-3k rows.
             with get_conn() as conn:
                 rows = conn.execute(
                     "SELECT name, strength, form, price, currency, generics, is_free, list_date FROM drugs"

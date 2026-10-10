@@ -4,7 +4,7 @@
 -- Seed data lives in loaders, never here. To add a column later:
 --   ALTER TABLE <t> ADD COLUMN IF NOT EXISTS ...;
 -- Privacy: the ONLY row that survives a conversation is `metadata`, and it has no
--- id, no timestamp and no link to a session on purpose.
+-- id, no timestamp and no session key on purpose.
 
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS cazas (
     name_en text PRIMARY KEY,
     name_ar text,
     name_fr text,
-    lat     double precision,   -- centroid; used only to assign a caza to OSM rows at load time
+    lat     double precision,   -- unused for now (OSM rows already carry their caza)
     lon     double precision
 );
 
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS drugs (
     ingredient_key text,                  -- normalize(active ingredient); joins aliases + free list
     price          numeric(14, 2),
     currency       text NOT NULL DEFAULT 'LBP' CHECK (currency IN ('LBP', 'USD')),
-    is_free        boolean,               -- set at INGEST on an exact ingredient+strength match only
+    is_free        boolean,               -- NULL on every row today: no loader sets it until a human confirms the free list
     free_list_date date,
     list_date      date,
     source         text,
@@ -84,8 +84,8 @@ CREATE INDEX IF NOT EXISTS drugs_name_key_trgm ON drugs USING gin (name_key gin_
 CREATE INDEX IF NOT EXISTS drugs_ingredient_idx ON drugs (ingredient_key);
 
 CREATE TABLE IF NOT EXISTS drug_aliases (
-    alias_key      text PRIMARY KEY,      -- panadol / بنادول
-    ingredient_key text NOT NULL          -- maps to an ingredient, not a row: the brand may not be listed
+    alias_key      text PRIMARY KEY,      -- UNUSED today: brand spellings live in data.medicine.ALIASES
+    ingredient_key text NOT NULL
 );
 
 -- ---- hotlines ---------------------------------------------------------------
@@ -114,11 +114,18 @@ CREATE TABLE IF NOT EXISTS transcripts (
 CREATE INDEX IF NOT EXISTS transcripts_created_at_idx ON transcripts (created_at);
 -- Unlogged: transcript text is never written to the write-ahead log, so it cannot outlive its
 -- DELETE in WAL files. A crash empties the table, which is fine for temporary data.
-ALTER TABLE transcripts SET UNLOGGED;
+-- Guarded, because ALTER takes an exclusive lock even when there is nothing to change.
+DO $$ BEGIN
+    IF (SELECT relpersistence FROM pg_class WHERE oid = 'transcripts'::regclass) <> 'u' THEN
+        ALTER TABLE transcripts SET UNLOGGED;
+    END IF;
+END $$;
 
 -- ---- metadata: the only thing that survives a conversation -------------------
--- Closed vocabularies so free text cannot land here. No id / created_at / session link,
--- so a row cannot be correlated back to a transcript by order or time.
+-- lang / outcome are closed sets and caza must be a known caza. topic / subtopic are restricted
+-- to a lowercase-word PATTERN (no digits, no spaces), not to a fixed list: the values come from
+-- a fixed map in data.transcripts. No id / created_at / session key. (Insertion order could
+-- still pair a row with its transcript while that transcript exists.)
 CREATE TABLE IF NOT EXISTS metadata (
     topic    text NOT NULL CHECK (topic ~ '^[a-z_]{1,40}$'),
     subtopic text CHECK (subtopic ~ '^[a-z_]{1,40}$'),

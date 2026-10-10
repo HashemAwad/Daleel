@@ -5,16 +5,20 @@
     resolve_caza("pharmacie à Choueifat")  -> "Aley"
 
 `caza` may be a caza name in any spelling, a town, or the user's whole sentence.
-No place we recognise => [] (we never present arbitrary facilities as "nearest").
 
-ponytail: lat/lon are accepted (frozen contract) but ignored — no channel sends coordinates
-yet. When one does, order by haversine here and fill distance_km.
-Results are NOT ranked by distance: the named town comes first, then the town that shares
-the caza's name, then alphabetical.
+  * lat/lon given  -> every facility of that kind ranked by real distance, distance_km filled
+  * place only     -> facilities in that caza, NOT ranked by distance: the named town first,
+                      then the town that shares the caza's name, then alphabetical
+  * neither        -> [] (we never present arbitrary facilities as "nearest")
+
+A database failure RAISES from nearest() (the pipeline turns that into the hotline fallback).
+Returning [] there would be read as "no place given" and make the bot ask for a town forever.
+resolve_caza() never raises.
 """
 from __future__ import annotations
 import logging
 import math
+import time
 from data.db import get_conn
 from data.normalize import place_key
 from shared.contracts import Facility
@@ -42,6 +46,9 @@ _LOCATION_WORDS = {place_key(w) for w in [
 # Attached prepositions / articles: بعاليه, بالشوف, b3aley, bel chouf
 _PREFIXES = sorted([place_key(p) for p in ["بال", "لل", "عال", "ال", "ب", "ل", "ع", "و", "bel", "bil", "el", "b", "l"]],
                    key=len, reverse=True)
+# Only these (preposition + article, "in the ...") may unlock an ambiguous word: بالشوف = "in Chouf",
+# but بشوف = "I see", الصور = "the pictures", وشوف = "and look".
+_LOCATIVE_PREFIXES = {place_key(p) for p in ["بال", "لل", "عال", "bel", "bil"]}
 # Town first-words that are generic ("farm of", "valley of") or surnames, not a specific place.
 _GENERIC_TOWN_WORDS = {
     "cheikh", "haouch", "jdeidet", "joubb", "majdel", "mazraa", "mazareaa", "ouadi", "qornet", "sahel",
@@ -50,7 +57,9 @@ _GENERIC_TOWN_WORDS = {
 }
 _MIN_TOWN_LEN = 5
 
+_CACHE_SECONDS = 300          # re-read place tables now and then, so a reload shows up without a restart
 _tables: tuple[dict[str, str], dict[str, str]] | None = None
+_loaded_at = 0.0
 
 
 def build_towns(rows: list[dict], aliases: dict[str, str]) -> dict[str, str]:
@@ -65,14 +74,17 @@ def build_towns(rows: list[dict], aliases: dict[str, str]) -> dict[str, str]:
 
 
 def _load() -> tuple[dict[str, str], dict[str, str]]:
-    # Cached for the life of the process: run the loader before starting the app.
-    global _tables
-    if _tables is None:
+    """Place tables, cached briefly. Raises if the DB is unreachable or no place data is loaded:
+    an empty table must never be cached, or every question would look like "no town given"."""
+    global _tables, _loaded_at
+    if _tables is None or time.monotonic() - _loaded_at > _CACHE_SECONDS:
         with get_conn() as conn:
             aliases = {r["alias_key"]: r["caza"] for r in conn.execute("SELECT alias_key, caza FROM caza_aliases")}
             towns = build_towns(conn.execute(
                 "SELECT DISTINCT address, caza FROM facilities WHERE address IS NOT NULL").fetchall(), aliases)
-        _tables = (aliases, towns)
+        if not aliases:
+            raise RuntimeError("no place data loaded (run: python -m data.loaders)")
+        _tables, _loaded_at = (aliases, towns), time.monotonic()
     return _tables
 
 
@@ -99,7 +111,7 @@ def resolve(text: str | None, aliases: dict[str, str], towns: dict[str, str]) ->
         for p in _PREFIXES:                                # بعاليه -> عاليه, b3aley -> 3aley
             rest = tok[len(p):]
             if tok.startswith(p) and rest:
-                if rest in aliases:
+                if rest in aliases and (rest not in _AMBIGUOUS or p in _LOCATIVE_PREFIXES):
                     return aliases[rest], None
                 if rest in towns:
                     return towns[rest], rest
@@ -124,52 +136,49 @@ def order(rows: list[dict], caza: str, town: str | None, aliases: dict[str, str]
     return sorted(rows, key=rank)
 
 
+def _facility(r: dict, distance_km: float | None = None) -> Facility:
+    return Facility(
+        id=str(r["id"]),
+        name=r["name"] + (" [demo data]" if r["is_synthetic"] else ""),
+        type=r["type"], caza=r["caza"], address=r["address"], phone=r["phone"],
+        lat=r["lat"], lon=r["lon"], distance_km=distance_km)
+
+
 class DirectorySearchImpl:
     def nearest(self, kind: str, caza: str | None = None, lat: float | None = None,
                 lon: float | None = None, k: int = 3) -> list[Facility]:
         if kind not in KINDS:
             return []
         k = max(1, min(k, MAX_K))
+        try:
+            return self._nearest(kind, caza, lat, lon, k)
+        except Exception as e:
+            log.warning("directory lookup failed: %s", type(e).__name__)   # class only, never the text
+            raise
+
+    def _nearest(self, kind: str, caza: str | None, lat: float | None, lon: float | None, k: int) -> list[Facility]:
+        aliases, towns = _load()          # also proves the DB is up before we answer "no place given"
 
         # TRUE nearest: if the user shared a location, rank ALL facilities of this
         # kind by real distance and fill distance_km. This is the accurate path.
         if lat is not None and lon is not None:
-            try:
-                with get_conn() as conn:
-                    rows = conn.execute(
-                        "SELECT id, name, type, caza, address, phone, lat, lon, is_synthetic "
-                        "FROM facilities WHERE type = %s AND lat IS NOT NULL AND lon IS NOT NULL",
-                        (kind,)).fetchall()
-                ranked = sorted(((_haversine_km(lat, lon, r["lat"], r["lon"]), r) for r in rows),
-                                key=lambda x: x[0])[:k]
-                return [Facility(
-                    id=str(r["id"]),
-                    name=r["name"] + (" [demo data]" if r["is_synthetic"] else ""),
-                    type=r["type"], caza=r["caza"], address=r["address"], phone=r["phone"],
-                    lat=r["lat"], lon=r["lon"], distance_km=round(dist, 1),
-                ) for dist, r in ranked]
-            except Exception as e:
-                log.warning("directory distance lookup failed: %s", type(e).__name__)
-                return []
-
-        # Fallback (no coordinates): city/caza-based, as before.
-        if not caza:
-            return []
-        try:
-            aliases, towns = _load()
-            resolved, town = resolve(caza, aliases, towns)
-            if not resolved:
-                return []
             with get_conn() as conn:
                 rows = conn.execute(
                     "SELECT id, name, type, caza, address, phone, lat, lon, is_synthetic "
-                    "FROM facilities WHERE type = %s AND caza = %s", (kind, resolved)).fetchall()
-            return [Facility(
-                id=str(r["id"]),
-                name=r["name"] + (" [demo data]" if r["is_synthetic"] else ""),
-                type=r["type"], caza=r["caza"], address=r["address"], phone=r["phone"],
-                lat=r["lat"], lon=r["lon"],
-            ) for r in order(rows, resolved, town, aliases)[:max(1, min(k, MAX_K))]]
-        except Exception as e:
-            log.warning("directory lookup failed: %s", type(e).__name__)
+                    "FROM facilities WHERE type = %s AND lat IS NOT NULL AND lon IS NOT NULL",
+                    (kind,)).fetchall()
+            ranked = sorted(((_haversine_km(lat, lon, r["lat"], r["lon"]), r) for r in rows),
+                            key=lambda x: x[0])[:k]
+            return [_facility(r, round(dist, 1)) for dist, r in ranked]
+
+        # No coordinates: by caza / town.
+        if not caza:
             return []
+        resolved, town = resolve(caza, aliases, towns)
+        if not resolved:
+            return []
+        with get_conn() as conn:
+            rows = conn.execute(
+                "SELECT id, name, type, caza, address, phone, lat, lon, is_synthetic "
+                "FROM facilities WHERE type = %s AND caza = %s", (kind, resolved)).fetchall()
+        return [_facility(r) for r in order(rows, resolved, town, aliases)[:k]]

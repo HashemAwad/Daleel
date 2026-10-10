@@ -8,12 +8,8 @@ CONTRACT_TABLES = {"procedures", "facilities", "drugs", "hotlines", "transcripts
 
 
 @pytest.fixture(scope="module")
-def conn():
-    try:
-        apply_schema()
-        c = get_conn()
-    except Exception:
-        pytest.skip("Postgres not reachable")
+def conn(db_ready):
+    c = get_conn()
     yield c
     c.close()
 
@@ -41,6 +37,33 @@ def test_metadata_rejects_free_text(conn):
             "INSERT INTO metadata (topic, outcome, day) "
             "VALUES ('my number 70123456', 'answered', '2026-10-10')"
         )
+    conn.rollback()
+
+
+@pytest.mark.parametrize("column,value,error", [
+    ("subtopic", "John 70123", psycopg.errors.CheckViolation),
+    ("lang", "xx", psycopg.errors.CheckViolation),
+    ("outcome", "maybe", psycopg.errors.CheckViolation),
+    ("topic", "a" * 41, psycopg.errors.CheckViolation),
+    ("caza", "Nowhere", psycopg.errors.ForeignKeyViolation),
+])
+def test_metadata_rejects_out_of_vocabulary_values(conn, column, value, error):
+    row = {"topic": "other", "subtopic": None, "caza": None, "lang": None, "outcome": "answered", column: value}
+    with pytest.raises(error):
+        conn.execute("INSERT INTO metadata (topic, subtopic, caza, lang, outcome, day) "
+                     "VALUES (%(topic)s, %(subtopic)s, %(caza)s, %(lang)s, %(outcome)s, '2026-10-10')", row)
+    conn.rollback()
+
+
+def test_metadata_has_no_identifying_columns(conn):
+    cols = {r["column_name"] for r in conn.execute(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'metadata'")}
+    assert cols == {"topic", "subtopic", "caza", "lang", "outcome", "day"}
+
+
+def test_transcripts_is_unlogged_and_schema_reapply_keeps_it(conn):
+    apply_schema()
+    assert conn.execute("SELECT relpersistence AS p FROM pg_class WHERE relname = 'transcripts'").fetchone()["p"] == "u"
     conn.rollback()
 
 

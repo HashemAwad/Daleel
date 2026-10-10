@@ -70,6 +70,23 @@ def test_several_products_come_back_without_prices():
     assert len(family) >= 2 and all(price is None for *_, price in family)
 
 
+def test_single_family_match_never_carries_a_price():
+    # "panadol" is not the product "PANADOL JOINT": even with one hit, no price may be quoted
+    rows = [{"name": "ASPIRIN PROTECT", "strength": "100mg", "form": "Tablet", "price": 146479}]
+    assert [(r["name"], r["price"]) for r in match("how much is aspirin", rows)] == [("ASPIRIN PROTECT", None)]
+    assert [(r["name"], r["price"]) for r in match("aspirin protect price", rows)] == [("ASPIRIN PROTECT", 146479)]
+
+
+def test_a_number_is_a_strength_only_with_a_unit_or_right_after_the_name():
+    both = [("CONCOR", "5mg", None), ("CONCOR", "10mg", None)]
+    assert _names("price of concor for 10 people") == both           # 10 is not a strength here
+    assert _names("my mom takes 5 a day, concor price") == both
+    assert _names("concor 5 for 10 days") == [("CONCOR", "5mg", 870164)]
+    assert _names("2 boxes of concor 10") == [("CONCOR", "10mg", 1176665)]
+    assert _names("10 mg concor") == [("CONCOR", "10mg", 1176665)]   # a unit counts anywhere
+    assert _names("concor 20mg") == [] and _names("concor 2,5") == []
+
+
 def test_ordinary_word_brand_is_not_a_family():
     assert _names("medicine for my children") == []
 
@@ -88,15 +105,15 @@ def test_db_failure_returns_empty(monkeypatch):
 
 # ---- against the real seed data -------------------------------------------------
 @pytest.fixture(scope="module")
-def lookup():
-    from data.db import apply_schema
-    from data.loaders import load
-    try:
-        apply_schema()
-        load()
-    except Exception:
-        pytest.skip("Postgres not reachable")
+def lookup(db_ready):
     return MedicineLookupImpl()
+
+
+def test_real_single_variant_brands_quote_no_price(lookup):
+    for sentence in ["how much is aspirin", "diamicron price"]:
+        got = lookup.find(sentence)
+        assert got and all(d.price is None for d in got), sentence
+    assert all(d.price is None for d in lookup.find("price of concor for 10 people"))
 
 
 def test_real_concor_5(lookup):
