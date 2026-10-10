@@ -47,3 +47,41 @@ class TranscriberImpl:
         if code not in _SUPPORTED:
             text, code = self._run(audio, _FALLBACK)
         return text, code if code in _SUPPORTED else None
+
+
+def _main(argv=None) -> int:
+    """Test one audio file by hand. Prints to the terminal only: nothing is stored or logged.
+        PYTHONPATH=src python -m ai.transcribe clip.ogg            transcript + language + seconds
+        PYTHONPATH=src python -m ai.transcribe clip.ogg --answer   also run the pipeline, print the reply
+    """
+    import argparse
+    import time
+    from pathlib import Path
+    p = argparse.ArgumentParser(prog="python -m ai.transcribe", description=_main.__doc__.splitlines()[0])
+    p.add_argument("file")
+    p.add_argument("--answer", action="store_true", help="also run the pipeline and print the reply")
+    args = p.parse_args(argv)
+
+    audio = Path(args.file).read_bytes()
+    t = TranscriberImpl()
+    t0 = time.perf_counter()
+    t._load()
+    t1 = time.perf_counter()
+    text, lang = t.transcribe(audio, "")
+    t2 = time.perf_counter()
+    print(f"model:      {os.getenv('WHISPER_MODEL', 'small')} (loaded in {t1 - t0:.1f}s)")
+    print(f"transcript: {text!r}")
+    print(f"language:   {lang}")
+    print(f"seconds:    {t2 - t1:.1f}")
+    if args.answer:
+        os.environ["RECORD_TURNS"] = "0"                  # a hand test must not write a turn to the DB
+        from core import pipeline
+        from shared.contracts import Inquiry
+        a = pipeline.handle(Inquiry(id="cli", channel="whatsapp", text=text, lang=lang, user_ref="cli"))
+        print(f"tool:       {a.tool}   outcome: {a.outcome}   ({time.perf_counter() - t2:.1f}s)")
+        print(f"reply:\n{a.text}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())
