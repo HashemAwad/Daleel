@@ -43,9 +43,14 @@ def hears(text, lang="en"):
     return type("T", (), {"transcribe": lambda self, audio, mime="": (text, lang), "ready": lambda self: True})()
 
 
-class RecordingLLM(stubs.StubLLM):
+class RecordingLLM:
+    """Not a StubLLM: the pipeline skips the model call for the stub."""
     def __init__(self):
         self.seen = []
+
+    def classify(self, text, labels):
+        self.seen.append(text)
+        return labels[0]
 
     def generate(self, system, prompt, context=""):
         self.seen.append(prompt + context)
