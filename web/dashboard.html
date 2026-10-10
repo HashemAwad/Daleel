@@ -158,6 +158,51 @@
     padding:6px 9px; border-radius:7px; z-index:9; white-space:nowrap;
   }
   .foot{color:var(--text-muted); font-size:12px; margin-top:22px; text-align:center}
+
+  /* ===== shared identity with the chat widget: cedar band, spring motion =====
+     The chart palette above is CVD-validated and deliberately untouched; this
+     block only changes chrome and timing. */
+  :root{ --spring:cubic-bezier(.22,1.2,.36,1); --ease:cubic-bezier(.16,1,.3,1) }
+
+  header.top{
+    position:relative; isolation:isolate; overflow:hidden;
+    margin:-20px -16px 18px; padding:26px 22px 22px;
+    background:linear-gradient(165deg, #0E5A48 0%, #072E25 100%);
+    color:#fff;
+  }
+  header.top::before{
+    content:""; position:absolute; inset:-60% -30%; z-index:-1;
+    background:
+      radial-gradient(28rem 16rem at 20% 20%, rgba(26,140,111,.55), transparent 62%),
+      radial-gradient(22rem 14rem at 84% 76%, rgba(127,227,196,.26), transparent 60%);
+    animation:drift 26s var(--ease) infinite alternate;
+  }
+  @keyframes drift{ to{ transform:translate3d(4%,-5%,0) scale(1.12) } }
+  header.top h1{color:#fff; font-size:23px; letter-spacing:-.2px}
+  header.top .tagline{color:rgba(255,255,255,.8)}
+  header.top .btn{
+    background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.2);
+    transition:background .22s var(--ease), transform .3s var(--spring);
+  }
+  header.top .btn:hover{background:rgba(255,255,255,.22); transform:translateY(-1px)}
+  @media (min-width:640px){
+    header.top{border-radius:0 0 22px 22px}
+  }
+
+  /* cards arrive once, in sequence — the page's single orchestrated moment */
+  .kpis .tile, #content > .card{animation:cardIn .5s var(--spring) both}
+  @keyframes cardIn{ from{opacity:0; transform:translateY(14px) scale(.985)} }
+
+  /* bars grow to their value instead of appearing at it */
+  .bar{animation:grow .7s var(--spring) both}
+  @keyframes grow{ from{ transform:scaleX(0) } }
+  .bar{transform-origin:inline-start}
+  .col .fill{animation:rise .7s var(--spring) both; transform-origin:bottom}
+  @keyframes rise{ from{ transform:scaleY(0) } }
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
+  }
 </style>
 </head>
 <body class="viz-root">
@@ -483,6 +528,21 @@ function render(m){
   geo.appendChild(tableView(["Caza", "Questions"], cazaItems.map((c) => [c.name, c.count.toLocaleString()])));
   two2.appendChild(geo);
   content.appendChild(two2);
+
+  orchestrate(content);
+}
+
+/* One sequenced reveal on load: tiles, then cards, then each bar fills.
+   Deliberately once — re-running it on every refresh would be noise. */
+function orchestrate(content){
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const tiles = content.querySelectorAll(".kpis .tile");
+  tiles.forEach((t, i) => { t.style.animationDelay = (i * 60) + "ms"; });
+  const base = tiles.length * 60;
+  content.querySelectorAll(":scope > .card, :scope > .two > .card")
+    .forEach((c, i) => { c.style.animationDelay = (base + i * 70) + "ms"; });
+  content.querySelectorAll(".bar, .col .fill")
+    .forEach((b, i) => { b.style.animationDelay = (base + 120 + i * 35) + "ms"; });
 }
 
 async function load(){
