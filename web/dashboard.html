@@ -16,7 +16,8 @@
 <style>
   /* Olive green on warm beige. Every text and chart-mark colour is >= 4.5:1 on its background.
      light on #F4EFE4 / card #FCFAF4:  ink 12.6/13.9  ink-2 7.4/8.1  quiet 5.4/6.0  olive 6.2/6.8  attention 5.4/6.0
-     dark  on #171A10 / card #20241A:  ink 15.1/13.6  ink-2 11.3/10.2  quiet 8.1/7.3  olive 9.3/8.3  attention 8.1/7.3 */
+     dark  on #1D2018 / card #282C20:  ink 12.6/10.9  ink-2 9.4/8.1  quiet 6.7/5.8  olive 7.7/6.7  attention 7.3/6.3
+     Dark is deliberately softer than pure contrast: off-white text, a sage (not lime) accent, lifted surfaces. */
   :root{
     color-scheme: light;
     --bg:#F4EFE4; --card:#FCFAF4; --line:#E3DCCB; --track:#E6E8D3;
@@ -28,18 +29,18 @@
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       color-scheme: dark;
-      --bg:#171A10; --card:#20241A; --line:#343A28; --track:#2F3524;
-      --ink:#F0EEE2; --ink-2:#CFD1BE; --quiet:#AEB29C;
-      --olive:#B5C46B; --on-olive:#171A10; --attention:#E8A06A; --good:#A9D27A; --bad:#F0937A;
-      --focus:#8DB8FF;
+      --bg:#1D2018; --card:#282C20; --line:#3A4030; --track:#343A29;
+      --ink:#E4E1D3; --ink-2:#C3C5B1; --quiet:#A3A790;
+      --olive:#A9B872; --on-olive:#1D2018; --attention:#DDA06B; --good:#A8CB82; --bad:#E8927C;
+      --focus:#9DBEF0;
     }
   }
   :root[data-theme="dark"]{
     color-scheme: dark;
-    --bg:#171A10; --card:#20241A; --line:#343A28; --track:#2F3524;
-    --ink:#F0EEE2; --ink-2:#CFD1BE; --quiet:#AEB29C;
-    --olive:#B5C46B; --on-olive:#171A10; --attention:#E8A06A; --good:#A9D27A; --bad:#F0937A;
-    --focus:#8DB8FF;
+    --bg:#1D2018; --card:#282C20; --line:#3A4030; --track:#343A29;
+    --ink:#E4E1D3; --ink-2:#C3C5B1; --quiet:#A3A790;
+    --olive:#A9B872; --on-olive:#1D2018; --attention:#DDA06B; --good:#A8CB82; --bad:#E8927C;
+    --focus:#9DBEF0;
   }
   *{box-sizing:border-box}
   [hidden]{display:none !important}
@@ -146,8 +147,6 @@
   .segbtn[aria-pressed="true"]{background:var(--olive); color:var(--on-olive)}
   .segbtn:not([aria-pressed="true"]):hover{color:var(--olive)}
   /* ---- about + states ---- */
-  .about ul{margin:16px 0 0; padding-inline-start:22px; color:var(--ink-2)}
-  .about li{margin:10px 0}
   .skeleton{display:grid; gap:24px; margin-top:var(--gap)}
   .skeleton div{height:140px; border-radius:22px; background:linear-gradient(90deg,var(--card),var(--track),var(--card)); background-size:200% 100%; animation:sk 1.4s linear infinite}
   @keyframes sk{to{background-position:-200% 0}}
@@ -254,14 +253,6 @@ const T = {
     volume:   { title: "Questions per day" },
     cazas:    { title: "Where questions come from", hidden: "A district appears on its own once 5 or more questions come from it." },
   },
-  aboutTitle: "How these numbers are calculated",
-  about: [
-    "Questions handled: every recorded question in the period.",
-    "Answered with an official source: answered questions ÷ all questions.",
-    "No official answer found: questions that fell back to the hotline ÷ all questions.",
-    "Emergency routed and escalated: questions the safety rules or the hotline handed to a person.",
-    "Privacy: only the day is stored, never the time. No names, numbers or messages are kept.",
-  ],
   foot: "This page is built to WCAG 2.2 AA. To report an accessibility problem, contact the Daleel team at the Ministry of Public Health.",
 };
 
@@ -560,16 +551,6 @@ function render(m){
     const hn = hiddenNote(items, T.sections.cazas.hidden); if (hn) s.appendChild(hn);
     addMeta(s, m); content.appendChild(s);
   }
-
-  /* how it is calculated: once, at the bottom */
-  const about = el("section", "card about");
-  about.setAttribute("aria-labelledby", "about-h");
-  const ah = el("h2", null, T.aboutTitle); ah.id = "about-h";
-  about.appendChild(ah);
-  const ul = el("ul");
-  T.about.forEach((t) => ul.appendChild(el("li", null, t)));
-  about.appendChild(ul);
-  content.appendChild(about);
 }
 
 /* ---- loading, errors, demo toggle ---- */
