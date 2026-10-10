@@ -378,3 +378,45 @@ def test_credit_is_not_duplicated_if_core_already_added_it():
     ans = Answer(text=f"Pharmacy X. {render.OSM_CREDIT}", sources=[],
                  tool="directory", grounded=True, outcome="answered", lang="en")
     assert "\n".join(render.for_whatsapp(ans)).count(render.OSM_CREDIT) == 1
+
+
+# ---- open item C3: mock topics must be the real closed vocabulary ---------
+def test_mock_topics_are_all_in_the_declared_vocabulary():
+    assert {r["topic"] for r in metrics.MOCK_ROWS} <= set(metrics.MOCK_TOPICS)
+
+
+def test_mock_vocabulary_matches_bs_classifier():
+    """If B widens or renames TOPICS, this fails loudly instead of the mock
+    dashboard quietly drifting into topics the retention job never writes."""
+    classifier = pytest.importorskip("ai.classifier")
+    assert set(metrics.MOCK_TOPICS) == set(classifier.TOPICS)
+
+
+def test_mock_topics_satisfy_the_schema_check():
+    """metadata.topic is CHECK (topic ~ '^[a-z_]{1,40}$')."""
+    import re
+    for t in metrics.MOCK_TOPICS:
+        assert re.fullmatch(r"[a-z_]{1,40}", t), t
+
+
+# ---- open item C4: the sparse window between empty and publishable -------
+def test_real_but_tiny_data_is_flagged_sparse(monkeypatch):
+    """One real turn must not look like a broken dashboard."""
+    monkeypatch.setattr(metrics, "_fetch_rows",
+                        lambda: [{"topic": "directory", "caza": "Beirut", "lang": "ar",
+                                  "outcome": "answered", "day": "2026-10-10", "n": 1}])
+    m = client.get("/api/metrics").json()
+    assert m["source"] == "metadata"      # still honest about provenance
+    assert m["sparse"] is True
+    assert m["total_turns"] == 1
+
+
+def test_mock_is_never_flagged_sparse():
+    assert metrics.summarise(metrics.MOCK_ROWS, "mock")["sparse"] is False
+
+
+def test_sufficient_real_data_is_not_sparse(monkeypatch):
+    monkeypatch.setattr(metrics, "_fetch_rows",
+                        lambda: [{"topic": "directory", "caza": "Beirut", "lang": "ar",
+                                  "outcome": "answered", "day": "2026-10-10", "n": 40}])
+    assert client.get("/api/metrics").json()["sparse"] is False

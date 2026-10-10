@@ -29,23 +29,29 @@ ESCALATED_OUTCOMES = {"escalated", "emergency"}
 MIN_CELL = 5
 
 # Shaped like real rows so the page layout is honest about what Phase 2 shows.
-# Topics are snake_case to match the schema's CHECK (topic ~ '^[a-z_]{1,40}$');
-# the dashboard humanises them for display.
+# Topics MUST come from B's closed vocabulary (`ai.classifier.TOPICS`) — the
+# retention job only ever writes those, so inventing friendlier names here
+# would make the mock view a different page from the live one.
+# Kept as a literal rather than importing ai: channels does not depend on
+# another owner's module. tests/test_channels.py asserts the two agree.
+MOCK_TOPICS = ("coverage", "referral_admission", "chronic_med", "acute_med",
+               "procedures", "directory", "mental_health", "emergency", "other")
+
 MOCK_ROWS: list[dict[str, Any]] = [
-    {"topic": "chronic_medication_card", "caza": "Beirut", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 34},
-    {"topic": "chronic_medication_card", "caza": "Aley", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 12},
-    {"topic": "hospital_admission", "caza": "Tripoli", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 27},
-    {"topic": "hospital_admission", "caza": "Saida", "lang": "ar", "outcome": "unanswered", "day": "2026-10-09", "n": 9},
-    {"topic": "pharmacy_locator", "caza": "Beirut", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 22},
-    {"topic": "pharmacy_locator", "caza": "Zahle", "lang": "en", "outcome": "answered", "day": "2026-10-09", "n": 8},
-    {"topic": "drug_price", "caza": "Beirut", "lang": "fr", "outcome": "answered", "day": "2026-10-10", "n": 19},
-    {"topic": "drug_price", "caza": "Baabda", "lang": "ar", "outcome": "unanswered", "day": "2026-10-10", "n": 7},
-    {"topic": "vaccination", "caza": "Akkar", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 16},
-    {"topic": "newborn_registration", "caza": "Keserwan", "lang": "fr", "outcome": "answered", "day": "2026-10-09", "n": 6},
+    {"topic": "chronic_med", "caza": "Beirut", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 34},
+    {"topic": "chronic_med", "caza": "Aley", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 12},
+    {"topic": "referral_admission", "caza": "Tripoli", "lang": "ar", "outcome": "answered", "day": "2026-10-10", "n": 27},
+    {"topic": "referral_admission", "caza": "Saida", "lang": "ar", "outcome": "unanswered", "day": "2026-10-09", "n": 9},
+    {"topic": "directory", "caza": "Beirut", "lang": "arabizi", "outcome": "answered", "day": "2026-10-10", "n": 22},
+    {"topic": "directory", "caza": "Zahle", "lang": "en", "outcome": "answered", "day": "2026-10-09", "n": 8},
+    {"topic": "acute_med", "caza": "Beirut", "lang": "fr", "outcome": "answered", "day": "2026-10-10", "n": 19},
+    {"topic": "acute_med", "caza": "Baabda", "lang": "ar", "outcome": "unanswered", "day": "2026-10-10", "n": 7},
+    {"topic": "procedures", "caza": "Akkar", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 16},
+    {"topic": "procedures", "caza": "Keserwan", "lang": "fr", "outcome": "answered", "day": "2026-10-09", "n": 6},
+    {"topic": "coverage", "caza": "Metn", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 11},
     {"topic": "mental_health", "caza": "Beirut", "lang": "arabizi", "outcome": "escalated", "day": "2026-10-10", "n": 5},
     {"topic": "emergency", "caza": "Nabatieh", "lang": "ar", "outcome": "emergency", "day": "2026-10-10", "n": 4},
-    {"topic": "dosing_request", "caza": "Beirut", "lang": "en", "outcome": "refused", "day": "2026-10-10", "n": 6},
-    {"topic": "cancer_medicine", "caza": "Metn", "lang": "ar", "outcome": "answered", "day": "2026-10-09", "n": 11},
+    {"topic": "other", "caza": "Beirut", "lang": "en", "outcome": "refused", "day": "2026-10-10", "n": 6},
 ]
 
 _SQL = """
@@ -131,6 +137,10 @@ def summarise(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
         "answered": raw_outcomes.get("answered", 0),
         # stated on the page so a ministry reader knows why a row is missing
         "min_cell": MIN_CELL,
+        # Real data starts at one row and grows. Below the threshold every
+        # breakdown is withheld by design, which looks identical to a broken
+        # page — so say which it is rather than letting the reader guess.
+        "sparse": source != "mock" and total < MIN_CELL,
         "topics": _tally(rows, "topic")[:10],
         "languages": _tally(rows, "lang"),
         "cazas": _tally(rows, "caza")[:10],

@@ -449,12 +449,23 @@ function render(m){
   /* source banner */
   const banner = document.getElementById("banner");
   banner.hidden = false;
-  banner.className = "banner" + (m.source === "mock" ? " mock" : "");
+  /* Three states, not two: illustrative, too-early-to-publish, and live.
+     The middle one matters — below the suppression threshold every breakdown
+     is withheld, which looks exactly like a broken page unless we say so. */
+  const state = m.source === "mock" ? "mock" : (m.sparse ? "sparse" : "live");
+  banner.className = "banner" + (state === "live" ? "" : " mock");
   banner.textContent = "";
-  banner.appendChild(el("span", "ic", m.source === "mock" ? "!" : "✓"));
-  banner.appendChild(el("span", null, m.source === "mock"
-    ? "Showing mock data — the metadata table is empty or unreachable. Numbers below are illustrative."
-    : "Live data from the metadata table (anonymised rows written after transcripts are deleted)."));
+  banner.appendChild(el("span", "ic", state === "live" ? "✓" : "!"));
+  banner.appendChild(el("span", null, {
+    mock:   "Illustrative sample — the metadata table is empty or unreachable. "
+          + "Figures below are representative, not recorded.",
+    sparse: "Too few records to publish. The service has handled "
+          + (m.total_turns || 0).toLocaleString() + " question"
+          + ((m.total_turns === 1) ? "" : "s") + " so far; breakdowns stay withheld "
+          + "until a group reaches " + (m.min_cell || 5) + ".",
+    live:   "Live data from the metadata table — anonymised rows written after "
+          + "transcripts are deleted.",
+  }[state]));
 
   /* keep the footnote honest if the server ever changes the threshold */
   const mc = document.getElementById("mincell");
