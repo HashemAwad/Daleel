@@ -92,6 +92,30 @@ def chunk_text(text: str, min_words: int = MIN_WORDS, max_words: int = MAX_WORDS
     return [" ".join(c) for c in chunks]
 
 
+# Site chrome that Trafilatura keeps on moph.gov.lb pages (login banner). Whole-line match,
+# case-insensitive. Add patterns here if new pages leak other navigation text.
+_BOILERPLATE = re.compile(
+    r"^\s*(are you a new member\?.*|sign up( now)?|login area|\|?\s*sign up|login|close)\s*$", re.I)
+_TITLE_TAG = re.compile(r"<title[^>]*>(.*?)</title>", re.I | re.S)
+
+
+def clean_text(text: str) -> str:
+    """Drop site-chrome lines and collapse blank/space runs. Keeps paragraph breaks."""
+    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in text.splitlines()]
+    kept = [ln for ln in lines if ln and not _BOILERPLATE.match(ln)]
+    return "\n".join(kept)
+
+
+def page_title(html: str, meta_title: Optional[str], url: str) -> str:
+    """Prefer the page's <title>; Trafilatura's title is just the site name ('moph') here."""
+    m = _TITLE_TAG.search(html)
+    cand = re.sub(r"\s+", " ", m.group(1)).strip() if m else ""
+    for t in (cand, (meta_title or "").strip()):
+        if t and t.lower() not in {"moph", "moph.gov.lb"}:
+            return t
+    return url
+
+
 # ---------------------------------------------------------------- fetch / embed
 def fetch_page(url: str) -> Optional[tuple[str, str]]:
     """(title, main text) via Trafilatura, or None if the fetch/extract yields nothing."""
@@ -104,8 +128,10 @@ def fetch_page(url: str) -> Optional[tuple[str, str]]:
     if not text:
         return None
     meta = trafilatura.extract_metadata(html)
-    title = (meta.title if meta and meta.title else url).strip()
-    return title, text
+    text = clean_text(text)
+    if not text:
+        return None
+    return page_title(html, meta.title if meta else None, url), text
 
 
 _model = None

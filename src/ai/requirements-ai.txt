@@ -1,3 +1,5 @@
 trafilatura>=2.0
 sentence-transformers>=3.0
+# camel-tools: on Python 3.14 install with:  pip install --no-deps camel-tools emoji
+# (its editdistance dep has no wheel there; we only use camel_tools.utils.*, which does not need it)
 camel-tools>=1.5

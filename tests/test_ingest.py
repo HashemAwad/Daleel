@@ -78,3 +78,17 @@ def test_ingest_text_inserts_and_is_idempotent():
     finally:
         with get_conn() as conn:
             conn.execute("DELETE FROM procedures WHERE url = %s", (TEST_URL,))
+
+
+def test_clean_text_strips_site_chrome_only():
+    raw = ("Are you a new member?   Sign up now\n\n\t Login area\n | Sign up\n"
+           "1- Are all centers entitled to drugs?\nOnly network centers are.")
+    out = ingest.clean_text(raw)
+    assert out == "1- Are all centers entitled to drugs?\nOnly network centers are."
+
+
+def test_page_title_prefers_title_tag_over_site_name():
+    html = "<html><head><title> PHC - FAQ </title></head></html>"
+    assert ingest.page_title(html, "moph", "u") == "PHC - FAQ"
+    assert ingest.page_title("<html></html>", "moph", "https://x/y") == "https://x/y"
+    assert ingest.page_title("<html></html>", "Real Title", "u") == "Real Title"
