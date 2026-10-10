@@ -49,6 +49,7 @@ def test_emergency_sets_outcome():
     ("كيف آخذ دوا السرطان", "ar"),
     ("bade dawa la sokkari ktir", "arabizi"),
     ("je voudrais la liste des médicaments", "fr"),
+    ("j’ai une crise cardiaque", "fr"),
     ("how do I get the card", "en"),
 ])
 def test_lang(text, lang):

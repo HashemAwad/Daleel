@@ -12,7 +12,7 @@ set -euo pipefail
 
 HOST="${1:?usage: vm_setup.sh <public-hostname>}"
 APP=/opt/daleel
-MODEL="${DALEEL_MODEL:-qwen2.5:3b}"
+MODEL="${DALEEL_MODEL:-qwen3:4b}"
 cd "$APP"
 
 echo "== swap (the models are tight in 8 GB)"

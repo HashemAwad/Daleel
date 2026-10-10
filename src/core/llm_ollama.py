@@ -7,7 +7,7 @@ providers.py falls back to the stub so the app still boots.
 
 Setup:
   1. install Ollama (https://ollama.com)
-  2. `ollama pull qwen2.5:7b`   (or aya-expanse:8b for stronger Arabic)
+  2. `ollama pull qwen2.5:7b`
   3. in .env:  DALEEL_MODEL_PROVIDER=selfhost   DALEEL_MODEL=qwen2.5:7b
 """
 from __future__ import annotations
@@ -22,11 +22,16 @@ class OllamaLLM:
 
     @classmethod
     def available(cls, url: str | None = None) -> bool:
-        """Quick reachability check so we can fall back to stub if Ollama is down."""
+        """Ollama is usable only when it is up and the configured model exists."""
         base = (url or settings.ollama_url).rstrip("/")
         try:
-            httpx.get(base + "/api/tags", timeout=1.5)
-            return True
+            r = httpx.get(base + "/api/tags", timeout=1.5)
+            r.raise_for_status()
+            wanted = settings.model.split(":latest", 1)[0]
+            return any(
+                str(m.get("name", "")).split(":latest", 1)[0] == wanted
+                for m in r.json().get("models", [])
+            )
         except Exception:
             return False
 

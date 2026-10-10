@@ -13,10 +13,12 @@ from core.stubs import StubLLM
 
 TOOLS = ["procedure", "directory", "medicine", "hotline"]
 
-DIRECTORY_TERMS = ["pharmacy", "saydaliyye", "saydaliye", "saydaliyeh", "farmashia", "صيدلية",
+DIRECTORY_TERMS = ["pharmacy", "pharmacie", "saydaliyye", "saydaliye", "saydaliyeh", "farmashia", "صيدلية",
                    "hospital", "mostashfa", "mosta2fa", "mustashfa", "mستشفى", "مستشفى",
+                   "hôpital", "hopital", "centre de santé", "centre de sante",
                    "phc", "mustawsaf", "clinic", "3yede", "عيادة", "مركز",
-                   "nearest", "2arib", "2areeb", "arib", "قريب", "2a2rab", "a2rab", "أقرب", "اقرب"]
+                   "nearest", "closest", "nearby", "plus proche", "proche", "près de", "pres de",
+                   "2arib", "2areeb", "arib", "قريب", "2a2rab", "a2rab", "أقرب", "اقرب"]
 # Medicine = PRICE/COST/FREE intent only (not the bare word "medicine", which
 # also appears in procedure questions). A4 lets the model override this.
 MEDICINE_TERMS = ["price", "cost", "how much", "سعر", "كم سعر", "combien",
@@ -35,7 +37,7 @@ def _resolve_caza(text: str):
 
 def _directory_kind(text: str) -> str:
     t = text.lower()
-    if any(w in t for w in ("hospital", "مستشفى", "mostashfa", "mosta2fa", "mustashfa")):
+    if any(w in t for w in ("hospital", "hôpital", "hopital", "مستشفى", "mostashfa", "mosta2fa", "mustashfa")):
         return "hospital"
     if any(w in t for w in ("phc", "مركز", "clinic", "عيادة", "3yede", "mustawsaf")):
         return "phc"
@@ -76,11 +78,17 @@ def choose_tool(inq: Inquiry) -> str:
 
 def run_tool(tool: str, inq: Inquiry) -> ToolResult:
     if tool == "directory":
+        text = inq.text.lower()
+        one_only = any(term in text for term in (
+            "closest one", "nearest one", "only one", "the closest",
+            "الأقرب فقط", "اقرب واحد", "أقرب واحد", "le plus proche seulement",
+        ))
         return ToolResult(tool="directory",
                           facilities=providers.directory.nearest(
                               _directory_kind(inq.text),
                               caza=_resolve_caza(inq.text),
-                              lat=inq.lat, lon=inq.lon))
+                              lat=inq.lat, lon=inq.lon,
+                              k=1 if one_only else 3))
     if tool == "medicine":
         return ToolResult(tool="medicine", drugs=providers.medicine.find(inq.text))
     if tool == "hotline":

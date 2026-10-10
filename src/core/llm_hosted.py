@@ -6,7 +6,7 @@ strong Arabic). Behind the same LLMClient Protocol, so switching to self-hosted
 qwen is a one-line .env change. Redaction still runs before any call.
 
 Selected when DALEEL_MODEL_PROVIDER=hosted. Config (see docs/LLM.md):
-  DALEEL_LLM_BASE_URL   https://generativelanguage.googleapis.com/v1beta/openai   (Gemini)
+  DALEEL_LLM_BASE_URL   https://generativelanguage.googleapis.com/v1beta   (Gemini native)
   DALEEL_LLM_API_KEY    free key from https://aistudio.google.com/app/apikey
   DALEEL_MODEL          gemini-2.0-flash
 """
@@ -30,6 +30,9 @@ class HostedLLM:
         return bool(settings.llm_base_url and settings.llm_api_key)
 
     def generate(self, system: str, prompt: str, context: str = "") -> str:
+        if "generativelanguage.googleapis.com" in self.base_url:
+            return self._generate_gemini(system, prompt, context)
+
         user = f"Context:\n{context}\n\nUser question:\n{prompt}" if context else prompt
         payload = {
             "model": self.model,
@@ -55,6 +58,47 @@ class HostedLLM:
                 last = e
                 time.sleep(1.0 * (attempt + 1))
         raise last or RuntimeError("hosted LLM unavailable")
+
+    def _generate_gemini(self, system: str, prompt: str, context: str = "") -> str:
+        """Use Google's native endpoint; its compatibility endpoint is slower
+        and timed out repeatedly in the demo environment."""
+        user = f"Context:\n{context}\n\nUser question:\n{prompt}" if context else prompt
+        base = self.base_url.removesuffix("/openai")
+        url = f"{base}/models/{self.model}:generateContent"
+        payload = {
+            "systemInstruction": {"parts": [{"text": system}]},
+            "contents": [{"role": "user", "parts": [{"text": user}]}],
+            # Gemini 3 spends output tokens on internal reasoning. A low thinking
+            # level plus 1024 tokens reliably leaves room for Daleel's short
+            # visible answer; 512 produced truncated prices and facility names.
+            "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 1024,
+                "thinkingConfig": {"thinkingLevel": "low"},
+            },
+        }
+        last: Exception | None = None
+        for attempt in range(2):
+            try:
+                r = httpx.post(url, timeout=30, headers={"x-goog-api-key": self.api_key}, json=payload)
+                if r.status_code in _RETRY_STATUS:
+                    last = httpx.HTTPStatusError(str(r.status_code), request=r.request, response=r)
+                    time.sleep(attempt + 1)
+                    continue
+                r.raise_for_status()
+                texts = [
+                    part.get("text", "")
+                    for candidate in r.json().get("candidates", [])
+                    for part in candidate.get("content", {}).get("parts", [])
+                    if part.get("text")
+                ]
+                if texts:
+                    return "\n".join(texts).strip()
+                raise RuntimeError("Gemini returned no text")
+            except (httpx.TransportError, httpx.TimeoutException) as exc:
+                last = exc
+                time.sleep(attempt + 1)
+        raise last or RuntimeError("Gemini unavailable")
 
     def classify(self, text: str, labels: list[str]) -> str:
         out = self.generate(

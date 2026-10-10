@@ -393,23 +393,17 @@ def test_the_cap_counts_published_labels_only():
     assert len(cazas) == 11
 
 
-# ---- open item C2: OpenStreetMap attribution (ODbL) -----------------------
-def test_directory_answers_carry_the_osm_credit():
+# ---- directory replies stay concise ---------------------------------------
+def test_directory_answers_do_not_append_dataset_credit():
     ans = Answer(text="Pharmacy X, Main St", sources=[], tool="directory",
                  grounded=True, outcome="answered", lang="en")
-    assert render.OSM_CREDIT in "\n".join(render.for_whatsapp(ans))
+    assert "OpenStreetMap contributors" not in "\n".join(render.for_whatsapp(ans))
 
 
 def test_non_directory_answers_do_not():
     ans = Answer(text="Bring your ID.", sources=[], tool="procedure",
                  grounded=True, outcome="answered", lang="en")
-    assert render.OSM_CREDIT not in "\n".join(render.for_whatsapp(ans))
-
-
-def test_credit_is_not_duplicated_if_core_already_added_it():
-    ans = Answer(text=f"Pharmacy X. {render.OSM_CREDIT}", sources=[],
-                 tool="directory", grounded=True, outcome="answered", lang="en")
-    assert "\n".join(render.for_whatsapp(ans)).count(render.OSM_CREDIT) == 1
+    assert "OpenStreetMap contributors" not in "\n".join(render.for_whatsapp(ans))
 
 
 # ---- open item C3: mock topics must be the real closed vocabulary ---------

@@ -96,6 +96,11 @@ def test_alias_maps_arabic_spelling_to_brand(monkeypatch):
     assert _names("سعر كونكور 5") == [("CONCOR", "5mg", 870164)]
 
 
+def test_builtin_panadol_arabic_alias():
+    got = _names("ما سعر بنادول؟")
+    assert got and all(price is None for *_, price in got)
+
+
 def test_db_failure_returns_empty(monkeypatch):
     def boom():
         raise RuntimeError("secret row text")

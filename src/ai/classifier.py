@@ -79,7 +79,7 @@ _SUBTOPICS = (("cancer", ("سرطان", "cancer", "sarataan", "saratan")),
               ("hypertension", ("ضغط", "hypertension", "blood pressure", "tension", "daghet")))
 
 # ---------------------------------------------------------------- language
-_FR = re.compile(r"\b(le|la|les|des|du|de|et|pour|vous|est|une|un|dans|que|sur|je|mon|ma|où|comment|"
+_FR = re.compile(r"\b(le|la|les|des|du|de|et|pour|vous|est|une|un|dans|que|sur|je|j['’]ai|mon|ma|où|comment|"
                  r"puis|quel|quelle|pharmacie|besoin|voudrais|liste)\b")
 _ARABIZI_DIGITS = re.compile(r"\b\w*[a-z][23579]\w*\b|\b[23579][a-z]\w*\b")
 _ARABIZI_WORDS = re.compile(r"\b(bade|badde|badi|kif|kifak|shu|esh|ktir|mnih|wein|3ande|3endi|"

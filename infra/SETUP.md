@@ -64,7 +64,7 @@ Copies held by WhatsApp, Twilio, the model provider and the user's phone are out
 
 ## B. Fallback: the AWS server
 One Ubuntu 24.04 server built by `infra/vm_setup.sh` (Postgres, the app, the retention loop, Ollama with the
-smaller `qwen2.5:3b`, Caddy for HTTPS). It is slower and answers less well than the laptop. D has the SSH access.
+smaller `qwen3:4b`, Caddy for HTTPS). It is slower and answers less well than the laptop. D has the SSH access.
 ```bash
 HOST=ubuntu@<server-ip>
 rsync -az --delete --exclude .venv --exclude .git --exclude __pycache__ --exclude .env --exclude .pytest_cache ./ $HOST:/opt/daleel/

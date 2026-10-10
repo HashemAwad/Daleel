@@ -15,6 +15,7 @@ def _inq(text="", audio_url=None, lang=None):
     ("أقرب مستشفى", "directory"),
     ("combien coûte le Concor 5?", "medicine"),
     ("سعر الدوا", "medicine"),
+    ("pharmacie la plus proche", "directory"),
 ])
 def test_keyword_router_picks_tool(text, expected):
     # Test the deterministic keyword rules directly. route() may defer to the
@@ -48,6 +49,46 @@ def test_model_routing_falls_back_on_error(monkeypatch):
             return []
     monkeypatch.setattr(router.providers, "llm", BoomLLM())
     assert router.choose_tool(_inq("nearest pharmacy")) == "directory"  # keyword fallback
+
+
+def test_llm_failover_uses_hosted_when_local_fails():
+    from core.llm_failover import FailoverLLM
+
+    class Broken:
+        def generate(self, *args):
+            raise RuntimeError("local model stopped")
+
+    class Working:
+        def generate(self, system, prompt, context=""):
+            return "hosted answer"
+
+    llm = FailoverLLM(Broken(), Working())
+    assert llm.generate("system", "question", "facts") == "hosted answer"
+
+
+def test_native_gemini_response_is_parsed(monkeypatch):
+    from core.llm_hosted import HostedLLM
+    import core.llm_hosted as hosted_module
+
+    class Response:
+        status_code = 200
+        def raise_for_status(self):
+            return None
+        def json(self):
+            return {"candidates": [{"content": {"parts": [{"text": "grounded answer"}]}}]}
+
+    seen = {}
+    def fake_post(url, **kwargs):
+        seen["url"] = url
+        seen["headers"] = kwargs["headers"]
+        return Response()
+
+    monkeypatch.setattr(hosted_module.httpx, "post", fake_post)
+    llm = HostedLLM(base_url="https://generativelanguage.googleapis.com/v1beta",
+                    api_key="secret", model="gemini-3.6-flash")
+    assert llm.generate("system", "question", "facts") == "grounded answer"
+    assert seen["url"].endswith("/models/gemini-3.6-flash:generateContent")
+    assert seen["headers"] == {"x-goog-api-key": "secret"}
 
 
 # ---- A17: strip invented source URLs --------------------------------------
@@ -94,6 +135,25 @@ def test_pending_town_ignored_for_new_question(monkeypatch):
     assert out.text == "how much is panadol"   # not stitched
 
 
+def test_directory_followup_keeps_hospital_and_requests_one(monkeypatch):
+    from core import memory
+    memory.remember_directory_kind("u3", "hospital")
+    inq = _inq("I want the closest one").model_copy(update={"user_ref": "u3"})
+    out = pipeline._apply_directory_followup(inq)
+    assert isinstance(out, Inquiry)
+    assert out.text == "closest hospital only one"
+
+
+def test_private_followup_explains_missing_ownership_data():
+    from core import memory
+    memory.remember_directory_kind("u4", "hospital")
+    inq = _inq("I want the private ones").model_copy(update={"user_ref": "u4"})
+    out = pipeline._apply_directory_followup(inq)
+    assert out.tool == "directory"
+    assert "private or public" in out.text
+    assert "MediTrack" not in out.text
+
+
 # ---- A5: safety, multilingual ---------------------------------------------
 @pytest.mark.parametrize("text", [
     "my father is not breathing",
@@ -102,6 +162,11 @@ def test_pending_town_ignored_for_new_question(monkeypatch):
 ])
 def test_emergency(text):
     a = pipeline.handle(_inq(text))
+    assert a.outcome == "emergency" and "140" in a.text
+
+
+def test_severe_chest_pain_is_emergency():
+    a = pipeline.handle(_inq("I have severe chest pain"))
     assert a.outcome == "emergency" and "140" in a.text
 
 
@@ -119,6 +184,19 @@ def test_grounding_fallback(monkeypatch):
     monkeypatch.setattr(router, "route", lambda inq: ToolResult(tool="procedure"))
     a = pipeline.handle(_inq("something with no source"))
     assert a.grounded is False and a.outcome == "unanswered" and "1787" in a.text
+
+
+def test_stub_llm_uses_clean_direct_renderer(monkeypatch):
+    from core import providers, stubs
+    from shared.contracts import Facility
+    monkeypatch.setattr(providers, "llm", stubs.StubLLM())
+    monkeypatch.setattr(router, "route", lambda inq: ToolResult(
+        tool="directory",
+        facilities=[Facility(id="1", name="Test Pharmacy", type="pharmacy", distance_km=0.3)],
+    ))
+    a = pipeline._handle(_inq("nearest pharmacy"))
+    assert "[stub answer]" not in a.text
+    assert "Test Pharmacy" in a.text and "0.3" in a.text
 
 
 # ---- A6: voice note is transcribed before routing -------------------------
