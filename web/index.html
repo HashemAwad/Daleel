@@ -8,236 +8,204 @@
          and get an Arabizi answer back.
      Theme is the same pattern: follow the system, allow an override, remember.
 
-     Design: an official record, not a messaging app. Answers are entries, the
-     source is a reference line, and the cedar appears once, blind-embossed,
-     the way a seal sits on ministry letterhead.
-
-     No external assets — the venue network cannot be trusted, so the cedar is
-     inline SVG and both typefaces are resident on-device. -->
+     Design: the same olive-and-beige look as the dashboard. Hanken Grotesk for text, Archivo for
+     headings (Google Fonts; Noto Sans Arabic supplies the Arabic letters). Offline, system fonts take over;
+     the cedar is inline SVG, so nothing else is fetched. -->
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<meta name="theme-color" content="#F7F8F3" media="(prefers-color-scheme: light)"/>
-<meta name="theme-color" content="#151813" media="(prefers-color-scheme: dark)"/>
+<meta name="theme-color" content="#F4EFE4" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#171A10" media="(prefers-color-scheme: dark)"/>
 <title>دليل — وزارة الصحة العامة</title>
+<link rel="icon" href="data:,"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap"/>
 <style>
-  /* Light is the base. Dark is declared twice on purpose: the media query
-     follows the system, the data-theme scope follows an explicit choice and
-     has to win in both directions. */
+  /* Olive on beige. Every text colour is >= 4.5:1 on its background (checked in both modes).
+     Dark is declared twice on purpose: the media query follows the system, the data-theme scope
+     follows an explicit choice and has to win in both directions. */
   :root{
     color-scheme: light;
-    --cedar:#15693A;
-    --cedar-deep:#0D4426;
-    --seal:#C62127;        /* emergencies and the identity rule. Nowhere else. */
-    /* A sheet of paper on a desk, not a white screen. The ground carries a
-       faint green cast pulled from the cedar, which keeps it out of both the
-       clinical-white and the warm-cream default. */
-    --ink:#1E211C;
-    --ink-2:#454941;
-    --quiet:#686C62;
-    --ground:#E9EBE3;      /* the desk */
-    --paper:#F7F8F3;       /* the sheet the record sits on */
-    --paper-2:#E8EAE1;     /* the reader's margin note */
-    --rule:#D2D6C9;
-    --rule-soft:#E1E4DA;
-    --amber:#73510A; --amber-wash:#F2EBD6;
-    --seal-wash:#F6E6E4;
-    --emboss:.045;
-
-    --measure:40rem;
+    --bg:#F4EFE4; --card:#FCFAF4; --line:#E3DCCB; --track:#E6E8D3;
+    --ink:#272B1C; --ink-2:#4A4F3A; --quiet:#5E634D;
+    --olive:#4F5E1F; --olive-deep:#3C4817; --on-olive:#FCFAF4;
+    --bad:#A23B1C; --bad-wash:#F7E4DC; --attn:#9A4A1E; --attn-wash:#F5E8D8;
+    --focus:#0B4FB3;
+    --measure:46rem;
     --swift:cubic-bezier(.2,.65,.3,1);
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       color-scheme: dark;
-      --cedar:#5FB98A; --cedar-deep:#93D8B2; --seal:#FF8F8A;
-      --ink:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
-      --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
-      --rule:#2C3128; --rule-soft:#212520;
-      --amber:#E2BC72; --amber-wash:#2A2109; --seal-wash:#2E1512;
-      --emboss:.07;       /* an emboss needs more presence on dark paper */
+      --bg:#171A10; --card:#20241A; --line:#343A28; --track:#2F3524;
+      --ink:#F0EEE2; --ink-2:#CFD1BE; --quiet:#AEB29C;
+      --olive:#B5C46B; --olive-deep:#CBD88A; --on-olive:#171A10;
+      --bad:#F0937A; --bad-wash:#3A1F17; --attn:#E8A06A; --attn-wash:#33261A;
+      --focus:#8DB8FF;
     }
   }
   :root[data-theme="dark"]{
     color-scheme: dark;
-    --cedar:#5FB98A; --cedar-deep:#93D8B2; --seal:#FF8F8A;
-    --ink:#ECEFE8; --ink-2:#C7CBC1; --quiet:#8D9288;
-    --ground:#0C0E0B; --paper:#151813; --paper-2:#1E221B;
-    --rule:#2C3128; --rule-soft:#212520;
-    --amber:#E2BC72; --amber-wash:#2A2109; --seal-wash:#2E1512;
-    --emboss:.07;
+    --bg:#171A10; --card:#20241A; --line:#343A28; --track:#2F3524;
+    --ink:#F0EEE2; --ink-2:#CFD1BE; --quiet:#AEB29C;
+    --olive:#B5C46B; --olive-deep:#CBD88A; --on-olive:#171A10;
+    --bad:#F0937A; --bad-wash:#3A1F17; --attn:#E8A06A; --attn-wash:#33261A;
+    --focus:#8DB8FF;
   }
 
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   html,body{height:100%}
   body{
-    margin:0; background:var(--ground); color:var(--ink);
-    font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
-                "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
-    font-size:17px; line-height:1.85;
-    font-variant-numeric:tabular-nums;
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Hanken Grotesk","Noto Sans Arabic",system-ui,-apple-system,"Segoe UI",Roboto,Tahoma,sans-serif;
+    font-size:18px; line-height:1.65; font-variant-numeric:tabular-nums;
     -webkit-font-smoothing:antialiased;
   }
-  /* Latin interface text wants slightly tighter leading than Naskh. */
-  html[lang="en"] body{line-height:1.7}
+  html[lang="ar"] body{line-height:1.9}
+  h1,h2{font-family:Archivo,"Noto Sans Arabic","Hanken Grotesk",system-ui,sans-serif}
   .bidi{unicode-bidi:plaintext; text-align:start}
   bdi{unicode-bidi:isolate}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 
-  /* Full bleed. Depth comes from banding the surfaces, not from boxing the
-     page in: the record is the bright sheet, the chrome sits back on the
-     ground tone above and below it. */
-  #app{height:100%; display:flex; flex-direction:column; background:var(--paper)}
-  .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:22px}
+  #app{height:100%; display:flex; flex-direction:column; background:var(--bg)}
+  .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:24px}
 
-  /* ---- letterhead ------------------------------------------------------- */
-  .letterhead{flex:none; background:var(--ground)}
-  .lockup{display:flex; align-items:center; gap:13px; padding-block:13px;
-          padding-top:calc(13px + env(safe-area-inset-top))}
-  .cedar{width:31px; height:31px; flex:none; fill:var(--cedar); display:block}
-  .titles{display:flex; flex-direction:column; line-height:1.2}
-  /* Caps here are the ministry's actual logotype, not a decorative eyebrow. */
-  .titles span{font-size:10px; font-weight:700; letter-spacing:.11em;
-               text-transform:uppercase}
-  html[lang="ar"] .titles span{letter-spacing:0; font-size:11px; text-transform:none}
-  .t-state{color:var(--cedar)}
-  .t-ministry{color:var(--seal)}
-  .vrule{width:1px; align-self:stretch; background:var(--rule); margin-inline:5px}
-  .svc{font-size:16px; font-weight:600}
+  /* ---- header ----------------------------------------------------------- */
+  .letterhead{flex:none; border-bottom:1px solid var(--line); background:var(--bg)}
+  .lockup{display:flex; align-items:center; gap:14px; padding-block:12px;
+          padding-top:calc(12px + env(safe-area-inset-top))}
+  .cedar{width:30px; height:30px; flex:none; fill:var(--olive); display:block}
+  .titles{display:flex; flex-direction:column; line-height:1.25; color:var(--ink-2)}
+  .titles span{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+  html[lang="ar"] .titles span{letter-spacing:0; font-size:13px; text-transform:none}
+  .svc{font-size:20px; font-weight:700; margin:0}
   .grow{flex:1}
-  .letterhead nav{display:flex; gap:19px; font-size:14px}
+  .letterhead nav{display:flex; gap:6px; font-size:16px}
   .letterhead nav a{
-    color:var(--ink-2); text-decoration:none; padding-bottom:2px;
-    border-bottom:1px solid transparent;
-    transition:color .2s var(--swift), border-color .2s var(--swift);
+    display:inline-flex; align-items:center; min-height:44px; padding:0 14px; border-radius:999px;
+    color:var(--ink-2); text-decoration:none; font-weight:500;
+    transition:color .2s var(--swift), background .2s var(--swift);
   }
-  .letterhead nav a:hover{color:var(--cedar); border-bottom-color:var(--cedar)}
-
-  .controls{display:flex; gap:14px; align-items:center; margin-inline-start:16px}
+  .letterhead nav a:hover{color:var(--olive); background:var(--card)}
+  .controls{display:flex; gap:8px; align-items:center}
   .controls button{
-    font:inherit; font-size:13.5px; background:none; border:0; cursor:pointer;
-    color:var(--quiet); padding:0 0 2px; border-bottom:1px solid var(--rule);
+    font:inherit; font-size:15px; font-weight:600; min-height:44px; min-width:44px; padding:6px 18px; cursor:pointer;
+    background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px;
     transition:color .2s var(--swift), border-color .2s var(--swift);
   }
-  .controls button:hover{color:var(--cedar); border-bottom-color:var(--cedar)}
-  @media (max-width:620px){
+  .controls button:hover{color:var(--olive); border-color:var(--olive)}
+  @media (max-width:640px){
     .letterhead nav{display:none}
     .controls{margin-inline-start:auto}
+    .titles{display:none}
   }
 
-  /* The identity rule: cedar green, broken by the ministry's red. */
-  .band{height:2px; background:var(--cedar); position:relative}
-  .band::after{content:""; position:absolute; inset-block:0; inset-inline-start:0;
-               width:84px; background:var(--seal)}
+  /* ---- scroll area ------------------------------------------------------ */
+  #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain}
+  #log{display:flex; flex-direction:column; padding-block:40px 12px}
 
-  /* ---- record ----------------------------------------------------------- */
-  #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain; background:var(--paper)}
-  #log{display:flex; flex-direction:column; padding-block:30px 10px}
+  /* ---- home: the opening block ------------------------------------------ */
+  #open{padding-block:72px 24px}
+  #open h2{
+    font-size:clamp(32px, 6vw, 52px); font-weight:800; line-height:1.15;
+    margin:0 0 20px; letter-spacing:-.02em; max-width:20ch;
+  }
+  html[lang="ar"] #open h2{letter-spacing:0; line-height:1.35}
+  #open .lede{margin:0; color:var(--quiet); font-size:19px; max-width:42ch}
+  .examples{margin-top:48px; display:grid; grid-template-columns:repeat(2,1fr); gap:20px}
+  .ex{
+    display:flex; align-items:center; width:100%; min-height:104px; font:inherit; font-size:18px; font-weight:500;
+    cursor:pointer; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:22px;
+    text-align:start; padding:22px 26px;
+    transition:border-color .2s var(--swift), color .2s var(--swift);
+  }
+  .ex:hover{border-color:var(--olive); color:var(--olive)}
+  @media (max-width:640px){ .examples{grid-template-columns:1fr; gap:16px} #open{padding-block:44px 16px} .ex{min-height:84px} }
 
+  /* ---- conversation ----------------------------------------------------- */
   .m{max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere}
-  .m + .m{margin-top:26px}
-  /* The reader's question: a margin note, indented and ruled on the leading
-     edge. Logical properties throughout, so it mirrors with the interface. */
+  .m + .m{margin-top:28px}
   .m.u{
-    color:var(--ink-2); font-size:16px;
-    padding:4px 15px; margin-inline-start:auto; max-width:82%;
-    border-inline-start:2px solid var(--rule);
-    background:var(--paper-2);
+    align-self:flex-end; max-width:82%; padding:14px 22px;
+    background:var(--olive); color:var(--on-olive); font-size:18px;
+    border-radius:24px;
   }
-  .m.b{position:relative; padding-inline-start:19px}
-  .m.b::before{
-    content:""; position:absolute; inset-inline-start:0; top:.72em;
-    width:7px; height:7px; background:var(--cedar);
-    clip-path:polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  .m.b{
+    max-width:94%; padding:24px 28px; background:var(--card); border:1px solid var(--line);
+    border-radius:24px;
   }
-  .m.sys{color:var(--quiet); font-size:15px; text-align:center;
-         border-block:1px solid var(--rule-soft); padding-block:14px}
+  /* the small "tail" corner follows the page direction too (each message sets its own dir=auto) */
+  html[dir="ltr"] .m.u{border-bottom-right-radius:6px}
+  html[dir="rtl"] .m.u{border-bottom-left-radius:6px}
+  html[dir="ltr"] .m.b{border-bottom-left-radius:6px}
+  html[dir="rtl"] .m.b{border-bottom-right-radius:6px}
+  .m.sys{color:var(--quiet); font-size:16px; text-align:center; padding-block:12px}
   .m.enter{animation:settle .34s var(--swift) both}
-  @keyframes settle{from{opacity:0; transform:translateY(5px)}}
+  @keyframes settle{from{opacity:0; transform:translateY(6px)}}
 
   .flag{
-    display:inline-block; font-size:13px; font-weight:600;
-    padding:1px 9px; margin-bottom:7px;
-    border-inline-start:3px solid currentColor;
+    display:inline-block; font-size:14px; font-weight:600; line-height:1.4;
+    padding:3px 14px; margin-bottom:12px; border-radius:999px;
   }
-  .flag.emergency{background:var(--seal-wash); color:var(--seal)}
-  .flag.refused,.flag.unanswered{background:var(--amber-wash); color:var(--amber)}
+  .flag.emergency{background:var(--bad-wash); color:var(--bad)}
+  .flag.refused,.flag.unanswered{background:var(--attn-wash); color:var(--attn)}
 
-  .srcs{margin-top:15px; padding-top:10px; border-top:1px solid var(--rule-soft);
-        display:flex; flex-direction:column; gap:5px}
-  .src{font-size:14.5px; line-height:1.6; color:var(--quiet)}
-  .src a{color:var(--cedar); text-decoration:none;
-         border-bottom:1px solid var(--rule); transition:border-color .2s var(--swift)}
-  .src a:hover{border-bottom-color:var(--cedar)}
+  .srcs{margin-top:22px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; flex-direction:column; gap:8px}
+  .src{font-size:15.5px; line-height:1.6; color:var(--quiet)}
+  .src a{color:var(--olive); font-weight:600; text-underline-offset:3px}
+  .m a{color:var(--olive); text-underline-offset:3px}
 
-  .typing{display:flex; gap:5px; align-items:center; height:26px; padding-inline-start:19px}
-  .typing i{width:5px; height:5px; border-radius:50%; background:var(--quiet);
-            opacity:.3; animation:bob 1.3s var(--swift) infinite}
+  .typing{display:flex; gap:7px; align-items:center; height:56px; padding-block:0; width:fit-content}
+  .typing i{width:8px; height:8px; border-radius:50%; background:var(--quiet);
+            opacity:.35; animation:bob 1.3s var(--swift) infinite}
   .typing i:nth-child(2){animation-delay:.16s}
   .typing i:nth-child(3){animation-delay:.32s}
-  @keyframes bob{30%{opacity:.85; transform:translateY(-3px)}}
+  @keyframes bob{30%{opacity:.9; transform:translateY(-4px)}}
 
-  /* ---- opening: the seal ------------------------------------------------ */
-  #open{padding-block:9vh 0; position:relative}
-  .seal{
-    position:absolute; inset-block-start:5vh; inset-inline-end:-18px;
-    width:188px; height:188px; pointer-events:none;
-    fill:var(--ink); opacity:var(--emboss);
-  }
-  #open h1{
-    font-size:clamp(30px, 7vw, 44px); font-weight:600; line-height:1.3;
-    margin:0 0 14px; letter-spacing:-.01em; max-width:19ch;
-  }
-  #open .lede{margin:0; color:var(--quiet); font-size:16.5px; max-width:38ch}
-  .examples{margin-top:34px; border-top:1px solid var(--rule)}
-  .ex{
-    display:block; width:100%; font:inherit; font-size:16px; cursor:pointer;
-    background:none; border:0; border-bottom:1px solid var(--rule-soft);
-    color:var(--ink-2); text-align:start; padding:14px 2px;
-    transition:color .22s var(--swift), padding .28s var(--swift),
-               background .22s var(--swift);
-  }
-  .ex:hover{color:var(--cedar); padding-inline-start:10px; background:var(--paper-2)}
-  .ex:active{padding-inline-start:6px}
-
-  /* ---- composer --------------------------------------------------------- */
-  .composer{flex:none; background:var(--ground); border-top:1px solid var(--rule)}
-  .well{display:flex; align-items:flex-end; gap:10px; padding-block:12px}
-  #t{
-    flex:1; border:0; outline:0; background:transparent; color:var(--ink);
-    font:inherit; resize:none; padding:7px 0; max-height:170px; min-height:26px;
-    line-height:1.7;
-  }
-  #t::placeholder{color:var(--quiet); opacity:.85}
-  #send{
-    width:40px; height:40px; flex:none; border:0; cursor:pointer;
-    background:var(--cedar); color:var(--paper); display:grid; place-items:center;
-    transition:background .22s var(--swift), opacity .22s var(--swift),
-               transform .22s var(--swift);
-  }
-  #send:hover:not(:disabled){background:var(--cedar-deep)}
-  #send:active:not(:disabled){transform:scale(.94)}
-  #send:disabled{opacity:.28; cursor:default}
-  /* The arrow points the way the interface reads. */
-  #send svg{width:17px; height:17px; fill:currentColor; display:block}
-  html[dir="rtl"] #send svg{transform:scaleX(-1)}
-  .standing{
-    font-size:13.5px; color:var(--quiet); line-height:1.6;
-    padding-bottom:calc(11px + env(safe-area-inset-bottom));
-  }
-  .standing b{color:var(--seal); font-weight:700}
-
-  .more{display:flex; gap:20px; padding-block:16px 0; font-size:14.5px}
+  .more{display:flex; gap:12px; flex-wrap:wrap; padding-block:24px 8px}
   .more button{
-    font:inherit; background:none; border:0; cursor:pointer; color:var(--ink-2);
-    padding:0 0 2px; border-bottom:1px solid var(--rule);
+    font:inherit; font-size:16px; font-weight:600; min-height:44px; padding:8px 22px; cursor:pointer;
+    background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px;
     transition:color .2s var(--swift), border-color .2s var(--swift);
   }
-  .more button:hover{color:var(--cedar); border-bottom-color:var(--cedar)}
+  .more button:hover{color:var(--olive); border-color:var(--olive)}
 
-  :is(button,a,textarea):focus-visible{outline:2px solid var(--cedar); outline-offset:3px}
+  /* ---- composer: one rounded field with the send button inside ---------- */
+  .composer{flex:none; background:var(--bg)}
+  .composer .col{padding-block:16px 0}
+  .well{
+    display:flex; align-items:flex-end; gap:12px; background:var(--card);
+    border:1px solid var(--line); border-radius:32px; padding:8px; padding-inline-start:26px;
+  }
+  .well:focus-within{border-color:var(--olive); outline:2px solid var(--olive); outline-offset:2px}
+  #t{
+    flex:1; border:0; outline:0; background:transparent; color:var(--ink);
+    font:inherit; resize:none; padding:12px 0; max-height:170px; min-height:48px; line-height:1.6;
+  }
+  #t::placeholder{color:var(--quiet)}
+  #send{
+    width:48px; height:48px; flex:none; border:0; border-radius:50%; cursor:pointer;
+    background:var(--olive); color:var(--on-olive); display:grid; place-items:center;
+    transition:background .2s var(--swift), opacity .2s var(--swift), transform .2s var(--swift);
+  }
+  #send:hover:not(:disabled){background:var(--olive-deep)}
+  #send:active:not(:disabled){transform:scale(.94)}
+  #send:disabled{opacity:.4; cursor:default}
+  #send svg{width:20px; height:20px; fill:currentColor; display:block}
+  html[dir="rtl"] #send svg{transform:scaleX(-1)}
+  .standing{
+    font-size:15px; color:var(--quiet); line-height:1.6; margin:14px 0 0; text-align:center;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom));
+  }
+  .standing b{color:var(--bad); font-weight:700}
 
+  :is(button,a,textarea):focus-visible{outline:3px solid var(--focus); outline-offset:3px}
+  #t:focus-visible{outline:0}
+  @media (max-width:520px){ .col{padding-inline:16px} .m.b{padding:20px 20px} .m.u{max-width:90%} }
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
   }
@@ -249,7 +217,7 @@
 </symbol></svg>
 
 <div id="app">
-  <div class="letterhead">
+  <header class="letterhead">
     <div class="col lockup">
       <svg class="cedar" aria-hidden="true"><use href="#cedar"/></svg>
       <div class="titles">
@@ -257,7 +225,7 @@
         <span class="t-ministry" id="tMinistry">وزارة الصحة العامة</span>
       </div>
       <div class="vrule" aria-hidden="true"></div>
-      <span class="svc" id="svc">دليل</span>
+      <h1 class="svc" id="svc">دليل</h1>
       <div class="grow"></div>
       <nav>
         <a href="/join" id="navWa">واتساب</a>
@@ -268,14 +236,12 @@
         <button type="button" id="themeBtn"></button>
       </div>
     </div>
-    <div class="band" aria-hidden="true"></div>
-  </div>
+  </header>
 
-  <div id="scroll">
+  <main id="scroll">
     <div class="col">
       <section id="open">
-        <svg class="seal" aria-hidden="true"><use href="#cedar"/></svg>
-        <h1 id="openH"></h1>
+        <h2 id="openH"></h2>
         <p class="lede" id="openP"></p>
         <div class="examples" id="examples"></div>
       </section>
@@ -283,9 +249,9 @@
       <div id="log" role="log" aria-live="polite"></div>
       <div class="more" id="more"></div>
     </div>
-  </div>
+  </main>
 
-  <div class="composer">
+  <footer class="composer">
     <div class="col">
       <form id="f" autocomplete="off">
         <label class="sr" for="t" id="tLabel"></label>
@@ -298,7 +264,7 @@
       </form>
       <p class="standing" id="standing"></p>
     </div>
-  </div>
+  </footer>
 </div>
 
 <script>
@@ -610,6 +576,7 @@ function followUps(){
     b.addEventListener("click", fn);
     bar.appendChild(b);
   }
+  scrollDown();
 }
 
 function showHotlines(){
@@ -697,7 +664,7 @@ async function send(text){
     const retry = document.createElement("button");
     retry.type = "button"; retry.textContent = T.retry;
     retry.style.cssText = "font:inherit;background:none;border:0;cursor:pointer;"
-      + "color:var(--cedar);border-bottom:1px solid var(--rule);margin-top:8px;padding:0 0 2px";
+      + "color:var(--olive);text-decoration:underline;margin-top:8px;padding:8px 0";
     retry.addEventListener("click", () => { retry.remove(); send(q); });
     d.appendChild(document.createElement("br"));
     d.appendChild(retry);
