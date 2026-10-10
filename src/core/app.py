@@ -42,3 +42,13 @@ def chat(body: ChatIn) -> Answer:
         lang=body.lang, user_ref=body.user_ref,
     )
     return pipeline.handle(inq)
+
+
+# Mount C's channel routes (WhatsApp webhook, /dashboard, /join, metrics).
+# Guarded: a channels import/config error must never take the core app down.
+try:
+    from channels import register
+    register(app)
+except Exception as _e:  # pragma: no cover
+    import logging
+    logging.getLogger(__name__).warning("channels not mounted: %s", type(_e).__name__)
