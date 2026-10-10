@@ -8,7 +8,7 @@ Snapshot of what's built, how to test it, and what's left. **103 tests passing o
 # one-time
 python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 #   install Ollama + a model (free local LLM):
-ollama pull qwen2.5:3b        # or qwen2.5:7b / aya-expanse:8b on good wifi
+ollama pull qwen2.5:7b        # the team's ONE committed model (~4.7 GB) — download once
 
 # each session
 docker compose up -d                      # Postgres (pgvector) — the data lives here
@@ -19,7 +19,7 @@ PYTHONPATH=src pytest -q                   # 103 passing
 # to also get WhatsApp + dashboard routes (until the 1-line wire-up below lands):
 PYTHONPATH=src uvicorn channels.asgi:app --reload
 ```
-Open **http://localhost:8000** for the chat widget. `.env` is already set to `selfhost` + `qwen2.5:3b`.
+Open **http://localhost:8000** for the chat widget. `.env` is already set to `selfhost` + `qwen2.5:7b`.
 
 ---
 ## 2. What works TODAY (by question type) + how to test
@@ -99,6 +99,6 @@ All in `src/core` + `src/shared`. Verify all at once: `PYTHONPATH=src pytest -q`
 
 ---
 ## 7. Known limitations (say these honestly)
-- The free local **3B model** is weak on Lebanese Arabizi and sometimes replies in the wrong language — improves with a bigger model + B's prompt tuning.
+- The committed model is the free local **qwen2.5:7b** (chosen for strong grounding + Arabic). Lebanese Arabizi is still the weakest area and improves with prompt tuning. If the model is ever down, the bot still answers accurately from the data (plain/templated).
 - Pharmacy data may be partly synthetic (per the plan) — label it in the demo.
 - We delete transcripts on our side only; WhatsApp/the user's phone keep their copies.
