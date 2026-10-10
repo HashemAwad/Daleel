@@ -32,6 +32,14 @@ PYTHONPATH=src python -m data.loaders      # idempotent; prints counts only
 - Regenerate drugs/facilities: `python -m data.build_seeds --osm <geojson> --xlsx data_source` (needs `openpyxl`).
 - Use `data.normalize.normalize()` / `place_key()` for every key, at ingest **and** query time.
 
+## Medicine lookup (`medicine.py`)
+`MedicineLookupImpl().find(sentence)` takes the whole user sentence and fails closed:
+- matches only a product's full name as a whole-word phrase; no typo tolerance, no similarity scores
+- strength is exact ("Concor 5" never returns 10mg; "Concor 20" returns `[]`)
+- **one product → its price; several products → all returned with `price=None`** so the bot must ask which
+- anything doubtful, or a DB error → `[]` → the 1787 fallback
+- Arabic-script brand spellings: add to `ALIASES` only after the healthcare teammate has checked them (empty for now)
+
 ## Tables (`init/schema.sql`)
 | Table | Notes |
 |-------|-------|
