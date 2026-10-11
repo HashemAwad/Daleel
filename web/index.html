@@ -58,6 +58,8 @@
   *{box-sizing:border-box}
   [hidden]{display:none !important}
   html,body{height:100%}
+  /* desktop reads best at ~75% of the browser's 100%: scale the whole UI down */
+  @media (min-width:901px){ html{zoom:.75} }
   body{
     margin:0; background:var(--bg); color:var(--ink);
     font-family:"Hanken Grotesk","Noto Sans Arabic",system-ui,-apple-system,"Segoe UI",Roboto,Tahoma,sans-serif;
@@ -106,17 +108,17 @@
 
   /* ---- scroll area ------------------------------------------------------ */
   #scroll{flex:1; overflow-y:auto; overscroll-behavior:contain}
-  #log{display:flex; flex-direction:column; padding-block:40px 12px}
+  #log{display:flex; flex-direction:column; padding-block:clamp(16px, 4vh, 40px) 12px}
 
   /* ---- home: the opening block ------------------------------------------ */
-  #open{padding-block:72px 24px}
+  #open{padding-block:clamp(20px, 6vh, 72px) 16px}
   #open h2{
     font-size:clamp(32px, 6vw, 52px); font-weight:800; line-height:1.15;
-    margin:0 0 20px; letter-spacing:-.02em; max-width:20ch;
+    margin:0 0 clamp(8px, 2vh, 20px); letter-spacing:-.02em; max-width:20ch;
   }
   html[lang="ar"] #open h2{letter-spacing:0; line-height:1.35}
   #open .lede{margin:0; color:var(--quiet); font-size:19px; max-width:42ch}
-  .examples{margin-top:48px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px}
+  .examples{margin-top:clamp(16px, 4vh, 48px); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(10px, 2vh, 20px)}
   .ex{
     display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:6px;
     width:100%; min-height:104px; font:inherit; font-size:18px; font-weight:500;
