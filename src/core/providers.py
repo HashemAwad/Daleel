@@ -25,14 +25,30 @@ from shared.config import settings
 llm = stubs.StubLLM()
 try:
     if settings.model_provider in {"api", "hosted"}:
-        from core.llm_hosted import HostedLLM
-        if HostedLLM.available():
-            primary = HostedLLM()
+        primary = None
+        if settings.api_vendor == "anthropic":
+            from core.llm import AnthropicLLM
+            if AnthropicLLM.available():
+                primary = AnthropicLLM()
+        else:
+            from core.llm_hosted import HostedLLM
+            if HostedLLM.available():
+                primary = HostedLLM()
+        if primary is not None:
+            backup = None
             if (settings.backup_llm_base_url and settings.backup_llm_api_key
                     and settings.backup_hosted_model):
+                from core.llm_hosted import HostedLLM
                 backup = HostedLLM(settings.backup_llm_base_url,
                                    settings.backup_llm_api_key,
                                    settings.backup_hosted_model)
+            elif settings.api_vendor == "anthropic":
+                # The normal hosted settings become Claude's independent Gemini
+                # fallback. Both are external APIs; no local model is selected.
+                from core.llm_hosted import HostedLLM
+                if HostedLLM.available():
+                    backup = HostedLLM()
+            if backup is not None:
                 from core.llm_failover import FailoverLLM
                 llm = FailoverLLM(primary, backup)
             else:

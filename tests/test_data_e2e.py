@@ -4,11 +4,34 @@ The model is pinned to the stub so results don't depend on which LLM is installe
 in src/data runs for real against the seed data. Needs Postgres (shared `db_ready` fixture)."""
 import pytest
 from fastapi.testclient import TestClient
-from core import providers, stubs
+from core import providers, router, understanding
 from data import directory, retention, transcripts
 from data.transcripts import NO_TEXT, session_key
 
 PREFIX = "zz_ete_"       # letters and underscores only: the topic CHECK rejects digits
+
+
+class FakeAPI:
+    """Hermetic answer API: echo grounded context; no network in data tests."""
+    name = "api:test"
+
+    def generate(self, system, prompt, context=""):
+        return context
+
+
+def fake_interpret(text, cazas, context):
+    from shared.contracts import Inquiry
+    inq = Inquiry(id="test", channel="web", text=text, user_ref="test")
+    tool = router.route_keywords(inq)
+    return {
+        "intent": "health_question", "relation": "new", "safety": "none",
+        "tool": tool, "facility_type": router._directory_kind(text) if tool == "directory" else None,
+        "location": router._resolve_caza(text) if tool == "directory" else None,
+        "drug": None, "result_limit": 3, "ownership_filter": None,
+        "reply_language": "en", "needs_clarification": False,
+        "clarification_kind": "none", "clarification_question": "",
+        "resolved_query": text, "reply": "", "confidence": 1.0, "model": "api:test",
+    }
 
 
 @pytest.fixture
@@ -22,7 +45,8 @@ def app(db_ready, monkeypatch):
     monkeypatch.setattr(transcripts.settings, "session_hash_salt", "a-real-test-salt")
     monkeypatch.setattr(transcripts, "_down_until", 0.0)
     monkeypatch.setattr(directory, "_tables", None)
-    monkeypatch.setattr(providers, "llm", stubs.StubLLM())
+    monkeypatch.setattr(providers, "llm", FakeAPI())
+    monkeypatch.setattr(understanding, "interpret", fake_interpret)
     monkeypatch.setattr(providers, "medicine", MedicineLookupImpl())
     monkeypatch.setattr(providers, "directory", DirectorySearchImpl())
     real_topic = transcripts.topic

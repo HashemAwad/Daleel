@@ -18,7 +18,7 @@ Adding an **optional** field to a model is safe. **Renaming or removing** a fiel
 ## Interfaces (Protocols) — who implements what
 | Protocol | Method | Owner | Real class/fn (providers.py looks for this) |
 |----------|--------|-------|---------------------------------------------|
-| `LLMClient` | `generate(system, prompt, context)`, `classify(text, labels)`, `embed(texts)` | A | `core.llm.AnthropicLLM` |
+| `LLMClient` | `generate(system, prompt, context)`, `generate_structured(system, prompt, schema)`, `classify(text, labels)`, `embed(texts)` | A | `core.llm.AnthropicLLM` (Claude) or `core.llm_hosted.HostedLLM` (Gemini/API backup) |
 | `Transcriber` | `transcribe(audio, mime) -> (text, lang?)` | B | `ai.transcribe.TranscriberImpl` |
 | `ProcedureSearch` | `search(query, lang?, k) -> [Doc]` | B | `ai.retrieval.ProcedureSearchImpl` |
 | `DirectorySearch` | `nearest(kind, caza?, lat?, lon?, k) -> [Facility]` | D | `data.directory.DirectorySearchImpl` |

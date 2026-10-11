@@ -8,6 +8,15 @@ def _inq(text="", audio_url=None, lang=None):
     return Inquiry(id="t", channel="web", text=text, user_ref="t", audio_url=audio_url, lang=lang)
 
 
+def _semantic_plan(tool: str, query: str) -> dict:
+    return {"intent": "health_question", "relation": "new", "safety": "none",
+            "tool": tool, "facility_type": None, "location": None, "drug": None,
+            "result_limit": 3, "ownership_filter": None, "reply_language": "en",
+            "needs_clarification": False, "clarification_kind": "none",
+            "clarification_question": "", "resolved_query": query, "reply": "",
+            "confidence": 0.95, "model": "api:test"}
+
+
 # ---- A4: routing picks the right tool -------------------------------------
 @pytest.mark.parametrize("text,expected", [
     ("how do I get my cancer medicine from the ministry?", "procedure"),
@@ -237,31 +246,27 @@ def test_strength_in_price_question_is_not_mistaken_for_dosing():
 
 # ---- A3: grounding gate falls back when no tool result --------------------
 def test_grounding_fallback(monkeypatch):
-    monkeypatch.setattr(router, "choose_tool", lambda inq: "procedure")
-    monkeypatch.setattr(router, "run_tool", lambda tool, inq: ToolResult(tool="procedure"))
+    monkeypatch.setattr(pipeline.understanding, "interpret",
+                        lambda *args: _semantic_plan("procedure", "missing procedure"))
+    monkeypatch.setattr(router, "run_tool", lambda tool, inq, **hints: ToolResult(tool="procedure"))
     a = pipeline.handle(_inq("something with no source"))
     assert a.grounded is False and a.outcome == "unanswered" and "1787" in a.text
 
 
 def test_unanswered_result_preserves_original_tool(monkeypatch):
-    monkeypatch.setattr(router, "choose_tool", lambda inq: "medicine")
-    monkeypatch.setattr(router, "run_tool", lambda tool, inq: ToolResult(tool="medicine"))
+    monkeypatch.setattr(pipeline.understanding, "interpret",
+                        lambda *args: _semantic_plan("medicine", "unavailable medicine price"))
+    monkeypatch.setattr(router, "run_tool", lambda tool, inq, **hints: ToolResult(tool="medicine"))
     a = pipeline.handle(_inq("price of unavailable medicine"))
     assert a.outcome == "unanswered" and a.tool == "medicine"
 
 
-def test_stub_llm_uses_clean_direct_renderer(monkeypatch):
+def test_missing_api_does_not_guess_with_legacy_router(monkeypatch):
     from core import providers, stubs
-    from shared.contracts import Facility
     monkeypatch.setattr(providers, "llm", stubs.StubLLM())
-    monkeypatch.setattr(router, "choose_tool", lambda inq: "directory")
-    monkeypatch.setattr(router, "run_tool", lambda tool, inq: ToolResult(
-        tool="directory",
-        facilities=[Facility(id="1", name="Test Pharmacy", type="pharmacy", distance_km=0.3)],
-    ))
     a = pipeline._handle(_inq("nearest pharmacy"))
-    assert "[stub answer]" not in a.text
-    assert "Test Pharmacy" in a.text and "0.3" in a.text
+    assert a.outcome == "unanswered"
+    assert "temporarily unavailable" in a.text
 
 
 # ---- A6: voice note is transcribed before routing -------------------------

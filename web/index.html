@@ -164,6 +164,7 @@
         display:flex; flex-direction:column; gap:8px}
   .src{font-size:15.5px; line-height:1.6; color:var(--quiet)}
   .src a{color:var(--olive); font-weight:600; text-underline-offset:3px}
+  .model-tag{margin-top:14px; font-size:13px; line-height:1.4; color:var(--quiet)}
   .m a{color:var(--olive); text-underline-offset:3px}
 
   .typing{display:flex; gap:7px; align-items:center; height:56px; padding-block:0; width:fit-content}
@@ -313,6 +314,7 @@ const STRINGS = {
     logLabel:"المحادثة",
     standing:["معلومات رسمية فقط. لا نقدّم نصائح طبية أو جرعات. للطوارئ اتصل بالرقم ", "."],
     srcPrefix:"المصدر: ", checked:"، روجع في ",
+    answeredBy:"أجاب بواسطة: ",
     another:"اسأل سؤالاً آخر", hotlinesBtn:"أرقام الطوارئ",
     hotlinesHead:"أرقام الطوارئ والخطوط الساخنة",
     offline:"الخدمة غير متاحة الآن. تحقق من اتصالك ثم أعد المحاولة.",
@@ -335,6 +337,7 @@ const STRINGS = {
     logLabel:"Conversation",
     standing:["Official information only. No medical or dosing advice. In an emergency call ", "."],
     srcPrefix:"Source: ", checked:", checked ",
+    answeredBy:"Answered by: ",
     another:"Ask another question", hotlinesBtn:"Emergency numbers",
     hotlinesHead:"Emergency and hotline numbers",
     offline:"The service is unavailable. Check your connection, then try again.",
@@ -472,6 +475,17 @@ function say(text, who){
   return d;
 }
 
+function modelLabel(value){
+  const raw = String(value || "").replace(/^failover->/, "");
+  if (!raw) return ui === "ar" ? "غير معروف" : "Unknown";
+  if (raw.startsWith("gemini:")) return "Google Gemini · " + raw.slice(7);
+  if (raw.startsWith("groq:")) return "Groq · " + raw.slice(5);
+  if (raw === "daleel:safety-rules") return ui === "ar" ? "قواعد السلامة في دليل" : "Daleel safety rules";
+  if (raw === "deterministic") return ui === "ar" ? "بيانات دليل الموثقة" : "Daleel verified data";
+  if (raw === "stub") return ui === "ar" ? "خدمة الذكاء الاصطناعي غير متاحة" : "AI service unavailable";
+  return raw;
+}
+
 function showAnswer(a){
   const d = entry("b");
 
@@ -488,6 +502,11 @@ function showAnswer(a){
   body.className = "bidi";
   linkify(body, a.text || "");          // URLs (e.g. Google Maps) become clickable
   d.appendChild(body);
+
+  const model = document.createElement("div");
+  model.className = "model-tag";
+  model.textContent = T.answeredBy + modelLabel(a.model);
+  d.appendChild(model);
 
   const srcs = (a.sources || []).filter(s => s && s.url);
   if (srcs.length){

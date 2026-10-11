@@ -177,7 +177,7 @@ def test_gibberish_transcript_still_gets_a_reply(monkeypatch):
     monkeypatch.setattr(providers, "transcriber", hears("شكرا ترجمة نانسي قنقر", "ar"))
     monkeypatch.setattr(providers, "procedures", type("P", (), {"search": lambda *a, **k: []})())
     r = client.post(whatsapp.WEBHOOK_PATH, data=voice_form())
-    assert r.status_code == 200 and "1787" in r.text
+    assert r.status_code == 200 and "140" in r.text
 
 
 def test_a_crash_in_the_turn_is_a_reply_not_a_500(monkeypatch):

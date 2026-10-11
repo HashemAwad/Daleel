@@ -139,9 +139,21 @@ def test_real_misses_and_ambiguity(lookup):
 def test_chat_end_to_end(lookup, monkeypatch):
     from fastapi.testclient import TestClient
     from core.app import app
-    from core import providers, stubs
+    from core import providers, understanding
     if not isinstance(providers.medicine, MedicineLookupImpl):
         pytest.skip("providers did not pick up the real lookup")
-    monkeypatch.setattr(providers, "llm", stubs.StubLLM())      # don't depend on a model being installed
+    class FakeAPI:
+        name = "api:test"
+        def generate(self, system, prompt, context=""):
+            return context
+    monkeypatch.setattr(providers, "llm", FakeAPI())
+    monkeypatch.setattr(understanding, "interpret", lambda *args: {
+        "intent": "health_question", "relation": "new", "safety": "none",
+        "tool": "medicine", "facility_type": None, "location": None, "drug": "Concor 5",
+        "result_limit": 3, "ownership_filter": None, "reply_language": "fr",
+        "needs_clarification": False, "clarification_kind": "none",
+        "clarification_question": "", "resolved_query": "Combien coûte le Concor 5?",
+        "reply": "", "confidence": 1.0, "model": "api:test",
+    })
     body = TestClient(app).post("/chat", json={"channel": "web", "text": "Combien coûte le Concor 5?", "user_ref": "t"}).json()
     assert body["tool"] == "medicine" and body["grounded"] is True

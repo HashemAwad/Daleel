@@ -31,7 +31,7 @@ This file is loaded automatically by Claude Code. If you are an agent working in
 python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
 docker compose up -d                       # Postgres + pgvector (+ pg_trgm); schema auto-applies on a fresh volume
 PYTHONPATH=src python -m data.db           # re-apply schema to an existing volume (idempotent)
-cp .env.example .env                        # fill in ANTHROPIC_API_KEY etc.
+cp .env.example .env                        # select the API vendor and fill its key
 PYTHONPATH=src uvicorn core.app:app --reload   # backend + widget + channel routes at http://localhost:8000
 PYTHONPATH=src python -m data.retention --loop  # deletes idle transcripts; without it nothing is ever deleted
 PYTHONPATH=src pytest -q                     # must stay green. NEVER on the demo server: DB tests reload seeds + delete transcripts
@@ -53,7 +53,7 @@ Healthcare teammate (5th): verifies procedures, writes the eval set, defines the
 Core depends only on the Protocols in `src/shared/contracts.py`. `core/providers.py` imports each real implementation if it exists, else a stub. To ship, expose exactly these names:
 - B → `ai.retrieval.ProcedureSearchImpl`, `ai.redaction.redact`, `ai.classifier.classify`, `ai.transcribe.TranscriberImpl`
 - D → `data.directory.DirectorySearchImpl`, `data.medicine.MedicineLookupImpl`
-- A → `core.llm.AnthropicLLM`
+- A → `core.llm.AnthropicLLM` (primary Claude API), `core.llm_hosted.HostedLLM` (explicit alternate API)
 
 Full detail: `docs/CONTRACTS.md`. Your tasks: `docs/tickets/dev-<you>.md`. Plan + timeline: `docs/PLAN.md`.
 

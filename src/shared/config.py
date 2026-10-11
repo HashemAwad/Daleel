@@ -8,7 +8,9 @@ load_dotenv()
 
 class Settings:
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_vendor = os.getenv("DALEEL_API_VENDOR", "gemini").lower()
     model = os.getenv("DALEEL_MODEL", "claude-sonnet-4-6")
+    anthropic_model = os.getenv("DALEEL_ANTHROPIC_MODEL", os.getenv("DALEEL_MODEL", "claude-sonnet-4-6"))
     local_model = os.getenv("DALEEL_LOCAL_MODEL", os.getenv("DALEEL_MODEL", "qwen2.5:7b"))
     hosted_model = os.getenv("DALEEL_HOSTED_MODEL", os.getenv("DALEEL_MODEL", "gemini-3.6-flash"))
     # Runtime policy: API-only. ``hosted`` remains a backwards-compatible alias

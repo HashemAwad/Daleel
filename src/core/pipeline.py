@@ -67,9 +67,8 @@ def _chat_default(lang: str) -> str:
 
 
 def _annotate_debug(answer: Answer) -> Answer:
-    """With DALEEL_DEBUG set, append the answering engine to the visible text so we
-    can see at a glance whether Gemini, the local model, or deterministic rendering
-    produced it. Off by default — real users never see it."""
+    """With DALEEL_DEBUG set, append the answering API to the visible text.
+    Off by default — real users never see it."""
     if os.getenv("DALEEL_DEBUG", "").strip().lower() not in ("1", "true", "yes"):
         return answer
     return answer.model_copy(update={"text": f"{answer.text}\n\n— via {answer.model or 'deterministic'}"})
@@ -97,8 +96,7 @@ def _handle(inq: Inquiry) -> Answer:
     # 3. UNDERSTAND the message with the model: intent, the tool that answers it, and
     #    the entities to query with (town->caza, facility type, drug) — tolerant of
     #    typos and transliteration, in any of the four languages. This replaces brittle
-    #    keyword matching as the primary interpreter; the deterministic router remains
-    #    the fallback when the model is unavailable. The model only INTERPRETS here —
+    #    keyword matching. The model only INTERPRETS here —
     #    every fact still comes from the tools below, so grounding is unchanged.
     previous = memory.last_context(inq.user_ref)
     model_context = dict(previous)
@@ -106,17 +104,17 @@ def _handle(inq: Inquiry) -> Answer:
     model_context["user_location_available"] = inq.lat is not None and inq.lon is not None
     interp = understanding.interpret(inq.text, _known_cazas(), model_context)
 
-    # 3b. A short refinement of the PREVIOUS directory turn ("the closest one", "the
-    #     private ones?") applies only when the model didn't read a clear new request —
-    #     so stale directory context never hijacks a fresh procedure/medicine question,
-    #     yet a genuine refinement still works even though standalone it reads as "unclear".
-    refined = False
+    # API-only understanding: never silently reuse legacy routing or stale
+    # conversation state when the semantic API is unavailable.
     if interp is None:
-        followup = _apply_directory_followup(inq)
-        if isinstance(followup, Answer):
-            return followup
-        refined = followup is not inq           # closest_one rewrote the question
-        inq = followup
+        return _understanding_unavailable(inq)
+
+    safety_category = interp.get("safety", "none")
+    if safety_category == "none" and interp.get("intent") in {"unclear", "out_of_scope"}:
+        safety_category = understanding.reassess_safety(inq.text, model_context)
+    semantic_safety = safety.from_semantic_category(inq, safety_category)
+    if semantic_safety:
+        return semantic_safety
 
     # 3c. Greeting / small-talk / gibberish -> reply conversationally, unless we just
     #     recognised the message as a directory refinement.
@@ -144,7 +142,9 @@ def _handle(inq: Inquiry) -> Answer:
 
     # 4. Route to exactly one tool (model's choice, else keywords). A tool may raise
     #    (missing dependency, DB down, bug) — never 500; degrade to the hotline fallback.
-    chosen_tool = (interp and interp["tool"]) or router.choose_tool(inq)
+    chosen_tool = interp.get("tool")
+    if not chosen_tool:
+        return _understanding_unavailable(inq)
     hints = understanding.resolved_hints(interp, previous)
 
     # Ownership is absent from the verified facility dataset. This is a
@@ -189,16 +189,11 @@ def _handle(inq: Inquiry) -> Answer:
     context = build_context(result)
     lang = reply_lang(inq)
     if isinstance(providers.llm, stubs.StubLLM):
-        return Answer(text=_render_facts(result, lang), sources=_sources(result), tool=result.tool,
-                      grounded=True, outcome="answered", lang=lang, model=_llm_name())
+        return _understanding_unavailable(inq)
     try:
         text = providers.llm.generate(SYSTEM_PROMPT, tool_inq.text, context)
     except Exception:
-        rendered = _render_facts(result, lang)
-        if rendered:
-            return Answer(text=rendered, sources=_sources(result), tool=result.tool,
-                          grounded=True, outcome="answered", lang=inq.lang, model="deterministic")
-        return _fallback(inq)
+        return _understanding_unavailable(inq)
     # The retrieved passage can be a weak/near-miss match (e.g. a "health card"
     # question that only reaches the "vaccination card" page). When that happens the
     # model follows the grounding rule and declines. Return a CLEAN hotline fallback
@@ -420,6 +415,19 @@ def _fallback(inq: Inquiry, tool: str = "none") -> Answer:
     }
     return Answer(
         text=messages[lang], tool=tool, grounded=False, outcome="unanswered", lang=lang)
+
+
+def _understanding_unavailable(inq: Inquiry) -> Answer:
+    """Expose an API outage safely instead of reusing an unrelated old intent."""
+    lang = reply_lang(inq)
+    messages = {
+        "ar": "تعذّر فهم الطلب الآن بسبب انقطاع مؤقت في خدمة المساعد. حاول مجدداً بعد قليل. في الحالة الطارئة اتصل على 140.",
+        "arabizi": "Ma 2derna nefham talabak halla2 la2an khidmet l musa3ed ma2tou3a mou2akkatan. Jarreb ba3den. Bel tawari2 2ettsel 3a 140.",
+        "fr": "Le service de compréhension est temporairement indisponible. Réessayez dans un instant. En cas d’urgence, appelez le 140.",
+        "en": "The assistant's understanding service is temporarily unavailable. Please try again shortly. In an emergency, call 140.",
+    }
+    return Answer(text=messages.get(lang, messages["en"]), tool="none", grounded=False,
+                  outcome="unanswered", lang=lang, model=_llm_name())
 
 
 def _ask_town(inq: Inquiry) -> Answer:

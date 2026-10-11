@@ -56,9 +56,26 @@ def check(inq: Inquiry) -> Optional[Answer]:
         lang = reply_lang(inq)
         return Answer(
             text=_EMERGENCY[lang].replace("140", rc.number),
-            tool="hotline", grounded=True, outcome="emergency", lang=lang)
+            tool="hotline", grounded=True, outcome="emergency", lang=lang,
+            model="daleel:safety-rules")
     if _matches(t, ADVICE_TERMS):
         lang = reply_lang(inq)
         return Answer(
-            text=_REFUSAL[lang], tool="hotline", grounded=True, outcome="refused", lang=lang)
+            text=_REFUSAL[lang], tool="hotline", grounded=True, outcome="refused", lang=lang,
+            model="daleel:safety-rules")
+    return None
+
+
+def from_semantic_category(inq: Inquiry, category: str) -> Optional[Answer]:
+    """Use fixed verified safety wording after typo-tolerant API classification."""
+    lang = reply_lang(inq)
+    if category == "emergency":
+        rc = next(h for h in providers.HOTLINES if h.number == "140")
+        return Answer(text=_EMERGENCY[lang].replace("140", rc.number), tool="hotline",
+                      grounded=True, outcome="emergency", lang=lang,
+                      model=getattr(providers.llm, "name", type(providers.llm).__name__))
+    if category == "medical_advice":
+        return Answer(text=_REFUSAL[lang], tool="hotline", grounded=True,
+                      outcome="refused", lang=lang,
+                      model=getattr(providers.llm, "name", type(providers.llm).__name__))
     return None

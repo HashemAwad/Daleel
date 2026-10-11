@@ -18,6 +18,7 @@ class Interpretation(BaseModel):
     intent: Literal["health_question", "greeting", "assistant_info",
                     "out_of_scope", "unclear"]
     relation: Literal["new", "follow_up", "none"]
+    safety: Literal["none", "emergency", "medical_advice"] = "none"
     tool: Literal["procedure", "directory", "medicine", "hotline"] | None = None
     facility_type: Literal["pharmacy", "hospital", "phc"] | None = None
     location: str | None = None
@@ -38,6 +39,14 @@ assistant. You never answer health questions and never invent facts. Produce onl
 requested structured action plan. Understand Arabic, Lebanese Arabizi, French and English,
 including typos and transliteration."""
 
+_SAFETY_SYSTEM = """You are the safety-intent reviewer for a Lebanese public-health
+assistant. Classify meaning, not keywords. Mentally correct likely spelling mistakes and
+understand Arabic, Lebanese Arabizi, French and English. Return only the requested schema.
+Choose emergency when the message may indicate immediate danger to life or an urgent
+medical emergency. Choose medical_advice only for individualized diagnosis, dosing,
+contraindication or treatment decisions. Official schedules and general public-health
+information are none. When uncertain between emergency and none, choose emergency."""
+
 _PROMPT = """Interpret the current message using its meaning and the structured previous
 context. Decide whether it is a new request or a follow-up; never let old context override
 an explicit new facility, medicine, location or procedure.
@@ -50,6 +59,16 @@ Product scope:
 - hotline: emergency or request for an official phone number/human.
 - assistant_info: who Daleel is or what services it offers.
 - out_of_scope: understandable but unrelated to health/Ministry services.
+
+Safety is semantic, not keyword-based. Set safety=emergency for a possible urgent danger
+to life or immediate medical emergency, even with typos, dialect or transliteration.
+Set safety=medical_advice only for an individualized diagnosis, medicine dose, treatment
+choice, contraindication, or a recommendation that depends on the person's symptoms or
+medical history. Official schedules, required-vaccine lists, eligibility rules, preventive
+health programmes, medicine prices, and Ministry procedures are factual public information,
+not medical advice—even when the user asks about their own child or family member. Route
+those requests to the appropriate grounded tool. Safety always overrides conversation
+history and the previously active tool.
 
 If the request has multiple plausible meanings that require different official sources,
 set needs_clarification=true and ask one short clarification in the user's language—but
@@ -94,6 +113,7 @@ def _schema(cazas: list[str]) -> dict:
             "intent": {"type": "string", "enum": ["health_question", "greeting",
                        "assistant_info", "out_of_scope", "unclear"]},
             "relation": {"type": "string", "enum": ["new", "follow_up", "none"]},
+            "safety": {"type": "string", "enum": ["none", "emergency", "medical_advice"]},
             "tool": {"type": "string", "nullable": True,
                      "enum": ["procedure", "directory", "medicine", "hotline"]},
             "facility_type": {"type": "string", "nullable": True,
@@ -112,7 +132,7 @@ def _schema(cazas: list[str]) -> dict:
             "reply": {"type": "string"},
             "confidence": {"type": "number", "minimum": 0, "maximum": 1},
         },
-        "required": ["intent", "relation", "tool", "facility_type", "location", "drug",
+        "required": ["intent", "relation", "safety", "tool", "facility_type", "location", "drug",
                      "result_limit", "ownership_filter", "reply_language",
                      "needs_clarification", "clarification_kind",
                      "clarification_question", "resolved_query", "reply", "confidence"],
@@ -131,7 +151,10 @@ def interpret(text: str, cazas: list[str], context: dict | None = None) -> dict 
         else:
             raw = json.loads(llm.generate(_SYSTEM, prompt))
         parsed = Interpretation.model_validate(raw)
-    except (ValueError, TypeError, ValidationError, json.JSONDecodeError):
+    # Provider/network/quota failures are not interpretation results. Returning
+    # None lets the pipeline show its explicit API-unavailable response rather
+    # than leaking an exception as a 500 or falling into legacy keyword routing.
+    except Exception:
         return None
     out = parsed.model_dump()
     # The API schema can constrain this only to the 1..3 range. Collapse any
@@ -140,6 +163,27 @@ def interpret(text: str, cazas: list[str], context: dict | None = None) -> dict 
     out["result_limit"] = 1 if parsed.result_limit == 1 else 3
     out["model"] = getattr(llm, "name", type(llm).__name__)
     return out
+
+
+def reassess_safety(text: str, context: dict | None = None) -> str:
+    """Focused semantic safety review for unclear/out-of-scope first-pass results."""
+    llm = providers.llm
+    if isinstance(llm, StubLLM) or not hasattr(llm, "generate_structured"):
+        return "none"
+    schema = {
+        "type": "object",
+        "properties": {"safety": {"type": "string",
+                                      "enum": ["none", "emergency", "medical_advice"]}},
+        "required": ["safety"],
+    }
+    prompt = ("Recent conversation: " + json.dumps(context or {}, ensure_ascii=False)
+              + "\nCurrent message: " + text)
+    try:
+        raw = llm.generate_structured(_SAFETY_SYSTEM, prompt, schema)
+        value = raw.get("safety")
+        return value if value in {"none", "emergency", "medical_advice"} else "none"
+    except Exception:
+        return "none"
 
 
 def resolved_hints(interp: dict | None, previous: dict | None = None) -> dict:

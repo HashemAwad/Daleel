@@ -20,9 +20,19 @@ class StructuredLLM:
         return self.result
 
 
+class GeneratingLLM:
+    name = "api:test"
+
+    def __init__(self, text: str):
+        self.text = text
+
+    def generate(self, system, prompt, context=""):
+        return self.text
+
+
 def plan(**changes):
     value = {
-        "intent": "health_question", "relation": "new", "tool": "directory",
+        "intent": "health_question", "relation": "new", "safety": "none", "tool": "directory",
         "facility_type": "hospital", "location": None, "drug": None,
         "result_limit": 3, "ownership_filter": None, "reply_language": "en",
         "needs_clarification": False, "clarification_kind": "none",
@@ -45,6 +55,66 @@ def test_structured_plan_is_validated(monkeypatch):
 def test_invalid_structured_plan_is_rejected(monkeypatch):
     monkeypatch.setattr(providers, "llm", StructuredLLM(plan(tool="invented_tool")))
     assert understanding.interpret("anything", ["Beirut"], {}) is None
+
+
+def test_api_failure_is_reported_as_unavailable_not_raised(monkeypatch):
+    class UnavailableLLM:
+        name = "anthropic:test"
+        def generate_structured(self, *args):
+            raise RuntimeError("quota or transport failure")
+
+    monkeypatch.setattr(providers, "llm", UnavailableLLM())
+    assert understanding.interpret("nearest hospital", ["Beirut"], {}) is None
+
+
+def test_semantic_emergency_overrides_old_directory_context(monkeypatch):
+    user = "semantic-emergency"
+    memory.remember_context(user, {"tool": "directory", "facility_type": "pharmacy"})
+    monkeypatch.setattr(understanding, "interpret", lambda *args: plan(
+        safety="emergency", tool="hotline", facility_type=None, resolved_query=""))
+    monkeypatch.setattr(router, "run_tool", lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError("emergency must never reach the prior directory tool")))
+
+    answer = pipeline._handle(_inq("i am in danegfr", user))
+    assert answer.outcome == "emergency"
+    assert "140" in answer.text
+
+
+def test_unclear_message_gets_focused_semantic_safety_review(monkeypatch):
+    monkeypatch.setattr(understanding, "interpret", lambda *args: plan(
+        intent="out_of_scope", safety="none", tool=None, facility_type=None,
+        resolved_query=""))
+    monkeypatch.setattr(understanding, "reassess_safety", lambda *args: "emergency")
+
+    answer = pipeline._handle(_inq("badly misspelled danger message"))
+    assert answer.outcome == "emergency"
+    assert "140" in answer.text
+
+
+def test_general_vaccine_schedule_is_not_medical_advice(monkeypatch):
+    monkeypatch.setattr(understanding, "interpret", lambda *args: plan(
+        safety="none", tool="procedure", facility_type=None,
+        resolved_query="official vaccination schedule for a two-month-old"))
+    seen = {}
+    def run_tool(tool, inq, **kwargs):
+        seen["query"] = inq.text
+        return ToolResult(tool="procedure")
+    monkeypatch.setattr(router, "run_tool", run_tool)
+    # The assertion is on semantic routing; retrieval behavior is tested separately.
+    pipeline._handle(_inq("what is my two-month-old next vaccination?"))
+    assert seen["query"] == "official vaccination schedule for a two-month-old"
+
+
+def test_api_failure_never_reuses_stale_context(monkeypatch):
+    user = "api-down-stale-context"
+    memory.remember_context(user, {"tool": "directory", "facility_type": "pharmacy"})
+    monkeypatch.setattr(understanding, "interpret", lambda *args: None)
+    monkeypatch.setattr(router, "run_tool", lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError("legacy routing must not run when API understanding fails")))
+
+    answer = pipeline._handle(_inq("a completely new request", user))
+    assert answer.outcome == "unanswered"
+    assert "temporarily unavailable" in answer.text
 
 
 def test_middle_result_limit_is_normalized_not_discarded(monkeypatch):
@@ -72,6 +142,7 @@ def test_new_request_never_inherits_old_facility():
 def test_pipeline_uses_single_plan_instead_of_old_directory_guess(monkeypatch):
     user = "new-overrides-old"
     memory.remember_context(user, {"tool": "directory", "facility_type": "pharmacy"})
+    monkeypatch.setattr(providers, "llm", GeneratingLLM("Hospital"))
     monkeypatch.setattr(understanding, "interpret", lambda text, cazas, context: plan())
     seen = {}
 
@@ -145,6 +216,7 @@ def test_followup_uses_standalone_query_for_retrieval(monkeypatch):
 
 
 def test_location_clarification_is_ignored_when_channel_has_coordinates(monkeypatch):
+    monkeypatch.setattr(providers, "llm", GeneratingLLM("Nearby Hospital"))
     monkeypatch.setattr(understanding, "interpret", lambda text, cazas, context: plan(
         needs_clarification=True, clarification_kind="location",
         clarification_question="Which town?"))
@@ -196,6 +268,34 @@ def test_gemini_structured_request_sends_schema(monkeypatch):
     assert result == {"ok": True}
     assert seen["responseMimeType"] == "application/json"
     assert "responseSchema" in seen
+
+
+def test_claude_structured_request_uses_forced_tool_and_schema(monkeypatch):
+    from types import SimpleNamespace
+    import core.llm as claude
+
+    seen = {}
+
+    class Messages:
+        def create(self, **kwargs):
+            seen.update(kwargs)
+            return SimpleNamespace(content=[SimpleNamespace(
+                type="tool_use", name="return_structured_result", input={"ok": True})])
+
+    class Client:
+        messages = Messages()
+
+    monkeypatch.setattr(claude.anthropic, "Anthropic", lambda api_key: Client())
+    llm = claude.AnthropicLLM(api_key="key", model="claude-sonnet-4-6")
+    result = llm.generate_structured(
+        "system", "prompt",
+        {"type": "object", "properties": {
+            "value": {"type": "string", "nullable": True}}})
+
+    assert result == {"ok": True}
+    assert seen["tool_choice"] == {"type": "tool", "name": "return_structured_result"}
+    value_schema = seen["tools"][0]["input_schema"]["properties"]["value"]
+    assert value_schema == {"anyOf": [{"type": "string"}, {"type": "null"}]}
 
 
 def test_hosted_failover_covers_structured_understanding():
