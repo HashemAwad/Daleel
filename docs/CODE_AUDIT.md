@@ -13,7 +13,7 @@ demo blockers from honest product limitations so the team fixes the right things
    types, but not ministry approval, ownership, opening hours or pharmacy stock.
    Spot-check the names/types used in the scripted demo. Never call a hospital
    public/private unless a verified ownership field is added.
-3. **Choose the demo model by measurement.** Compare Gemini, `qwen2.5:7b` and
+3. **Choose the demo model by measurement.** Compare Gemini, `qwen3.5:9b` and
    `qwen3.5:9b-q8_0` on the same reviewed Arabic/Arabizi/French/English questions.
    Record accuracy, wrong-language rate and median response time. Newer/larger
    does not automatically win the live-demo slot.

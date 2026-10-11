@@ -12,7 +12,7 @@ and redaction always runs first. So the backend is swappable without touching an
 | Provider | When | Needs | Notes |
 |----------|------|-------|-------|
 | `hosted` | **now (bridge)** | a free API key, no download | fluent immediately; data leaves the machine (dev only) |
-| `selfhost` | **demo/local** | `ollama pull qwen2.5:7b` done | private, on-device; hosted remains its automatic fallback |
+| `selfhost` | **demo/local** | `ollama pull qwen3.5:9b` done | private, on-device; hosted remains its automatic fallback |
 | `anthropic` | not used | paid key | left in for completeness |
 
 If the configured backend is unavailable, the app still answers from the data
@@ -25,9 +25,10 @@ If the configured backend is unavailable, the app still answers from the data
    3.8 Flash's reasoning behavior was materially slower for this short-answer UI.
 2. **Hosted reliability fallback:** Groq `llama-3.3-70b-versatile` when Gemini
    quota is unavailable. Groq lists it as a production model.
-3. **Self-hosted demo target:** Ollama `qwen2.5:7b`. Its download was already
-   halfway complete when this decision was reviewed, so finishing and testing it
-   is lower risk than restarting a large download hours before the demo.
+3. **Self-hosted demo target:** Ollama `qwen3.5:9b` (current generation). Chosen
+   over qwen2.5:7b for noticeably stronger Arabic/Arabizi and instruction-following
+   (grounding), at ~6.6GB it fits 24GB with headroom, and it has native tool
+   calling. Downloaded and verified: fluent grounded Arabic answers locally.
 4. **No-model fallback:** Daleel renders retrieved facts directly, so a model
    outage never removes verified facility, medicine or procedure results.
 
@@ -61,23 +62,23 @@ switch providers without running the same multilingual evaluation set.
 > OpenAI the company. The client (`core/llm_hosted.py`) retries transient 429/503s;
 > a persistent provider failure falls back to plain (still accurate) answers, never an error.
 
-## Switch to self-hosted (when `ollama list` shows `qwen2.5:7b`)
+## Switch to self-hosted (when `ollama list` shows `qwen3.5:9b`)
 Keep separate names for the local and hosted models, then change the provider and restart:
 ```
 DALEEL_MODEL_PROVIDER=selfhost
-DALEEL_LOCAL_MODEL=qwen2.5:7b
+DALEEL_LOCAL_MODEL=qwen3.5:9b
 DALEEL_HOSTED_MODEL=gemini-3.6-flash
 ```
 The separate variables matter: if local generation fails, the hosted fallback
 must retain its own Gemini/Groq model name rather than receiving the Ollama tag.
 
-### Post-demo upgrade: Qwen3 8B
+### Larger models (post-demo evaluation)
 
-Qwen3 8B has broader multilingual training, including Standard and Levantine
-Arabic, and should be evaluated after the hackathon. We are intentionally not
-discarding the current half-complete download during the demo build. This is a
-schedule-risk decision, not a claim that Qwen2.5 is the stronger model. Compare
-both on the same reviewed evaluation set before changing production.
+`qwen3.5:9b` is the demo model. If more capacity is available post-hackathon,
+evaluate larger options on the same reviewed eval set before changing production:
+`qwen3.5:9b-q8_0` (near-lossless, ~11GB), or Arabic-specialist models such as
+Fanar-2-27B / Jais-30B (strongest pure Arabic, but ~16-20GB and weaker on
+French/English/Arabizi, so not ideal as a single all-cases model).
 
 ## Privacy note
 In `hosted` mode the (redacted) text is sent to the provider — fine for development,

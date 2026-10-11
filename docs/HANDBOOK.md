@@ -41,7 +41,7 @@ Written for humans, assuming **no prior knowledge**. If you've been using an AI 
 | **API / endpoint** | A "door" into the backend. E.g. `/chat` is the door you send a question to; `/health` is a door that just says "I'm alive." |
 | **FastAPI** | The Python tool we use to build those doors. |
 | **LLM (large language model)** | The "AI brain" that reads a question and writes a human-sounding reply. Ours is **qwen**, run **locally and free** (no paid API). |
-| **Ollama** | The app that runs the local LLM. Finish `ollama pull qwen2.5:7b` for this demo; evaluate Qwen3 8B after submission. |
+| **Ollama** | The app that runs the local LLM on your machine. We use `qwen3.5:9b` (private, on-device). |
 | **RAG (retrieval-augmented generation)** | The pattern we use: first *retrieve* real facts from our database, then let the LLM *phrase* them. The LLM is a writer, not a source of facts. |
 | **Database / Postgres** | Where the real facts live (drugs, pharmacies, procedures). We use Postgres with an add-on called **pgvector**. |
 | **pgvector** | A Postgres add-on that lets us search text *by meaning* (so an Arabizi question can match Arabic text). Used for procedures. |
@@ -346,7 +346,7 @@ flowchart LR
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 #   install Ollama (the local AI runner), then download a model:
-ollama pull qwen2.5:7b          # ~4.7 GB; finish the in-progress demo download
+ollama pull qwen3.5:9b          # ~4.7 GB; finish the in-progress demo download
 
 # every work session
 docker compose up -d                      # start the database

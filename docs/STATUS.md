@@ -8,7 +8,7 @@ Snapshot of what's built, how to test it, and what's left. **103 tests passing o
 # one-time
 python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 #   install Ollama + a model (free local LLM):
-ollama pull qwen2.5:7b        # finish the in-progress demo model (~4.7 GB)
+ollama pull qwen3.5:9b        # finish the in-progress demo model (~4.7 GB)
 
 # each session
 docker compose up -d                      # Postgres (pgvector) — the data lives here
@@ -19,7 +19,7 @@ PYTHONPATH=src pytest -q                   # 103 passing
 # to also get WhatsApp + dashboard routes (until the 1-line wire-up below lands):
 PYTHONPATH=src uvicorn channels.asgi:app --reload
 ```
-Open **http://localhost:8000** for the chat widget. Set `.env` to `selfhost` + `qwen2.5:7b` for local inference.
+Open **http://localhost:8000** for the chat widget. Set `.env` to `selfhost` + `qwen3.5:9b` for local inference.
 
 ---
 ## 2. What works TODAY (by question type) + how to test
@@ -99,6 +99,6 @@ All in `src/core` + `src/shared`. Verify all at once: `PYTHONPATH=src pytest -q`
 
 ---
 ## 7. Known limitations (say these honestly)
-- The demo local model is **qwen2.5:7b** because its download was already halfway complete when the model decision was reviewed. Qwen3 8B is the recommended post-demo comparison candidate, not a blocker today. If the model is down, the bot answers from verified data using the plain renderer.
+- The demo local model is **qwen3.5:9b** (current generation): strong Arabic/Arabizi + instruction-following, ~6.6GB, fits 24GB. Downloaded and verified. If the model is down, the bot answers from verified data using the plain renderer (and can fail over to the hosted model).
 - Pharmacy data may be partly synthetic (per the plan) — label it in the demo.
 - We delete transcripts on our side only; WhatsApp/the user's phone keep their copies.

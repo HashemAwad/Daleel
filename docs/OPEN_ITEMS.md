@@ -60,7 +60,7 @@ Status is as read from `main` at that time — check the code before assuming an
 | H7 | **Decide the fallback number.** moph.gov.lb labels 1787 "Hotline for Health Services for Displaced Lebanese" and 1214 "MoPH Hotline" | The bot sends every unanswered question to 1787 (`core/pipeline.py`, `core/prompts.py`, `core/stubs.py`, `channels/whatsapp.py`, `web/index.html`). Call both, then A and C change the number in one commit |
 
 ## Deployment (as of Sat 10 Oct, evening)
-- **The demo runs on a teammate's MacBook** with the already-downloading `qwen2.5:7b` and a tunnel: `bash infra/laptop_setup.sh`, then `bash infra/run_demo.sh`. Steps in `infra/SETUP.md`.
+- **The demo runs on a teammate's MacBook** with the already-downloading `qwen3.5:9b` and a tunnel: `bash infra/laptop_setup.sh`, then `bash infra/run_demo.sh`. Steps in `infra/SETUP.md`.
 - Still to do on that laptop: Twilio values + `PUBLIC_BASE_URL` in `.env`, the Twilio webhook, and B's procedure ingestion.
 - Fallback: the AWS VM built by `infra/vm_setup.sh`, using the smaller `qwen3:4b` when local inference is needed. Verify its URL and loaded procedures before relying on it.
 - `bash infra/reset_demo.sh` before each rehearsal. It deletes all transcripts and metadata and inserts 320 **made-up** metadata rows marked `subtopic='sample'` so the dashboard is not empty.
