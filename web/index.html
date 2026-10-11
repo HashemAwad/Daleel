@@ -71,7 +71,7 @@
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 
   #app{height:100%; display:flex; flex-direction:column; background:var(--bg)}
-  .col{width:100%; max-width:var(--measure); margin-inline:auto; padding-inline:24px}
+  .col{width:100%; padding-inline:clamp(16px, 4vw, 56px)}
 
   /* ---- header ----------------------------------------------------------- */
   .letterhead{flex:none; border-bottom:1px solid var(--line); background:var(--bg)}
@@ -127,19 +127,19 @@
   .ex:hover{border-color:var(--olive); color:var(--olive)}
   .ex .script{font-size:14px; font-weight:700; color:var(--olive)}
   .ex .q{unicode-bidi:isolate; overflow-wrap:anywhere; min-width:0}
-  @media (min-width:1500px){ :root{--measure:52rem} }
+  @media (min-width:1100px){ .examples{grid-template-columns:repeat(3,minmax(0,1fr))} }
   @media (max-width:640px){ .examples{grid-template-columns:minmax(0,1fr); gap:16px} #open{padding-block:44px 16px} .ex{min-height:84px} }
 
   /* ---- conversation ----------------------------------------------------- */
   .m{max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere}
   .m + .m{margin-top:28px}
   .m.u{
-    align-self:flex-end; max-width:82%; padding:14px 22px;
+    align-self:flex-end; max-width:min(82%, 44rem); padding:14px 22px;
     background:var(--olive); color:var(--on-olive); font-size:18px;
     border-radius:24px;
   }
   .m.b{
-    max-width:94%; padding:24px 28px; background:var(--card); border:1px solid var(--line);
+    max-width:min(94%, 56rem); padding:24px 28px; background:var(--card); border:1px solid var(--line);
     border-radius:24px;
   }
   /* the small "tail" corner follows the page direction too (each message sets its own dir=auto) */
@@ -214,7 +214,7 @@
 
   :is(button,a,textarea):focus-visible{outline:3px solid var(--focus); outline-offset:3px}
   #t:focus-visible{outline:0}
-  @media (max-width:520px){ .col{padding-inline:16px} .m.b{padding:20px 20px} .m.u{max-width:90%} }
+  @media (max-width:520px){ .m.b{padding:20px 20px} .m.u{max-width:90%} }
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{animation:none !important; transition-duration:.01ms !important}
   }
