@@ -1,6 +1,7 @@
 # Verified procedure pages for Daleel. One URL per line; the trailing comment gives language and topic.
 # Every URL was fetched on 2026-10-10 and its body read: it loads and holds a procedure, not a news item.
-# Ingest: PYTHONPATH=src python src/ai/ingest.py URL [URL ...] --lang ar|fr|en   (strip the comment first)
+# Ingest all: PYTHONPATH=src python -m ai.ingest_manifest
+# Refresh all: PYTHONPATH=src python -m ai.ingest_manifest --refresh
 # No French pages: moph.gov.lb has no French version and Dawlati's pages are empty without JavaScript.
 # Not found on any reachable official page: chronic-medication card, disability card (MoSA), NSSF claims.
 # Details and what could not be verified: docs/DATA_RESEARCH.md

@@ -19,6 +19,7 @@ SYSTEM_PROMPT = (
     "Reply in the SAME language and script the user wrote in: Arabic script for Arabic, Latin "
     "letters with numbers (3, 7, 2...) for Lebanese Arabizi, French for French, English for English. "
     "Do not mix languages except for names, numbers and URLs. "
+    "Never use emojis, pictograms, decorative icons or emoji bullets. "
     "Keep it to 2-4 short lines, then list only the relevant steps or items. Do not write a source "
     "heading, citation, Markdown link or URL in the answer body; the interface displays verified "
     "sources separately."

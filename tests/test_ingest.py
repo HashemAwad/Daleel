@@ -2,8 +2,25 @@
 so no 2GB model download). DB test skips when Postgres isn't reachable."""
 import pytest
 from ai import ingest
+from ai.ingest_manifest import parse_manifest
 
 TEST_URL = "test://ingest-b1"
+
+
+def test_procedure_manifest_parses_urls_languages_and_comments():
+    entries = parse_manifest(
+        "# heading\n"
+        "https://example.org/ar  # lang=ar topic=mental health\n"
+        "https://example.org/en # lang=en topic=registration\n")
+    assert [(entry.url, entry.lang) for entry in entries] == [
+        ("https://example.org/ar", "ar"),
+        ("https://example.org/en", "en"),
+    ]
+
+
+def test_procedure_manifest_rejects_duplicate_urls():
+    with pytest.raises(ValueError, match="duplicate"):
+        parse_manifest("https://example.org # lang=en\nhttps://example.org # lang=en")
 
 
 def _sentences(n, words_each=20, end="."):

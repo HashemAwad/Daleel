@@ -414,7 +414,8 @@ def _fallback(inq: Inquiry, tool: str = "none") -> Answer:
         "en": f"I don't have a verified official answer for that yet. You can call the Ministry of Public Health on {h.number}.",
     }
     return Answer(
-        text=messages[lang], tool=tool, grounded=False, outcome="unanswered", lang=lang)
+        text=messages[lang], tool=tool, grounded=False, outcome="unanswered", lang=lang,
+        notice="no_source")
 
 
 def _understanding_unavailable(inq: Inquiry) -> Answer:

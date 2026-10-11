@@ -129,6 +129,15 @@ def test_strip_invented_url_on_facilities():
     assert "http" not in out            # facilities have no source -> link dropped
 
 
+def test_only_real_no_source_fallback_sets_ui_notice():
+    from core import pipeline
+
+    fallback = pipeline._fallback(_inq("unknown"))
+    clarification = pipeline._ask_facility_type(_inq("find a place"))
+    assert fallback.notice == "no_source"
+    assert clarification.notice is None
+
+
 def test_keep_real_procedure_source_url():
     from core import pipeline
     from shared.contracts import ToolResult, Doc, Source

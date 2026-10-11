@@ -62,7 +62,15 @@ class ProcedureSearchImpl:
         from ai.ingest import embeddings_available
         if self._embed is not None or embeddings_available():
             try:
-                return self._vector_search(query, k)
+                docs = self._vector_search(query, k)
+                if docs:
+                    return docs
+                # Pages whose embedding provider failed during ingestion are
+                # deliberately stored with NULL vectors. Search only those rows
+                # lexically; never use lexical matches to override a weak vector
+                # score on normally embedded documents.
+                from ai.lexical import lexical_search
+                return lexical_search(query, k, only_without_embedding=True)
             except Exception:
                 pass
         from ai.lexical import lexical_search   # no-ML keyword fallback

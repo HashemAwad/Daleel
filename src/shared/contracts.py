@@ -97,6 +97,7 @@ class Answer(BaseModel):
     model: Optional[str] = None       # which engine produced the text, for debugging:
                                       # e.g. "gemini:gemini-3.6-flash", "ollama:qwen3.5:9b",
                                       # "deterministic" (facts rendered without a model), "stub"
+    notice: Optional[Literal["no_source"]] = None  # UI banner; clarifications stay banner-free
 
 
 class Metadata(BaseModel):

@@ -57,15 +57,17 @@ def ingest_lexical(url: str, lang: Optional[str] = None) -> int:
 
 
 # ---------------------------------------------------------------- search
-def lexical_search(query: str, k: int = 4, min_score: Optional[float] = None) -> list[Doc]:
+def lexical_search(query: str, k: int = 4, min_score: Optional[float] = None,
+                   only_without_embedding: bool = False) -> list[Doc]:
     """pg_trgm word-similarity over title+content. Language-agnostic exact-ish
     matching (no stemming); cross-language matching is the vector path's job."""
     floor = LEXICAL_MIN_SCORE if min_score is None else min_score
     with get_conn() as conn:
+        where = " WHERE embedding IS NULL" if only_without_embedding else ""
         rows = conn.execute(
             "SELECT id, title, content, url, checked_on, lang,"
             " word_similarity(%s, title || ' ' || content) AS score"
-            " FROM procedures"
+            " FROM procedures" + where +
             " ORDER BY score DESC LIMIT %s",
             (query, k)).fetchall()
     return [Doc(id=str(r["id"]), title=r["title"], content=r["content"], lang=r["lang"],

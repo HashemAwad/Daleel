@@ -37,7 +37,8 @@ class Interpretation(BaseModel):
 _SYSTEM = """You interpret messages for Daleel, Lebanon's Ministry of Public Health
 assistant. You never answer health questions and never invent facts. Produce only the
 requested structured action plan. Understand Arabic, Lebanese Arabizi, French and English,
-including typos and transliteration."""
+including typos and transliteration. Any conversational reply or clarification must be
+plain text without emojis, pictograms or decorative icons."""
 
 _SAFETY_SYSTEM = """You are the safety-intent reviewer for a Lebanese public-health
 assistant. Classify meaning, not keywords. Mentally correct likely spelling mistakes and
