@@ -231,14 +231,22 @@ def test_in_budget_reply_is_not_sent_twice(monkeypatch):
 def test_spoken_phone_and_name_are_redacted_before_the_model_and_never_logged(monkeypatch, caplog):
     llm = RecordingLLM()
     monkeypatch.setattr(providers, "llm", llm)
-    monkeypatch.setattr(providers, "transcriber", hears(SPOKEN_PII))
+    # Use a PROCEDURE question: directory/medicine answers are rendered directly
+    # (no model), so a procedure is the path that actually reaches the model —
+    # which is what lets us check the prompt was redacted first.
+    pii = "my name is John Smith and my number is 03 123 456, how do I renew my prescription?"
+    monkeypatch.setattr(providers, "transcriber", hears(pii))
+    from shared.contracts import Doc
+    monkeypatch.setattr(providers, "procedures",
+                        type("P", (), {"search": lambda self, q, lang=None, k=4:
+                                       [Doc(id="1", title="Renewal", content="Bring your ID.")]})())
     with caplog.at_level(logging.DEBUG):
         r = client.post(whatsapp.WEBHOOK_PATH, data=voice_form())
     assert r.status_code == 200 and llm.seen, "the model was never reached, so this test proved nothing"
     for prompt in llm.seen:
         assert "John" not in prompt and "Smith" not in prompt and "123" not in prompt
         assert "[NAME]" in prompt and "[PHONE]" in prompt
-    for secret in ("John", "Smith", "123 456", "concor", "70123456", "AUDIO-BYTES-MARKER"):
+    for secret in ("John", "Smith", "123 456", "70123456", "AUDIO-BYTES-MARKER"):
         assert secret not in caplog.text
 
 

@@ -94,6 +94,9 @@ class Answer(BaseModel):
     grounded: bool = False            # True only if a tool result supports the text
     outcome: Outcome = "answered"
     lang: Optional[Lang] = None
+    model: Optional[str] = None       # which engine produced the text, for debugging:
+                                      # e.g. "gemini:gemini-3.6-flash", "ollama:qwen3.5:9b",
+                                      # "deterministic" (facts rendered without a model), "stub"
 
 
 class Metadata(BaseModel):

@@ -1,86 +1,54 @@
-# LLM backends — bridge now, self-host later
+# LLM runtime — API only
 
-The answer model is pluggable (`core/providers.py` picks it from `.env`). Build
-on a hosted model now, then prefer the self-hosted model when it is installed.
-When `selfhost` is selected, the configured hosted endpoint remains an automatic
-runtime fallback if Ollama is missing or a local generation fails.
+Daleel uses an external model API. The deployed application never starts,
+selects, or falls back to Ollama or another locally/self-hosted model.
 
-The model only *phrases* answers — the facts always come from our database/retrieval
-and redaction always runs first. So the backend is swappable without touching anything else.
+The model interprets the request and phrases grounded results. Facts still come
+from Daleel's verified procedure, medicine, facility, and hotline data. Personal
+identifiers are redacted before an API request.
 
-## Three backends (set `DALEEL_MODEL_PROVIDER`)
-| Provider | When | Needs | Notes |
-|----------|------|-------|-------|
-| `hosted` | **now (bridge)** | a free API key, no download | fluent immediately; data leaves the machine (dev only) |
-| `selfhost` | **demo/local** | `ollama pull qwen3.5:9b` done | private, on-device; hosted remains its automatic fallback |
-| `anthropic` | not used | paid key | left in for completeness |
+## Primary API: Gemini
 
-If the configured backend is unavailable, the app still answers from the data
-(plain/templated) — it never hard-fails.
+Configure `.env`:
 
-## Final decision
-
-1. **Best hosted-demo balance:** Google `gemini-3.6-flash`. It produced a
-   complete grounded Arabic answer in roughly 2.5 seconds in the demo environment;
-   3.8 Flash's reasoning behavior was materially slower for this short-answer UI.
-2. **Hosted reliability fallback:** Groq `llama-3.3-70b-versatile` when Gemini
-   quota is unavailable. Groq lists it as a production model.
-3. **Self-hosted demo target:** Ollama `qwen3.5:9b` (current generation). Chosen
-   over qwen2.5:7b for noticeably stronger Arabic/Arabizi and instruction-following
-   (grounding), at ~6.6GB it fits 24GB with headroom, and it has native tool
-   calling. Downloaded and verified: fluent grounded Arabic answers locally.
-4. **No-model fallback:** Daleel renders retrieved facts directly, so a model
-   outage never removes verified facility, medicine or procedure results.
-
-The model is never allowed to choose facts. Safety, routing, retrieval, distance
-ranking and grounding remain deterministic.
-
-## Hosted mode — choose the available account
-
-**Gemini (best answer quality for the demo):**
-```
+```env
+DALEEL_MODEL_PROVIDER=api
 DALEEL_HOSTED_MODEL=gemini-3.6-flash
 DALEEL_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta
-DALEEL_LLM_API_KEY=...                 # key from aistudio.google.com/app/apikey
+DALEEL_LLM_API_KEY=... # never commit this value
 ```
 
-**Groq (reliable backup — fast and production-listed):**
-1. Free key at **https://console.groq.com** → API Keys → Create (no card).
-2. In `.env`:
-   ```
-   DALEEL_MODEL_PROVIDER=hosted
-   DALEEL_HOSTED_MODEL=llama-3.3-70b-versatile
-   DALEEL_LLM_BASE_URL=https://api.groq.com/openai/v1
-   DALEEL_LLM_API_KEY=gsk_...          # your Groq key
-   ```
-3. Restart the server → fluent answers (Llama 3.3 70B, good Arabic).
+Restart the application after changing environment variables. The response's
+`model` field identifies the API/model that actually answered.
 
-Gemini is the quality-first choice; Groq is the quota/reliability choice. Do not
-switch providers without running the same multilingual evaluation set.
+## Optional API backup
 
-> "OpenAI-format" = the de-facto API shape Gemini/Groq/OpenRouter all accept — **not**
-> OpenAI the company. The client (`core/llm_hosted.py`) retries transient 429/503s;
-> a persistent provider failure falls back to plain (still accurate) answers, never an error.
+A second, independent API provider avoids losing natural-language understanding
+when Gemini is rate-limited or unavailable. This is API-to-API failover—not a
+local model fallback.
 
-## Switch to self-hosted (when `ollama list` shows `qwen3.5:9b`)
-Keep separate names for the local and hosted models, then change the provider and restart:
+Example using Groq:
+
+```env
+DALEEL_BACKUP_HOSTED_MODEL=llama-3.3-70b-versatile
+DALEEL_BACKUP_LLM_BASE_URL=https://api.groq.com/openai/v1
+DALEEL_BACKUP_LLM_API_KEY=... # never commit this value
 ```
-DALEEL_MODEL_PROVIDER=selfhost
-DALEEL_LOCAL_MODEL=qwen3.5:9b
-DALEEL_HOSTED_MODEL=gemini-3.6-flash
-```
-The separate variables matter: if local generation fails, the hosted fallback
-must retain its own Gemini/Groq model name rather than receiving the Ollama tag.
 
-### Larger models (post-demo evaluation)
+If neither API is available, Daleel does not invent an answer and does not call
+a local LLM. It can still render facts returned by its verified data tools in a
+plain format.
 
-`qwen3.5:9b` is the demo model. If more capacity is available post-hackathon,
-evaluate larger options on the same reviewed eval set before changing production:
-`qwen3.5:9b-q8_0` (near-lossless, ~11GB), or Arabic-specialist models such as
-Fanar-2-27B / Jais-30B (strongest pure Arabic, but ~16-20GB and weaker on
-French/English/Arabizi, so not ideal as a single all-cases model).
+## Reliability and quota
 
-## Privacy note
-In `hosted` mode the (redacted) text is sent to the provider — fine for development,
-**not** for production. The ministry-facing deployment uses `selfhost`, where nothing
-leaves the server. We redact phone numbers / IDs / names before *any* model call in both modes.
+No usage-limited public API can guarantee unlimited availability. For the demo:
+
+1. Use a paid/quota-enabled Gemini project if available.
+2. Configure an independent API backup with a separate provider and quota.
+3. Keep retries bounded so a provider outage does not stall the chat.
+4. Run the multilingual evaluation set against the exact production model before
+   changing providers.
+
+The term `HostedLLM` in Python means an external API client. It does not mean
+self-hosting. The legacy provider value `hosted` remains accepted for old `.env`
+files; new configuration must use `api`.

@@ -12,12 +12,17 @@ from core.stubs import StubLLM
 
 TOOLS = ["procedure", "directory", "medicine", "hotline"]
 
-DIRECTORY_TERMS = ["pharmacy", "pharmacie", "صيدلية",
-                   "hospital", "مستشفى",
-                   "hôpital", "hopital", "centre de santé", "centre de sante",
-                   "phc", "mustawsaf", "clinic", "3yede", "عيادة", "مركز",
-                   "nearest", "closest", "nearby", "plus proche", "proche", "près de", "pres de",
+# A facility NOUN alone is not a directory request: "my rights in a hospital" is a
+# procedure/law question. Directory needs a LOCATE signal too — a proximity word or
+# a named town. Split the two so the noun no longer forces the directory tool.
+FACILITY_NOUNS = ["pharmacy", "pharmacie", "صيدلية",
+                  "hospital", "مستشفى",
+                  "hôpital", "hopital", "centre de santé", "centre de sante",
+                  "phc", "mustawsaf", "clinic", "3yede", "عيادة", "مركز"]
+PROXIMITY_TERMS = ["nearest", "closest", "nearby", "plus proche", "proche", "près de", "pres de",
                    "near", "قريب", "أقرب", "اقرب"]
+# Kept for callers/tests that reference the old combined list.
+DIRECTORY_TERMS = FACILITY_NOUNS + PROXIMITY_TERMS
 # Medicine = PRICE/COST/FREE intent only (not the bare word "medicine", which
 # also appears in procedure questions). A4 lets the model override this.
 MEDICINE_TERMS = ["price", "cost", "how much", "سعر", "كم سعر", "combien",
@@ -111,13 +116,19 @@ def directory_followup_action(text: str) -> str:
 
 def route_keywords(inq: Inquiry) -> str:
     t = inq.text.lower()
-    if any(w in t for w in DIRECTORY_TERMS):
+    has_proximity = (any(w in t for w in PROXIMITY_TERMS)
+                     or any(_fuzzy_token(t, near) for near in _ARABIZI_NEAR))
+    has_facility = any(w in t for w in FACILITY_NOUNS) or _arabizi_facility_kind(t) is not None
+    # "nearest X", "X nearby" -> clearly a locate request.
+    if has_proximity:
         return "directory"
-    if (_arabizi_facility_kind(t) and
-            any(_fuzzy_token(t, near) for near in _ARABIZI_NEAR)):
+    # A facility noun + a named town ("pharmacy in Beirut") is also a locate request.
+    if has_facility and _resolve_caza(inq.text) is not None:
         return "directory"
     if any(w in t for w in MEDICINE_TERMS):
         return "medicine"
+    # A bare facility noun with no locate signal is ambiguous (likely procedure/law);
+    # choose_tool's semantic classifier decides rather than forcing directory here.
     return "procedure"
 
 
@@ -137,25 +148,35 @@ def choose_tool(inq: Inquiry) -> str:
         return kw
     semantic = _semantic_label(
         inq.text, TOOLS,
-        "Choose the single tool matching the user's intent in any language or transliteration.")
+        "Pick ONE tool for this health question, in any language or transliteration. "
+        "procedure = how to do or obtain something, requirements, steps, rights, or any official "
+        "ministry service — INCLUDING how to request medicine assistance or health coverage. "
+        "directory = find or locate a nearby pharmacy, hospital or health centre. "
+        "medicine = ONLY the price or free status of a specific named drug. "
+        "hotline = an emergency or a request for a phone number.")
     return semantic or kw
 
 
-def run_tool(tool: str, inq: Inquiry) -> ToolResult:
+def run_tool(tool: str, inq: Inquiry, caza: str | None = None,
+             facility_type: str | None = None, drug: str | None = None,
+             limit: int | None = None) -> ToolResult:
+    """Run one tool. `caza` / `facility_type` / `drug` are the understanding layer's
+    extracted entities (typo-/transliteration-tolerant); each falls back to the
+    deterministic extractor when the model didn't supply it."""
     if tool == "directory":
         text = inq.text.lower()
         one_only = any(term in text for term in ONE_ONLY_TERMS)
-        kind = _directory_kind(inq.text)
+        kind = facility_type or _directory_kind(inq.text)
         if kind is None:
             return ToolResult(tool="directory", clarification="facility_type")
         return ToolResult(tool="directory",
                           facilities=providers.directory.nearest(
                               kind,
-                              caza=_resolve_caza(inq.text),
+                              caza=caza or _resolve_caza(inq.text),
                               lat=inq.lat, lon=inq.lon,
-                              k=1 if one_only else 3))
+                              k=limit or (1 if one_only else 3)))
     if tool == "medicine":
-        return ToolResult(tool="medicine", drugs=providers.medicine.find(inq.text))
+        return ToolResult(tool="medicine", drugs=providers.medicine.find(drug or inq.text))
     if tool == "hotline":
         return ToolResult(tool="hotline", hotlines=providers.HOTLINES)
     return ToolResult(tool="procedure", docs=providers.procedures.search(inq.text, lang=inq.lang))

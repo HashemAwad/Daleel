@@ -11,6 +11,10 @@ class AnthropicLLM:
         self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         self.model = settings.model
 
+    @property
+    def name(self) -> str:
+        return f"anthropic:{self.model}"
+
     def generate(self, system: str, prompt: str, context: str = "") -> str:
         user = f"Context:\n{context}\n\nUser question:\n{prompt}" if context else prompt
         resp = self.client.messages.create(

@@ -88,6 +88,18 @@ def _load() -> tuple[dict[str, str], dict[str, str]]:
     return _tables
 
 
+def known_cazas() -> list[str]:
+    """Canonical caza names we actually have facilities in — the closed list the
+    understanding layer normalises any town/spelling to. Empty if the DB is down."""
+    try:
+        with get_conn() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT caza FROM facilities WHERE caza IS NOT NULL ORDER BY caza").fetchall()
+        return [r["caza"] for r in rows]
+    except Exception:
+        return []
+
+
 def resolve(text: str | None, aliases: dict[str, str], towns: dict[str, str]) -> tuple[str | None, str | None]:
     """Pure. -> (caza, town_word). The first place mentioned wins; the longest phrase at that spot wins."""
     tokens = place_key(text).split()
@@ -159,8 +171,26 @@ class DirectorySearchImpl:
     def _nearest(self, kind: str, caza: str | None, lat: float | None, lon: float | None, k: int) -> list[Facility]:
         aliases, towns = _load()          # also proves the DB is up before we answer "no place given"
 
-        # TRUE nearest: if the user shared a location, rank ALL facilities of this
-        # kind by real distance and fill distance_km. This is the accurate path.
+        # A NAMED TOWN is an explicit choice and wins over the browser's location:
+        # "pharmacies in Aley" must return Aley even if the user is sitting in Beirut.
+        # Restrict to that caza; if we also have the user's coordinates, still rank
+        # those town facilities by real distance (and fill distance_km), else town-first.
+        resolved, town = resolve(caza, aliases, towns) if caza else (None, None)
+        if resolved:
+            with get_conn() as conn:
+                rows = conn.execute(
+                    "SELECT id, name, type, caza, address, phone, lat, lon, is_synthetic "
+                    "FROM facilities WHERE type = %s AND caza = %s", (kind, resolved)).fetchall()
+            if lat is not None and lon is not None:
+                ranked = sorted(((_haversine_km(lat, lon, r["lat"], r["lon"]), r)
+                                 for r in rows if r["lat"] is not None and r["lon"] is not None),
+                                key=lambda x: x[0])
+                if ranked:
+                    return [_facility(r, round(dist, 1)) for dist, r in ranked[:k]]
+            return [_facility(r) for r in order(rows, resolved, town, aliases)[:k]]
+
+        # No town named: TRUE nearest — if the user shared a location, rank ALL
+        # facilities of this kind by real distance and fill distance_km.
         if lat is not None and lon is not None:
             with get_conn() as conn:
                 rows = conn.execute(
@@ -170,15 +200,4 @@ class DirectorySearchImpl:
             ranked = sorted(((_haversine_km(lat, lon, r["lat"], r["lon"]), r) for r in rows),
                             key=lambda x: x[0])[:k]
             return [_facility(r, round(dist, 1)) for dist, r in ranked]
-
-        # No coordinates: by caza / town.
-        if not caza:
-            return []
-        resolved, town = resolve(caza, aliases, towns)
-        if not resolved:
-            return []
-        with get_conn() as conn:
-            rows = conn.execute(
-                "SELECT id, name, type, caza, address, phone, lat, lon, is_synthetic "
-                "FROM facilities WHERE type = %s AND caza = %s", (kind, resolved)).fetchall()
-        return [_facility(r) for r in order(rows, resolved, town, aliases)[:k]]
+        return []

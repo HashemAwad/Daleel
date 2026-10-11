@@ -16,6 +16,8 @@ HOTLINES = [
 
 
 class StubLLM:
+    name = "stub"
+
     def generate(self, system: str, prompt: str, context: str = "") -> str:
         return "[stub answer] " + (context[:200] or prompt[:200])
 

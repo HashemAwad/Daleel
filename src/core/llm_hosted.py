@@ -11,6 +11,7 @@ Selected when DALEEL_MODEL_PROVIDER=hosted. Config (see docs/LLM.md):
   DALEEL_MODEL          gemini-2.0-flash
 """
 from __future__ import annotations
+import json
 import time
 import httpx
 from shared.config import settings
@@ -24,6 +25,12 @@ class HostedLLM:
         self.base_url = (base_url or settings.llm_base_url).rstrip("/")
         self.api_key = api_key or settings.llm_api_key
         self.model = model or settings.hosted_model
+
+    @property
+    def name(self) -> str:
+        kind = ("gemini" if "generativelanguage.googleapis.com" in self.base_url
+                else "groq" if "groq" in self.base_url else "hosted")
+        return f"{kind}:{self.model}"
 
     @classmethod
     def available(cls) -> bool:
@@ -99,6 +106,53 @@ class HostedLLM:
                 last = exc
                 time.sleep(attempt + 1)
         raise last or RuntimeError("Gemini unavailable")
+
+    def generate_structured(self, system: str, prompt: str, schema: dict) -> dict:
+        """Return schema-constrained JSON from Gemini.
+
+        This is used for message understanding, where parsing a best-effort JSON
+        blob is not reliable enough. Non-Gemini endpoints fall back to validated
+        JSON parsing so a second hosted provider can still implement the contract.
+        """
+        if "generativelanguage.googleapis.com" not in self.base_url:
+            schema_prompt = (f"{prompt}\n\nReturn JSON matching this schema exactly:\n"
+                             f"{json.dumps(schema, ensure_ascii=False)}")
+            return json.loads(self.generate(system, schema_prompt))
+        base = self.base_url.removesuffix("/openai")
+        url = f"{base}/models/{self.model}:generateContent"
+        payload = {
+            "systemInstruction": {"parts": [{"text": system}]},
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0,
+                "maxOutputTokens": 1024,
+                "thinkingConfig": {"thinkingLevel": "low"},
+                "responseMimeType": "application/json",
+                "responseSchema": schema,
+            },
+        }
+        last: Exception | None = None
+        for attempt in range(2):
+            try:
+                r = httpx.post(url, timeout=30,
+                               headers={"x-goog-api-key": self.api_key}, json=payload)
+                if r.status_code in _RETRY_STATUS:
+                    last = httpx.HTTPStatusError(str(r.status_code), request=r.request, response=r)
+                    time.sleep(attempt + 1)
+                    continue
+                r.raise_for_status()
+                text = "".join(
+                    part.get("text", "")
+                    for candidate in r.json().get("candidates", [])
+                    for part in candidate.get("content", {}).get("parts", [])
+                ).strip()
+                if text:
+                    return json.loads(text)
+                raise RuntimeError("Gemini returned no structured output")
+            except (httpx.TransportError, httpx.TimeoutException) as exc:
+                last = exc
+                time.sleep(attempt + 1)
+        raise last or RuntimeError("Gemini structured output unavailable")
 
     def classify(self, text: str, labels: list[str]) -> str:
         out = self.generate(

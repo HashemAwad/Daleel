@@ -19,30 +19,27 @@ from core import stubs
 log = logging.getLogger(__name__)
 
 # --- LLM (A) ---
-# Preferred order for the demo:
-# selfhost (private) -> hosted failover (if configured) -> plain renderer/stub.
+# Runtime policy: external API only. An optional fallback must also be an
+# external API provider. Ollama/local models are deliberately never selected.
 from shared.config import settings
 llm = stubs.StubLLM()
 try:
-    if settings.model_provider == "selfhost":
-        from core.llm_ollama import OllamaLLM
-        from core.llm_hosted import HostedLLM
-        local = OllamaLLM() if OllamaLLM.available() else None
-        hosted = HostedLLM() if HostedLLM.available() else None
-        if local and hosted:
-            from core.llm_failover import FailoverLLM
-            llm = FailoverLLM(local, hosted)
-        elif local:
-            llm = local
-        elif hosted:
-            llm = hosted
-    elif settings.model_provider == "hosted":
+    if settings.model_provider in {"api", "hosted"}:
         from core.llm_hosted import HostedLLM
         if HostedLLM.available():
-            llm = HostedLLM()
-    elif settings.anthropic_api_key:
-        from core.llm import AnthropicLLM
-        llm = AnthropicLLM()
+            primary = HostedLLM()
+            if (settings.backup_llm_base_url and settings.backup_llm_api_key
+                    and settings.backup_hosted_model):
+                backup = HostedLLM(settings.backup_llm_base_url,
+                                   settings.backup_llm_api_key,
+                                   settings.backup_hosted_model)
+                from core.llm_failover import FailoverLLM
+                llm = FailoverLLM(primary, backup)
+            else:
+                llm = primary
+    else:
+        log.error("unsupported LLM provider %r; API-only policy is active",
+                  settings.model_provider)
 except Exception as exc:
     log.error("LLM provider unavailable; using direct renderer: %s", type(exc).__name__)
     llm = stubs.StubLLM()

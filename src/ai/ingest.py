@@ -23,6 +23,8 @@ if __package__ in (None, ""):                       # allow `python src/ai/inges
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 EMBED_MODEL = "BAAI/bge-m3"          # 1024 dims = procedures.embedding vector(1024)
+GEMINI_EMBED_MODEL = "gemini-embedding-001"   # primary: 1024 dims (outputDimensionality), multilingual
+EMBED_DIM = 1024                     # must equal procedures.embedding vector(N)
 MIN_WORDS, MAX_WORDS = 300, 500
 
 # Sentence ends: . ؛ ! ؟ ? ، followed by whitespace. (، is a comma, but the ticket asks
@@ -92,17 +94,34 @@ def chunk_text(text: str, min_words: int = MIN_WORDS, max_words: int = MAX_WORDS
     return [" ".join(c) for c in chunks]
 
 
-# Site chrome that Trafilatura keeps on moph.gov.lb pages (login banner). Whole-line match,
-# case-insensitive. Add patterns here if new pages leak other navigation text.
-_BOILERPLATE = re.compile(
-    r"^\s*(are you a new member\?.*|sign up( now)?|login area|\|?\s*sign up|login|close)\s*$", re.I)
+# Site chrome moph.gov.lb leaks into extracted text: the top nav, the login banner,
+# and the "download the ministry app / send a complaint" promo. These pollute
+# retrieval (a complaint question matched the app banner) and must be dropped. Whole
+# nav items are matched exactly; the promo/hotline banners by substring.
+_CHROME_LINES = {
+    "toggle navigation", "back to the top", "home", "sitemap", "overview", "close",
+    "laws and regulations", "e-services", "publications", "media center", "contact us",
+    "faq", "login", "login area", "sign up", "sign up now", "track your documents",
+    "are you a physician?", "are you a physician",
+    "لمحة عامة", "المعاملات الإدارية", "المنشورات", "المركز الاعلامي", "اسئلة وأجوبة",
+    "إتصل بنا", "الخدمات الإلكترونية", "القوانين والأنظمة", "خريطة الموقع",
+}
+_CHROME_RE = re.compile(
+    r"(are you a new member|الخط الساخن|تطبيق وزارة الصحة|حمّل تطبيق|حمل تطبيق"
+    r"|send any complaint|النسخة الجديدة|sign up)", re.I)
 _TITLE_TAG = re.compile(r"<title[^>]*>(.*?)</title>", re.I | re.S)
+
+
+def _is_chrome(line: str) -> bool:
+    """True if a line is site navigation / login / app-promo chrome, not content."""
+    s = line.strip().strip("|").strip()
+    return (not s) or (s.lower() in _CHROME_LINES) or bool(_CHROME_RE.search(line))
 
 
 def clean_text(text: str) -> str:
     """Drop site-chrome lines and collapse blank/space runs. Keeps paragraph breaks."""
     lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in text.splitlines()]
-    kept = [ln for ln in lines if ln and not _BOILERPLATE.match(ln)]
+    kept = [ln for ln in lines if ln and not _is_chrome(ln)]
     return "\n".join(kept)
 
 
@@ -117,8 +136,46 @@ def page_title(html: str, meta_title: Optional[str], url: str) -> str:
 
 
 # ---------------------------------------------------------------- fetch / embed
+# moph.gov.lb service pages are an ASP.NET SPA: Trafilatura grabs the nav/banner
+# and truncates (or drops) the real service body, and always reports the title as
+# "Administrative Services". The service sheet lives in a `pageDetailsTop` block
+# and ends at the footer ("Back to the top" / "Toggle navigation"). We slice that
+# block, decode entities and read it as a label->value list.
+_MOPH_END = ("Back to the top", "Toggle navigation")
+
+
+def fetch_moph_service(url: str) -> Optional[tuple[str, str]]:
+    """(service name, body) for a moph.gov.lb AdministrativeServices/details page."""
+    import html as _html
+    import httpx
+    raw = httpx.get(url, timeout=30, follow_redirects=True,
+                    headers={"User-Agent": "Mozilla/5.0"}).text
+    start = raw.find("pageDetailsTop")
+    if start < 0:
+        return None
+    ends = [i for i in (raw.find(m, start) for m in _MOPH_END) if i > 0]
+    seg = raw[start:min(ends)] if ends else raw[start:]
+    seg = re.sub(r"<(script|style)\b.*?</\1>", " ", seg, flags=re.S | re.I)
+    seg = re.sub(r"<!--.*?-->", " ", seg, flags=re.S)
+    seg = re.sub(r"<[^>]+>", "\n", seg)                 # each element on its own line
+    text = _html.unescape(seg).replace("\xa0", " ")
+    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in text.splitlines()]
+    lines = [ln for ln in lines
+             if ln and ln != "Back" and "pageDetails" not in ln and not _is_chrome(ln)]
+    ti = next((i for i, ln in enumerate(lines) if _ARABIC.search(ln)), None)
+    if ti is None:
+        return None
+    return lines[ti], "\n".join(lines[ti:])
+
+
 def fetch_page(url: str) -> Optional[tuple[str, str]]:
-    """(title, main text) via Trafilatura, or None if the fetch/extract yields nothing."""
+    """(title, main text) via Trafilatura, or None if the fetch/extract yields nothing.
+    moph.gov.lb service pages use a dedicated extractor (Trafilatura mangles them)."""
+    if "moph.gov.lb" in url and "/AdministrativeServices/details/" in url:
+        page = fetch_moph_service(url)
+        if page:
+            return page
+        # layout changed -> fall through to the generic extractor rather than fail
     import trafilatura
     html = trafilatura.fetch_url(url)
     if not html:
@@ -137,8 +194,62 @@ def fetch_page(url: str) -> Optional[tuple[str, str]]:
 _model = None
 
 
+def _gemini_key() -> str:
+    from shared.config import settings
+    return settings.llm_api_key
+
+
+def embeddings_available() -> bool:
+    """True if we can embed at all: a Gemini key, or local sentence-transformers.
+    Retrieval uses this to decide vector vs. lexical, so a missing embedder never
+    silently sends every query to the (single-language) keyword fallback."""
+    import importlib.util
+    return bool(_gemini_key()) or bool(importlib.util.find_spec("sentence_transformers"))
+
+
+def _gemini_embed(texts: list[str]) -> list[list[float]]:
+    """Gemini embeddings at EMBED_DIM via batchEmbedContents. No local model
+    download; multilingual, so an Arabic/Arabizi/French query matches an English
+    or Arabic page. Retries transient overload/rate-limit."""
+    import time
+    import httpx
+    from shared.config import settings
+    base = settings.llm_base_url.rstrip("/").removesuffix("/openai")
+    url = f"{base}/models/{GEMINI_EMBED_MODEL}:batchEmbedContents"
+    out: list[list[float]] = []
+    for i in range(0, len(texts), 100):            # API cap: 100 contents per batch
+        batch = texts[i:i + 100]
+        payload = {"requests": [
+            {"model": f"models/{GEMINI_EMBED_MODEL}",
+             "content": {"parts": [{"text": t}]},
+             "outputDimensionality": EMBED_DIM}
+            for t in batch]}
+        last: Exception | None = None
+        for attempt in range(4):
+            try:
+                r = httpx.post(url, timeout=60, headers={"x-goog-api-key": _gemini_key()}, json=payload)
+                if r.status_code in (429, 500, 502, 503, 504):
+                    last = RuntimeError(f"embed {r.status_code}")
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                r.raise_for_status()
+                out.extend(e["values"] for e in r.json()["embeddings"])
+                break
+            except (httpx.TransportError, httpx.TimeoutException) as e:
+                last = e
+                time.sleep(1.0 * (attempt + 1))
+        else:
+            raise last or RuntimeError("Gemini embeddings unavailable")
+    return out
+
+
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """bge-m3 dense embeddings, L2-normalized (so cosine == dot product)."""
+    """Dense embeddings used for BOTH ingest and queries (same function => same
+    vector space). Gemini when a key is set (primary); otherwise bge-m3 if the
+    local model is installed. Cosine is handled by pgvector's <=> operator, so
+    the vectors need not be pre-normalized."""
+    if _gemini_key():
+        return _gemini_embed(texts)
     global _model
     if _model is None:
         from sentence_transformers import SentenceTransformer

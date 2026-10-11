@@ -4,11 +4,12 @@ transcribe (voice) -> safety -> redact -> route -> ground -> Answer.
 Nothing reaches the model before redaction; nothing leaves without tool support.
 """
 from __future__ import annotations
+import os
 import re
 import urllib.parse
 import httpx
 from shared.contracts import Inquiry, Answer, Source, ToolResult, Facility
-from core import safety, router, providers, memory, stubs
+from core import safety, router, providers, memory, stubs, understanding
 from core.prompts import SYSTEM_PROMPT, build_context
 from data import transcripts
 from core.language import of as reply_lang
@@ -19,9 +20,59 @@ def handle(inq: Inquiry) -> Answer:
     Wrapping here means the early returns (emergency, refusal, unreadable) are recorded too.
     Voice notes are transcribed first, so the recorded turn has their text and caza as well."""
     inq = _ensure_text(inq)
-    answer = _handle(inq)
+    answer = _annotate_debug(_handle(inq))
+    # General short-term context: keep the redacted user turn and assistant
+    # response so the next semantic interpretation can resolve follow-ups,
+    # corrections and clarification choices without phrase-specific rules.
+    memory.remember_turn(inq.user_ref, providers.redact(inq.text), answer.text)
     transcripts.record(inq, answer)
     return answer
+
+
+def _llm_name() -> str:
+    """Identifier of the engine that produced an answer (for the model field / debug)."""
+    return getattr(providers.llm, "name", type(providers.llm).__name__)
+
+
+def _known_cazas() -> list[str]:
+    """Closed list of cazas for the understanding layer to normalise towns to."""
+    try:
+        from data.directory import known_cazas
+        return known_cazas()
+    except Exception:
+        return []
+
+
+def _chat_reply(inq: Inquiry, interp: dict) -> Answer:
+    """Greeting / small-talk / unclear message: reply conversationally (the model wrote
+    the reply while interpreting), instead of routing it to the hotline fallback.
+    'unclear' stays outcome=unanswered so the metrics don't count gibberish as answered."""
+    lang = interp.get("reply_language") or reply_lang(inq)
+    text = interp.get("reply") or _chat_default(lang)
+    answered = interp["intent"] in ("greeting", "assistant_info")
+    return Answer(text=text, tool="none", grounded=False,
+                  outcome="answered" if answered else "unanswered",
+                  lang=lang, model=interp.get("model"))
+
+
+def _chat_default(lang: str) -> str:
+    """Last-resort line if the model didn't include a reply for a non-question."""
+    msgs = {
+        "ar": "أهلاً! اسألني عن معاملة صحية، سعر دواء، أو أقرب صيدلية أو مستشفى.",
+        "arabizi": "Ahlan! Es2alne 3an mu3amale se7iye, se3er dawa, aw a2rab saydaliye aw mustashfa.",
+        "fr": "Bonjour ! Posez-moi une question sur une démarche de santé, le prix d'un médicament, ou l'établissement le plus proche.",
+        "en": "Hello! Ask me about a health procedure, a medicine price, or the nearest pharmacy or hospital.",
+    }
+    return msgs.get(lang, msgs["en"])
+
+
+def _annotate_debug(answer: Answer) -> Answer:
+    """With DALEEL_DEBUG set, append the answering engine to the visible text so we
+    can see at a glance whether Gemini, the local model, or deterministic rendering
+    produced it. Off by default — real users never see it."""
+    if os.getenv("DALEEL_DEBUG", "").strip().lower() not in ("1", "true", "yes"):
+        return answer
+    return answer.model_copy(update={"text": f"{answer.text}\n\n— via {answer.model or 'deterministic'}"})
 
 
 def _handle(inq: Inquiry) -> Answer:
@@ -34,12 +85,6 @@ def _handle(inq: Inquiry) -> Answer:
     #     replied with a place, stitch it onto the original question.
     inq = _apply_pending_town(inq)
 
-    # 0c. Resolve short directory follow-ups against the previous facility type.
-    followup = _apply_directory_followup(inq)
-    if isinstance(followup, Answer):
-        return followup
-    inq = followup
-
     # 1. Safety rules (may short-circuit) — run on the real text
     early = safety.check(inq)
     if early:
@@ -49,12 +94,67 @@ def _handle(inq: Inquiry) -> Answer:
     safe_text = providers.redact(inq.text)
     inq = inq.model_copy(update={"text": safe_text})
 
-    # 3. Route to exactly one tool. A tool may raise (missing dependency, DB
-    #    down, bug in another module) — never let that 500 the request; degrade
-    #    to the hotline fallback so the user always gets a reply.
-    chosen_tool = router.choose_tool(inq)
+    # 3. UNDERSTAND the message with the model: intent, the tool that answers it, and
+    #    the entities to query with (town->caza, facility type, drug) — tolerant of
+    #    typos and transliteration, in any of the four languages. This replaces brittle
+    #    keyword matching as the primary interpreter; the deterministic router remains
+    #    the fallback when the model is unavailable. The model only INTERPRETS here —
+    #    every fact still comes from the tools below, so grounding is unchanged.
+    previous = memory.last_context(inq.user_ref)
+    model_context = dict(previous)
+    model_context["conversation"] = memory.conversation_history(inq.user_ref)
+    model_context["user_location_available"] = inq.lat is not None and inq.lon is not None
+    interp = understanding.interpret(inq.text, _known_cazas(), model_context)
+
+    # 3b. A short refinement of the PREVIOUS directory turn ("the closest one", "the
+    #     private ones?") applies only when the model didn't read a clear new request —
+    #     so stale directory context never hijacks a fresh procedure/medicine question,
+    #     yet a genuine refinement still works even though standalone it reads as "unclear".
+    refined = False
+    if interp is None:
+        followup = _apply_directory_followup(inq)
+        if isinstance(followup, Answer):
+            return followup
+        refined = followup is not inq           # closest_one rewrote the question
+        inq = followup
+
+    # 3c. Greeting / small-talk / gibberish -> reply conversationally, unless we just
+    #     recognised the message as a directory refinement.
+    needs_clarification = bool(interp and interp.get("needs_clarification"))
+    if (needs_clarification and interp.get("clarification_kind") == "location"
+            and inq.lat is not None and inq.lon is not None):
+        needs_clarification = False
+    if interp and needs_clarification:
+        question = interp.get("clarification_question", "").strip()
+        if question:
+            return Answer(text=question, tool=interp.get("tool") or "none",
+                          grounded=False, outcome="unanswered",
+                          lang=interp.get("reply_language") or reply_lang(inq),
+                          model=interp.get("model"))
+
+    if interp and interp["intent"] in ("greeting", "assistant_info", "out_of_scope", "unclear"):
+        return _chat_reply(inq, interp)
+
+    # Retrieval needs a complete semantic query, not a fragment such as "2",
+    # "yes", or a misspelled phrase. The schema-driven interpreter expands the
+    # current turn against pending clarification/context without inventing facts.
+    tool_inq = inq
+    if interp and interp.get("resolved_query", "").strip():
+        tool_inq = inq.model_copy(update={"text": interp["resolved_query"].strip()})
+
+    # 4. Route to exactly one tool (model's choice, else keywords). A tool may raise
+    #    (missing dependency, DB down, bug) — never 500; degrade to the hotline fallback.
+    chosen_tool = (interp and interp["tool"]) or router.choose_tool(inq)
+    hints = understanding.resolved_hints(interp, previous)
+
+    # Ownership is absent from the verified facility dataset. This is a
+    # data-capability decision, not language matching: any wording/language reaches
+    # the same honest result through the structured interpretation.
+    if (interp and interp.get("ownership_filter") and
+            (chosen_tool == "directory" or previous.get("tool") == "directory")):
+        return _ownership_unavailable(inq, interp)
     try:
-        result: ToolResult = router.run_tool(chosen_tool, inq)
+        result: ToolResult = router.run_tool(chosen_tool, tool_inq, **hints)
     except Exception:
         return _fallback(inq, chosen_tool)
 
@@ -70,9 +170,17 @@ def _handle(inq: Inquiry) -> Answer:
         return _fallback(inq, result.tool)
 
     if result.tool == "directory":
-        kind = router._directory_kind(inq.text)
+        kind = hints.get("facility_type") or router._directory_kind(inq.text)
         if kind:
             memory.remember_directory_kind(inq.user_ref, kind)
+            memory.remember_context(inq.user_ref, {
+                "tool": "directory", "facility_type": kind,
+                "caza": hints.get("caza"),
+            })
+    elif result.tool == "medicine":
+        memory.remember_context(inq.user_ref, {"tool": "medicine", "drug": hints.get("drug")})
+    elif result.tool in {"procedure", "hotline"}:
+        memory.remember_context(inq.user_ref, {"tool": result.tool})
 
     # 5. Build grounded answer from tool results only.
     #    If the model is unavailable (not pulled yet, down mid-demo), we still have
@@ -80,26 +188,28 @@ def _handle(inq: Inquiry) -> Answer:
     #    This keeps the platform useful under all conditions.
     context = build_context(result)
     lang = reply_lang(inq)
-    # Facility records are already structured. Rendering them directly is both
-    # clearer and safer than asking an LLM to repeat names, types and distances.
-    if result.tool in {"directory", "medicine"}:
-        return Answer(text=_render_facts(result, lang), sources=[], tool=result.tool,
-                      grounded=True, outcome="answered", lang=lang)
     if isinstance(providers.llm, stubs.StubLLM):
         return Answer(text=_render_facts(result, lang), sources=_sources(result), tool=result.tool,
-                      grounded=True, outcome="answered", lang=lang)
+                      grounded=True, outcome="answered", lang=lang, model=_llm_name())
     try:
-        text = providers.llm.generate(SYSTEM_PROMPT, inq.text, context)
+        text = providers.llm.generate(SYSTEM_PROMPT, tool_inq.text, context)
     except Exception:
         rendered = _render_facts(result, lang)
         if rendered:
             return Answer(text=rendered, sources=_sources(result), tool=result.tool,
-                          grounded=True, outcome="answered", lang=inq.lang)
+                          grounded=True, outcome="answered", lang=inq.lang, model="deterministic")
         return _fallback(inq)
+    # The retrieved passage can be a weak/near-miss match (e.g. a "health card"
+    # question that only reaches the "vaccination card" page). When that happens the
+    # model follows the grounding rule and declines. Return a CLEAN hotline fallback
+    # (outcome=unanswered, no mismatched source) instead of a half-refusal that still
+    # trails the wrong page's title and is miscounted as "answered".
+    if _looks_like_refusal(text):
+        return _fallback(inq, result.tool)
     text = _strip_unsourced_urls(text, result)   # A17: no made-up links
     text += _maps_block(result)                  # then add accurate map links
     return Answer(text=text, sources=_sources(result), tool=result.tool,
-                  grounded=True, outcome="answered", lang=inq.lang)
+                  grounded=True, outcome="answered", lang=inq.lang, model=_llm_name())
 
 
 # ---- follow-up memory ------------------------------------------------------
@@ -137,6 +247,35 @@ def _apply_directory_followup(inq: Inquiry) -> Inquiry | Answer:
     if action == "closest_one":
         return inq.model_copy(update={"text": f"closest {kind} only one"})
     return inq
+
+
+def _ownership_unavailable(inq: Inquiry, interp: dict | None = None) -> Answer:
+    lang = (interp or {}).get("reply_language") or reply_lang(inq)
+    messages = {
+        "ar": "لا تتضمن بيانات المرافق الحالية تصنيفاً موثوقاً للمرافق كخاصة أو حكومية. يمكنني ترتيبها حسب المسافة فقط.",
+        "arabizi": "Ma 3enna tasnif mawthou2 iza hal marafe2 khassa aw 7koumiye. Fina nratteba 7asab l masafe bas.",
+        "fr": "Les données actuelles n’indiquent pas de façon fiable si ces établissements sont privés ou publics. Je peux seulement les classer par distance.",
+        "en": "The current facility data does not reliably identify facilities as private or public. I can only rank them by distance.",
+    }
+    return Answer(text=messages[lang], tool="directory", grounded=False,
+                  outcome="answered", lang=lang,
+                  model=(interp or {}).get("model"))
+
+
+# ---- refusal detection -----------------------------------------------------
+# The system prompt tells the model to "say you don't have an official answer" when
+# the context doesn't support one. These are that sentence across our four languages;
+# matching them lets us swap a leaky half-refusal for the clean hotline fallback.
+_REFUSAL_MARKERS = (
+    "don't have an official", "do not have an official", "don't have a verified",
+    "no official answer", "ليس لدي", "لا أملك", "لا يوجد لدي", "ليس لدينا",
+    "لا تتوفر لدي", "je n'ai pas", "je n’ai pas", "pas de réponse officielle",
+)
+
+
+def _looks_like_refusal(text: str) -> bool:
+    low = text.lower()
+    return any(m.lower() in low for m in _REFUSAL_MARKERS)
 
 
 # ---- A17: strip any URL the model invented ---------------------------------
@@ -247,8 +386,23 @@ def _ensure_text(inq: Inquiry) -> Inquiry:
 
 
 # ---- helpers --------------------------------------------------------------
+# Dataset-level provenance for the structured tools. Per-row source URLs aren't in
+# the contract, so a procedure cites its own page while medicine/directory cite the
+# official dataset they came from — every answer carries a source.
+MEDICINE_SOURCE = Source(title="MoPH public drug price list",
+                         url="https://www.moph.gov.lb/en/Drugs/index/3/4848")
+DIRECTORY_SOURCE = Source(title="Health facilities — OpenStreetMap / HOT via HDX (ODbL)",
+                          url="https://data.humdata.org/dataset/hotosm_lbn_health_facilities")
+
+
 def _sources(result: ToolResult) -> list[Source]:
-    return [d.source for d in result.docs if d.source]
+    if result.docs:
+        return [d.source for d in result.docs if d.source]
+    if result.drugs:
+        return [MEDICINE_SOURCE]
+    if result.facilities:
+        return [DIRECTORY_SOURCE]
+    return []
 
 
 def _hotline(number: str):

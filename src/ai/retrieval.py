@@ -26,10 +26,12 @@ def count_procedures() -> int:
         return conn.execute("SELECT count(*) AS n FROM procedures").fetchone()["n"]
 
 
-# bge-m3 cosine similarity. Measured on the PHC FAQ page: off-topic questions (capital of
-# France, recipes, weather; AR/FR/EN) score 0.26-0.32, on-topic ones 0.44-0.54. Re-check this
-# when more pages are ingested. Override with PROCEDURE_MIN_SCORE.
-DEFAULT_MIN_SCORE = 0.38
+# Cosine-similarity floor for a usable match. Calibrated for gemini-embedding-001
+# @1024 dims (the active embedder): cross-language on-topic pairs score ~0.60-0.75,
+# off-topic ~0.40-0.45, so 0.55 cleanly separates them. (bge-m3, the offline
+# fallback, scored lower: on-topic ~0.44-0.54 — set PROCEDURE_MIN_SCORE=0.38 if
+# you switch to it.) Re-check after a big ingest; override with PROCEDURE_MIN_SCORE.
+DEFAULT_MIN_SCORE = 0.55
 
 
 class ProcedureSearchImpl:
@@ -57,8 +59,8 @@ class ProcedureSearchImpl:
             still answer with no ML download.
         The decision is made on *availability*, not on an empty result, so the
         vector threshold is never silently overridden by a lexical match."""
-        import importlib.util
-        if self._embed is not None or importlib.util.find_spec("sentence_transformers"):
+        from ai.ingest import embeddings_available
+        if self._embed is not None or embeddings_available():
             try:
                 return self._vector_search(query, k)
             except Exception:

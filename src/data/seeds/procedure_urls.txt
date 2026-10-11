@@ -49,6 +49,8 @@ https://www.moph.gov.lb/ar/AdministrativeServices/details/38  # lang=ar topic=me
 https://www.moph.gov.lb/ar/AdministrativeServices/details/104  # lang=ar topic=medical licence: opening a charitable dispensary (extractor drops the body, see DATA_RESEARCH)
 
 # --- MoPH information pages ---
+https://www.moph.gov.lb/en/view/4736/drugs-pharmaceutical-like-registration  # lang=en topic=registering a drug or pharmaceutical product
+https://www.moph.gov.lb/ar/AdministrativeServices/details/51  # lang=ar topic=registering an imported pharmaceutical product
 https://www.moph.gov.lb/en/Pages/14/1402/phc-faq  # lang=en topic=PHC services: FAQ (who can use PHC centres, essential and chronic drugs)
 https://www.moph.gov.lb/ar/Pages/14/1402/phc-faq  # lang=ar topic=PHC services: FAQ (page is mostly English under Arabic menus)
 https://www.moph.gov.lb/en/Pages/3/749/primary-health-care  # lang=en topic=PHC services: overview and service list

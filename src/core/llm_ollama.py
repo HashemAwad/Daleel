@@ -21,6 +21,10 @@ class OllamaLLM:
         self.model = model or settings.local_model
         self.url = (url or settings.ollama_url).rstrip("/")
 
+    @property
+    def name(self) -> str:
+        return f"ollama:{self.model}"
+
     @classmethod
     def available(cls, url: str | None = None) -> bool:
         """Ollama is usable only when it is up and the configured model exists."""
