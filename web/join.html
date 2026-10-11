@@ -3,107 +3,214 @@
      A judge scans the QR, WhatsApp opens with the sandbox join message
      pre-filled, they hit send, and they're talking to Daleel.
      The QR comes from /qr.svg; if that endpoint is unavailable the page falls
-     back to the link and the manual steps, so the demo never dead-ends. -->
+     back to the link and the manual steps, so the demo never dead-ends.
+     Look: the same olive-and-beige design as the chat and the dashboard (Hanken Grotesk + Archivo).
+     The body is bilingual line by line; the header follows the interface language chosen in the chat. -->
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#F4EFE4" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#1D2018" media="(prefers-color-scheme: dark)"/>
 <title>Daleel · WhatsApp</title>
+<link rel="icon" href="data:,"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap"/>
 <style>
   :root{
-    --brand:#15693A; --brand-deep:#0D4426; --red:#C62127;
-    --ground:#E9EBE3; --brand-soft:#E8EAE1; --surface:#F7F8F3; --ink:#1E211C;
-    --muted:#686C62; --line:#D2D6C9; --warn:#73510A; --warn-soft:#F2EBD6;
+    color-scheme: light;
+    --bg:#F4EFE4; --card:#FCFAF4; --line:#E3DCCB; --track:#E6E8D3;
+    --ink:#272B1C; --ink-2:#4A4F3A; --quiet:#5E634D;
+    --olive:#4F5E1F; --olive-deep:#3C4817; --on-olive:#FCFAF4;
+    --attn:#9A4A1E; --attn-wash:#F5E8D8;
+    --focus:#0B4FB3;
+    --swift:cubic-bezier(.2,.65,.3,1);
   }
   @media (prefers-color-scheme: dark){
-    :root{
-      --brand:#5FB98A; --brand-deep:#93D8B2; --red:#FF8F8A;
-      --ground:#0C0E0B; --brand-soft:#1E221B; --surface:#151813; --ink:#ECEFE8;
-      --muted:#8D9288; --line:#2C3128; --warn:#E2BC72; --warn-soft:#2A2109;
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --bg:#1D2018; --card:#282C20; --line:#3A4030; --track:#343A29;
+      --ink:#E4E1D3; --ink-2:#C3C5B1; --quiet:#A3A790;
+      --olive:#A9B872; --olive-deep:#C3D08C; --on-olive:#1D2018;
+      --attn:#DDA06B; --attn-wash:#342818; --focus:#9DBEF0;
     }
   }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#1D2018; --card:#282C20; --line:#3A4030; --track:#343A29;
+    --ink:#E4E1D3; --ink-2:#C3C5B1; --quiet:#A3A790;
+    --olive:#A9B872; --olive-deep:#C3D08C; --on-olive:#1D2018;
+    --attn:#DDA06B; --attn-wash:#342818; --focus:#9DBEF0;
+  }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   body{
-    margin:0; background:var(--surface); color:var(--ink);
-    font-family:"Noto Naskh Arabic","Traditional Arabic","Geeza Pro","SF Arabic",
-                "Iowan Old Style",Palatino,"Palatino Linotype",Charter,Georgia,serif;
-    font-size:16.5px; line-height:1.8; font-variant-numeric:tabular-nums;
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Hanken Grotesk","Noto Sans Arabic",system-ui,-apple-system,"Segoe UI",Roboto,Tahoma,sans-serif;
+    font-size:18px; line-height:1.7; font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
   }
+  h1,h2{font-family:Archivo,"Noto Sans Arabic","Hanken Grotesk",system-ui,sans-serif}
+  :focus-visible{outline:3px solid var(--focus); outline-offset:3px; border-radius:6px}
   .bidi{unicode-bidi:plaintext; text-align:start}
-  .wrap{max-width:560px; margin:0 auto; min-height:100%; background:var(--surface)}
-  header{
-    border-bottom:1px solid var(--line); background:var(--surface);
-    padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));
-    display:flex; align-items:center; gap:12px;
+  .col{width:100%; max-width:40rem; margin-inline:auto; padding-inline:24px}
+
+  /* ---- header: the same as the chat page, with the way back ------------- */
+  .letterhead{border-bottom:1px solid var(--line); background:var(--bg)}
+  .lockup{display:flex; align-items:center; gap:14px; padding-block:12px;
+          padding-top:calc(12px + env(safe-area-inset-top))}
+  .cedar{width:30px; height:30px; flex:none; fill:var(--olive); display:block}
+  .titles{display:flex; flex-direction:column; line-height:1.25; color:var(--ink-2)}
+  .titles span{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+  html[lang="ar"] .titles span{letter-spacing:0; font-size:13px; text-transform:none}
+  .svc{font-size:20px; font-weight:700; margin:0}
+  .grow{flex:1}
+  .letterhead nav{display:flex; gap:6px; font-size:16px}
+  .letterhead nav a{
+    display:inline-flex; align-items:center; min-height:44px; padding:0 14px; border-radius:999px;
+    color:var(--ink-2); text-decoration:none; font-weight:500;
+    transition:color .2s var(--swift), background .2s var(--swift);
   }
-  .cedar{width:30px; height:30px; flex:none; fill:var(--brand); display:block}
-  .titles{display:flex; flex-direction:column; line-height:1.18}
-  .t-state{font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--brand); text-transform:uppercase}
-  .t-ministry{font-size:10.5px; font-weight:800; letter-spacing:.1em; color:var(--red); text-transform:uppercase}
-  .vrule{width:1px; align-self:stretch; background:var(--line); margin-inline:4px}
-  header .t{font-weight:650; font-size:14.5px}
-  main{padding:18px}
-  h2{font-size:16px; margin:0 0 8px}
-  p{margin:0 0 12px}
+  .letterhead nav a:hover{color:var(--olive); background:var(--card)}
+  .controls button{
+    font:inherit; font-size:15px; font-weight:600; min-height:44px; min-width:44px; padding:6px 18px; cursor:pointer;
+    background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px;
+    transition:color .2s var(--swift), border-color .2s var(--swift);
+  }
+  .controls button:hover{color:var(--olive); border-color:var(--olive)}
+  @media (max-width:640px){
+    .lockup{flex-wrap:wrap; row-gap:0}
+    .letterhead nav{order:3; width:100%}
+    .controls{margin-inline-start:auto}
+    .titles{display:none}
+  }
+
+  /* ---- page --------------------------------------------------------------- */
+  main{padding-block:56px 72px}
+  h1{font-size:clamp(32px,6vw,46px); font-weight:800; line-height:1.2; margin:0 0 12px; letter-spacing:-.02em}
+  html[lang="ar"] h1{letter-spacing:0; line-height:1.35}
+  h2{font-size:24px; line-height:1.3; margin:0 0 16px; font-weight:700}
+  p{margin:0 0 14px}
+  .lede{color:var(--quiet); font-size:19px; margin-bottom:36px}
+
   .qrbox{
-    display:flex; flex-direction:column; align-items:center; gap:12px;
-    padding:18px; border:1px solid var(--line); border-radius:0; margin-bottom:18px;
+    display:flex; flex-direction:column; align-items:center; gap:24px;
+    padding:36px 24px; margin-bottom:44px; background:var(--card);
+    border:1px solid var(--line); border-radius:24px;
   }
-  .qrbox img{width:230px; height:230px; background:#fff; border-radius:10px; padding:8px}
+  .qrbox img{width:min(260px,100%); height:auto; aspect-ratio:1; background:#fff; border-radius:18px; padding:12px; border:1px solid var(--line)}
   .cta{
-    display:inline-block; background:var(--brand); color:#fff; text-decoration:none;
-    padding:11px 18px; border-radius:0; font-weight:600;
+    display:inline-flex; align-items:center; justify-content:center; min-height:52px; padding:0 30px;
+    background:var(--olive); color:var(--on-olive); text-decoration:none; font-weight:700; font-size:18px;
+    border-radius:999px; transition:background .2s var(--swift); text-align:center; line-height:1.4; padding-block:12px;
   }
-  ol{margin:0 0 16px; padding-inline-start:22px}
-  li{margin-bottom:7px}
+  .cta:hover{background:var(--olive-deep)}
+
+  ol{list-style:none; counter-reset:s; margin:0 0 36px; padding:0; display:grid; gap:20px}
+  li{counter-increment:s; display:grid; grid-template-columns:44px minmax(0,1fr); gap:16px; align-items:start}
+  li::before{
+    content:counter(s); width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
+    background:var(--track); color:var(--ink); font-family:Archivo,sans-serif; font-weight:700; font-size:18px;
+  }
+  .txt > span + span{color:var(--quiet); font-size:16.5px}
+  html[dir="rtl"] .bil > span{text-align:right}
+  html[dir="ltr"] .bil > span{text-align:left}
+
   code{
-    background:var(--brand-soft); padding:2px 7px; border-radius:0;
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:14px;
-    unicode-bidi:isolate; direction:ltr; display:inline-block;
+    background:var(--track); color:var(--ink); padding:3px 12px; border-radius:999px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:16px;
+    unicode-bidi:isolate; direction:ltr; display:inline-block; overflow-wrap:anywhere;
   }
-  .warn{background:var(--warn-soft); color:var(--warn); border-radius:10px; padding:11px 13px; font-size:13.5px; margin-bottom:16px}
-  .note{color:var(--muted); font-size:13px}
-  .alt{border-top:1px solid var(--line); margin-top:18px; padding-top:16px}
-  .alt a{color:var(--brand); font-weight:600}
-  @media (prefers-color-scheme: dark){ .alt a{color:#8FD3AC} }
+  .kv{display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin-bottom:14px}
+  .kv .k{color:var(--ink-2); font-weight:600}
+  .warn{background:var(--attn-wash); color:var(--attn); border-radius:16px; padding:16px 20px; font-size:16.5px; margin-bottom:28px}
+  .note{color:var(--quiet); font-size:16.5px}
+  .alt{background:var(--card); border:1px solid var(--line); border-radius:24px; margin-top:44px; padding:32px 28px}
+  .alt .btn{
+    display:inline-flex; align-items:center; min-height:48px; padding:0 24px; margin-top:6px; border-radius:999px;
+    border:1px solid var(--olive); color:var(--olive); font-weight:700; text-decoration:none;
+  }
+  .alt .btn:hover{background:var(--olive); color:var(--on-olive)}
+  @media (max-width:520px){ .col{padding-inline:16px} main{padding-block:36px 48px} .alt{padding:26px 20px} }
+  @media (prefers-reduced-motion: reduce){ *,*::before,*::after{transition-duration:.01ms !important} }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <svg class="cedar" viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M32 3 L21.5 17h5.5L18.5 29h6L10 43h18.5v18h7V43H54L39.5 29h6L37 17h5.5Z"/>
-    </svg>
-    <div class="titles">
-      <span class="t-state">Republic of Lebanon</span>
-      <span class="t-ministry">Ministry of Public Health</span>
-    </div>
-    <div class="vrule" aria-hidden="true"></div>
-    <div class="t">دليل · واتساب</div>
-  </header>
-  <main>
-    <div id="state"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="cedar" viewBox="0 0 64 64">
+  <path d="M32 3 L21.5 17h5.5L18.5 29h6L10 43h18.5v18h7V43H54L39.5 29h6L37 17h5.5Z"/>
+</symbol></svg>
 
-    <div class="alt">
-      <h2>بدون واتساب؟ · <bdi dir="ltr">No WhatsApp?</bdi></h2>
-      <p class="note">
-        <span dir="rtl" lang="ar" style="display:block">الدردشة على الويب تعمل دائماً، حتى لو كان واتساب غير متاح.</span>
-        <span dir="ltr" lang="en" style="display:block">The web chat always works, even if WhatsApp is down.</span>
-      </p>
-      <p><a href="/">← افتح الدردشة على الويب · <bdi dir="ltr">Open the web chat</bdi></a></p>
+<header class="letterhead">
+  <div class="col lockup">
+    <svg class="cedar" aria-hidden="true"><use href="#cedar"/></svg>
+    <div class="titles">
+      <span id="tState">الجمهورية اللبنانية</span>
+      <span id="tMinistry">وزارة الصحة العامة</span>
     </div>
-  </main>
-</div>
+    <p class="svc" id="svc">دليل</p>
+    <div class="grow"></div>
+    <nav aria-label="Daleel">
+      <a href="/" id="navChat">الدردشة</a>
+      <a href="/dashboard" id="navStats">الإحصاءات</a>
+    </nav>
+    <div class="controls"><button type="button" id="themeBtn"></button></div>
+  </div>
+</header>
+
+<main class="col">
+  <h1><span lang="ar">واتساب</span> · <bdi dir="ltr" lang="en">WhatsApp</bdi></h1>
+  <p class="lede" id="lede"></p>
+
+  <div id="state"></div>
+
+  <section class="alt" aria-labelledby="altH">
+    <h2 id="altH">بدون واتساب؟ · <bdi dir="ltr">No WhatsApp?</bdi></h2>
+    <p class="note bil">
+      <span dir="rtl" lang="ar" style="display:block">الدردشة على الويب تعمل دائماً، حتى لو كان واتساب غير متاح.</span>
+      <span dir="ltr" lang="en" style="display:block">The web chat always works, even if WhatsApp is down.</span>
+    </p>
+    <a class="btn" href="/">الدردشة على الويب · <bdi dir="ltr">Web chat</bdi></a>
+  </section>
+</main>
 
 <script>
 "use strict";
 const state = document.getElementById("state");
+const root = document.documentElement;
 const el = (t, c, txt) => { const n = document.createElement(t); if (c) n.className = c; if (txt !== undefined) n.textContent = txt; return n; };
+
+/* ---- header language + theme: shared with the chat page (same storage keys) ---- */
+const HEAD = {
+  ar: { state:"الجمهورية اللبنانية", ministry:"وزارة الصحة العامة", svc:"دليل", chat:"الدردشة", stats:"الإحصاءات", dark:"داكن", light:"فاتح" },
+  en: { state:"Republic of Lebanon", ministry:"Ministry of Public Health", svc:"Daleel", chat:"Chat", stats:"Statistics", dark:"Dark", light:"Light" },
+};
+function uiLang(){
+  try { const s = localStorage.getItem("daleel_ui_lang"); if (HEAD[s]) return s; } catch(e){}
+  return (navigator.languages || [navigator.language || "ar"]).some(t => String(t).toLowerCase().startsWith("ar")) ? "ar" : "en";
+}
+const L = HEAD[uiLang()];
+root.lang = uiLang();      // the header is in the interface language; each body line sets its own lang and dir
+root.dir = root.lang === "ar" ? "rtl" : "ltr";
+const setText = (id, t) => { document.getElementById(id).textContent = t; };
+setText("tState", L.state); setText("tMinistry", L.ministry); setText("svc", L.svc);
+setText("navChat", L.chat); setText("navStats", L.stats);
+
+const THEME_KEY = "daleel_theme";
+const themeBtn = document.getElementById("themeBtn");
+const theme = () => { try { return localStorage.getItem(THEME_KEY) || "auto"; } catch(e){ return "auto"; } };
+const isDark = () => theme() === "auto" ? matchMedia("(prefers-color-scheme: dark)").matches : theme() === "dark";
+function paintTheme(){
+  if (theme() === "auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", theme());
+  themeBtn.textContent = isDark() ? L.light : L.dark;
+}
+themeBtn.addEventListener("click", () => { try { localStorage.setItem(THEME_KEY, isDark() ? "light" : "dark"); } catch(e){} paintTheme(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (theme() === "auto") paintTheme(); });
+paintTheme();
 
 /* One language per element with an explicit dir. A single node holding both
    scripts makes the bidi algorithm strand trailing punctuation (".Scan the"). */
 function bilingual(tag, cls, ar, en){
-  const box = el(tag, cls);
+  const box = el(tag, (cls ? cls + " " : "") + "bil");
   const a = el("span", null, ar); a.dir = "rtl"; a.lang = "ar"; a.style.display = "block";
   const e = el("span", null, en); e.dir = "ltr"; e.lang = "en"; e.style.display = "block";
   box.appendChild(a); box.appendChild(e);
@@ -118,11 +225,26 @@ function heading(ar, en){
   return h;
 }
 
+function row(ar, en, value){
+  const r = el("div", "kv");
+  const k = el("span", "k");
+  k.appendChild(document.createTextNode(ar + " · "));
+  const b = el("bdi", null, en); b.dir = "ltr";
+  k.appendChild(b);
+  r.appendChild(k);
+  r.appendChild(el("code", null, value));
+  return r;
+}
+
 function voiceNote(){
   return bilingual("p", "note",
     "🎤 يمكنك إرسال رسالة صوتية — نحوّلها إلى نص ونجيب عليها.",
     "Send a voice note — we transcribe it and answer.");
 }
+
+/* the opening line under the title */
+const lede = document.getElementById("lede");
+lede.appendChild(bilingual("span", null, "امسح الرمز وابدأ المحادثة مع دليل مباشرة على واتساب.", "Scan the code and talk to Daleel straight on WhatsApp."));
 
 function renderConfigured(info){
   state.textContent = "";
@@ -148,19 +270,15 @@ function renderConfigured(info){
       : ["أرسل أي رسالة للبدء.", "Send any message to start."],
     ["اسأل سؤالك بالعربية أو الفرنسية أو الإنجليزية.", "Ask in Arabic, Arabizi, French or English."],
   ];
-  for (const [ar, en] of steps) ol.appendChild(bilingual("li", null, ar, en));
+  for (const [ar, en] of steps){
+    const li = el("li");
+    li.appendChild(bilingual("div", "txt", ar, en));
+    ol.appendChild(li);
+  }
   state.appendChild(ol);
 
-  if (info.join_message){
-    const p = el("p", "bidi");
-    p.appendChild(document.createTextNode("رسالة الانضمام · Join message: "));
-    p.appendChild(el("code", null, info.join_message));
-    state.appendChild(p);
-  }
-  const num = el("p", "note bidi");
-  num.appendChild(document.createTextNode("الرقم · Number: "));
-  num.appendChild(el("code", null, info.number || "—"));
-  state.appendChild(num);
+  if (info.join_message) state.appendChild(row("رسالة الانضمام", "Join message", info.join_message));
+  state.appendChild(row("الرقم", "Number", info.number || "—"));
   state.appendChild(voiceNote());
 
   if (!info.qr_available){
@@ -180,7 +298,12 @@ function renderUnconfigured(){
     "Twilio sandbox: Messaging → Try it out → WhatsApp.",
     "Copy the sandbox number into TWILIO_WHATSAPP_FROM and the join code into TWILIO_SANDBOX_JOIN_CODE.",
     "Point the sandbox webhook at PUBLIC_BASE_URL + /webhook/whatsapp.",
-  ]) ol.appendChild(el("li", null, s));
+  ]){
+    const li = el("li");
+    const t = el("div", "txt"); t.appendChild(el("span", null, s)); t.firstChild.dir = "ltr"; t.firstChild.lang = "en"; t.firstChild.style.display = "block";
+    li.appendChild(t);
+    ol.appendChild(li);
+  }
   state.appendChild(ol);
   state.appendChild(voiceNote());
 }
